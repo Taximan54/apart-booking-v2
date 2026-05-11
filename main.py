@@ -3,18 +3,11 @@ import asyncio
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
 
-from aiogram import Bot, Dispatcher, types
-from aiogram.filters import CommandStart
-from aiogram.types import (
-    ReplyKeyboardMarkup,
-    KeyboardButton,
-    WebAppInfo
-)
+from aiogram import Bot, Dispatcher
 
-from config import (
-    BOT_TOKEN,
-    WEBAPP_URL
-)
+from config import BOT_TOKEN
+
+from handlers.user import router as user_router
 
 # =====================================================
 # FASTAPI
@@ -29,6 +22,8 @@ app = FastAPI()
 bot = Bot(token=BOT_TOKEN)
 
 dp = Dispatcher()
+
+dp.include_router(user_router)
 
 # =====================================================
 # HTML
@@ -54,48 +49,6 @@ async def home():
 
     </html>
     """
-
-# =====================================================
-# START
-# =====================================================
-
-@dp.message(CommandStart())
-async def start(message: types.Message):
-
-    keyboard = ReplyKeyboardMarkup(
-
-        keyboard=[
-
-            [
-                KeyboardButton(
-                    text="📅 Забронировать",
-                    web_app=WebAppInfo(
-                        url=WEBAPP_URL
-                    )
-                )
-            ],
-
-            [
-                KeyboardButton(
-                    text="📸 Фото квартиры"
-                )
-            ],
-
-            [
-                KeyboardButton(
-                    text="📋 Описание квартиры"
-                )
-            ]
-
-        ],
-
-        resize_keyboard=True
-    )
-
-    await message.answer(
-        "Добро пожаловать в ONE APART ✨",
-        reply_markup=keyboard
-    )
 
 # =====================================================
 # TELEGRAM START
