@@ -11,92 +11,78 @@ from config import BOT_TOKEN
 from handlers.user import router as user_router
 from handlers.admin import router as admin_router
 
-# =========================================
-# APP
-# =========================================
+from database.models import create_tables
+
+
+# =====================================================
+# FASTAPI
+# =====================================================
 
 app = FastAPI()
 
-# =========================================
-# TELEGRAM
-# =========================================
+create_tables()
+
+
+# =====================================================
+# STATIC
+# =====================================================
+
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+
+# =====================================================
+# TELEGRAM BOT
+# =====================================================
 
 bot = Bot(token=BOT_TOKEN)
 
 dp = Dispatcher()
 
+
+# =====================================================
+# ROUTERS
+# =====================================================
+
 dp.include_router(user_router)
+
 dp.include_router(admin_router)
 
-# =========================================
-# SITE
-# =========================================
+
+# =====================================================
+# WEBSITE
+# =====================================================
 
 @app.get("/", response_class=HTMLResponse)
 async def home():
 
     return """
     <html>
-    <head>
-        <title>Городская Пауза</title>
 
-        <style>
+        <head>
 
-        body{
-            background:#111;
-            color:white;
-            font-family:Arial;
-            display:flex;
-            justify-content:center;
-            align-items:center;
-            height:100vh;
-            margin:0;
-            flex-direction:column;
-        }
+            <title>Городская Пауза</title>
 
-        h1{
-            font-size:52px;
-            margin-bottom:10px;
-        }
+        </head>
 
-        p{
-            color:#aaa;
-            font-size:22px;
-        }
+        <body style="font-family:Arial;padding:40px;">
 
-        </style>
+            <h1>Городская Пауза</h1>
 
-    </head>
+            <p>Сайт работает</p>
 
-    <body>
+        </body>
 
-        <h1>Городская Пауза</h1>
-
-        <p>
-            Сервис бронирования апартаментов
-        </p>
-
-    </body>
     </html>
     """
 
-# =========================================
+
+# =====================================================
 # START BOT
-# =========================================
-
-async def start_bot():
-
-    await bot.delete_webhook(
-        drop_pending_updates=True
-    )
-
-    await dp.start_polling(bot)
-
-# =========================================
-# STARTUP
-# =========================================
+# =====================================================
 
 @app.on_event("startup")
 async def startup():
 
-    asyncio.create_task(start_bot())
+    asyncio.create_task(
+        dp.start_polling(bot)
+    )
