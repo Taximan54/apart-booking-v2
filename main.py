@@ -36,12 +36,12 @@ async def home():
     <html>
 
         <head>
-            <title>ONE APART</title>
+            <title>Городская Пауза</title>
         </head>
 
         <body style="font-family:Arial;padding:40px;">
 
-            <h1>🏠 ONE APART</h1>
+            <h1>🏠 Городская Пауза</h1>
 
             <p>Новая архитектура работает</p>
 

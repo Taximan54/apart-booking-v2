@@ -33,7 +33,7 @@ async def send_photos(message):
             media.append(
                 InputMediaPhoto(
                     media=FSInputFile(photo),
-                    caption="🏠 ONE APART"
+                    caption="🏠 Городская Пауза"
                 )
             )
 
@@ -97,7 +97,7 @@ def main_keyboard():
 async def start(message: types.Message):
 
     await message.answer(
-        "Добро пожаловать в ONE APART ✨",
+        "Добро пожаловать в «Городская Пауза» ✨",
         reply_markup=main_keyboard()
     )
 
@@ -119,7 +119,7 @@ async def description(message: types.Message):
 
     await message.answer(
         """
-🏠 ONE APART
+🏠 Городская Пауза
 
 ✨ Комфортная квартира в Новосибирске
 
