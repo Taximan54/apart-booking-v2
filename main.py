@@ -18,6 +18,67 @@ from webapp.routes import router as webapp_router
 
 app = FastAPI()
 
+@app.get("/", response_class=HTMLResponse)
+async def home():
+
+    return """
+    <!DOCTYPE html>
+    <html lang="ru">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Городская Пауза</title>
+
+        <style>
+
+        body{
+            margin:0;
+            background:#f5f5f5;
+            font-family:Arial;
+            display:flex;
+            justify-content:center;
+            align-items:center;
+            height:100vh;
+            flex-direction:column;
+        }
+
+        h1{
+            font-size:42px;
+            margin-bottom:10px;
+        }
+
+        p{
+            color:#666;
+            margin-bottom:30px;
+        }
+
+        .btn{
+            padding:18px 35px;
+            background:black;
+            color:white;
+            border:none;
+            border-radius:20px;
+            font-size:20px;
+            cursor:pointer;
+        }
+
+        </style>
+    </head>
+
+    <body>
+
+        <h1>Городская Пауза</h1>
+
+        <p>Сервис бронирования квартиры</p>
+
+        <button class="btn">
+            Календарь скоро подключим
+        </button>
+
+    </body>
+    </html>
+    """
+
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 app.include_router(webapp_router)
