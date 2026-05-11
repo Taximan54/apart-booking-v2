@@ -3,21 +3,57 @@ from aiogram.filters import CommandStart
 from aiogram.types import (
     ReplyKeyboardMarkup,
     KeyboardButton,
-    WebAppInfo
+    WebAppInfo,
+    FSInputFile,
+    InputMediaPhoto
 )
 
 from config import WEBAPP_URL
 
 router = Router()
 
+PHOTOS = [
+    "static/images/1.JPG",
+    "static/images/2.JPG",
+    "static/images/3.JPG"
+]
+
 # =====================================================
-# START
+# PHOTO SEND
 # =====================================================
 
-@router.message(CommandStart())
-async def start(message: types.Message):
+async def send_photos(message):
 
-    keyboard = ReplyKeyboardMarkup(
+    media = []
+
+    for i, photo in enumerate(PHOTOS):
+
+        if i == 0:
+
+            media.append(
+                InputMediaPhoto(
+                    media=FSInputFile(photo),
+                    caption="🏠 ONE APART"
+                )
+            )
+
+        else:
+
+            media.append(
+                InputMediaPhoto(
+                    media=FSInputFile(photo)
+                )
+            )
+
+    await message.answer_media_group(media)
+
+# =====================================================
+# MAIN KEYBOARD
+# =====================================================
+
+def main_keyboard():
+
+    return ReplyKeyboardMarkup(
 
         keyboard=[
 
@@ -53,7 +89,60 @@ async def start(message: types.Message):
         resize_keyboard=True
     )
 
+# =====================================================
+# START
+# =====================================================
+
+@router.message(CommandStart())
+async def start(message: types.Message):
+
     await message.answer(
         "Добро пожаловать в ONE APART ✨",
-        reply_markup=keyboard
+        reply_markup=main_keyboard()
+    )
+
+# =====================================================
+# PHOTO
+# =====================================================
+
+@router.message(lambda m: m.text == "📸 Фото квартиры")
+async def photos(message: types.Message):
+
+    await send_photos(message)
+
+# =====================================================
+# DESCRIPTION
+# =====================================================
+
+@router.message(lambda m: m.text == "📋 Описание квартиры")
+async def description(message: types.Message):
+
+    await message.answer(
+        """
+🏠 ONE APART
+
+✨ Комфортная квартира в Новосибирске
+
+🛏 2 гостя
+📶 Wi-Fi
+❄️ Кондиционер
+🛁 Ванна
+🍳 Кухня
+📺 Smart TV
+
+📍 Метро Заельцовская
+📍 Роял Парк
+📍 Центр города
+"""
+    )
+
+# =====================================================
+# ADMIN
+# =====================================================
+
+@router.message(lambda m: m.text == "🛠 Админка")
+async def admin(message: types.Message):
+
+    await message.answer(
+        "🛠 Админка скоро будет перенесена отдельно"
     )
