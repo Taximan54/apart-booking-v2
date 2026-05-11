@@ -11,16 +11,8 @@ from config import BOT_TOKEN
 from handlers.user import router as user_router
 from handlers.admin import router as admin_router
 
-from database.models import create_tables
-
-
-# =====================================================
-# FASTAPI
-# =====================================================
 
 app = FastAPI()
-
-create_tables()
 
 
 # =====================================================
@@ -31,20 +23,14 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
 # =====================================================
-# TELEGRAM BOT
+# BOT
 # =====================================================
 
 bot = Bot(token=BOT_TOKEN)
 
 dp = Dispatcher()
 
-
-# =====================================================
-# ROUTERS
-# =====================================================
-
 dp.include_router(user_router)
-
 dp.include_router(admin_router)
 
 
@@ -59,9 +45,7 @@ async def home():
     <html>
 
         <head>
-
             <title>Городская Пауза</title>
-
         </head>
 
         <body style="font-family:Arial;padding:40px;">
