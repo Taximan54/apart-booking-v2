@@ -1,5 +1,7 @@
 import asyncio
 
+from database.db import init_db
+
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -14,6 +16,7 @@ from handlers.admin import router as admin_router
 
 app = FastAPI()
 
+init_db()
 
 # =====================================================
 # STATIC
