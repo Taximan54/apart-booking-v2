@@ -1,8 +1,7 @@
 import asyncio
 
-from database.db import init_db
-
 from fastapi import FastAPI
+from database.db import init_db
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
