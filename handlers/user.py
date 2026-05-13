@@ -1,32 +1,127 @@
-import json
-
 from aiogram import Router, types, F
-from aiogram.types import Message
+from aiogram.filters import CommandStart
+from aiogram.types import (
+    ReplyKeyboardMarkup,
+    KeyboardButton,
+    WebAppInfo,
+    FSInputFile,
+    InputMediaPhoto
+)
+
+from config import WEBAPP_URL
 
 from services.booking_service import create_booking
 
+
 router = Router()
 
+# =====================================================
+# PHOTOS
+# =====================================================
+PHOTOS = [
+    "static/images/1.JPG",
+    "static/images/2.JPG",
+    "static/images/3.JPG"
+]
 
-@router.message(F.web_app_data)
-async def webapp_booking(message: Message):
 
+async def send_photos(message: types.Message):
+    media = []
+
+    for i, photo in enumerate(PHOTOS):
+        if i == 0:
+            media.append(
+                InputMediaPhoto(
+                    media=FSInputFile(photo),
+                    caption="🏠 Городская Пауза"
+                )
+            )
+        else:
+            media.append(
+                InputMediaPhoto(media=FSInputFile(photo))
+            )
+
+    await message.answer_media_group(media)
+
+
+# =====================================================
+# KEYBOARD
+# =====================================================
+def main_keyboard():
+    return ReplyKeyboardMarkup(
+        keyboard=[
+            [
+                KeyboardButton(
+                    text="📅 Забронировать",
+                    web_app=WebAppInfo(url=WEBAPP_URL)
+                )
+            ],
+            [
+                KeyboardButton(text="📸 Фото квартиры")
+            ],
+            [
+                KeyboardButton(text="📋 Описание квартиры")
+            ],
+            [
+                KeyboardButton(text="🛠 Админка")
+            ],
+        ],
+        resize_keyboard=True
+    )
+
+
+# =====================================================
+# START
+# =====================================================
+@router.message(CommandStart())
+async def start(message: types.Message):
+    await message.answer(
+        "Добро пожаловать в «Городская Пауза» ✨",
+        reply_markup=main_keyboard()
+    )
+
+
+# =====================================================
+# BUTTONS (FIX — USING F.text)
+# =====================================================
+@router.message(F.text == "📸 Фото квартиры")
+async def photos(message: types.Message):
+    await send_photos(message)
+
+
+@router.message(F.text == "📋 Описание квартиры")
+async def description(message: types.Message):
+    await message.answer(
+        "🏠 Городская Пауза\n\n"
+        "🛏 2 гостя\n"
+        "📶 Wi-Fi\n"
+        "❄️ Кондиционер\n"
+        "🛁 Ванна\n"
+        "🍳 Кухня\n"
+        "📺 Smart TV"
+    )
+
+
+@router.message(F.text == "🛠 Админка")
+async def admin(message: types.Message):
+    await message.answer("🛠 Админка в разработке")
+
+
+# =====================================================
+# WEBAPP / TEST BOOKING (OPTIONAL DEBUG)
+# =====================================================
+@router.message()
+async def test_booking(message: types.Message):
     try:
-        data = json.loads(message.web_app_data.data)
-
         booking_id = create_booking(
             user_id=message.from_user.id,
             username=message.from_user.username or "unknown",
-            check_in=data["check_in"],
-            check_out=data["check_out"],
-            guests=int(data.get("guests", 1))
+            check_in="2026-05-15",
+            check_out="2026-05-16",
+            guests=2
         )
 
-        await message.answer(
-            f"✅ Бронь #{booking_id}\n"
-            f"📅 {data['check_in']} → {data['check_out']}\n"
-            f"👥 {data['guests']} гостей"
-        )
+        await message.answer(f"✅ Booking created: {booking_id}")
 
     except Exception as e:
-        await message.answer(f"❌ Ошибка бронирования: {str(e)}")
+        await message.answer(f"❌ Ошибка бронирования: {e}")
