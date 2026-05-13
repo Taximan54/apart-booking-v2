@@ -4,6 +4,9 @@ from datetime import datetime
 DB_PATH = "bookings.db"
 
 
+# =====================================================
+# INIT DB
+# =====================================================
 def init_db():
     with sqlite3.connect(DB_PATH) as conn:
         conn.execute("""
@@ -18,6 +21,9 @@ def init_db():
         """)
 
 
+# =====================================================
+# CHECK OVERLAP (AIRBNB LOGIC)
+# =====================================================
 def is_overlapping(check_in, check_out):
     with sqlite3.connect(DB_PATH) as conn:
         cursor = conn.cursor()
@@ -33,6 +39,9 @@ def is_overlapping(check_in, check_out):
         return cursor.fetchone() is not None
 
 
+# =====================================================
+# CREATE BOOKING
+# =====================================================
 def create_booking(user_id, username, check_in, check_out, guests):
 
     if is_overlapping(check_in, check_out):
@@ -51,6 +60,9 @@ def create_booking(user_id, username, check_in, check_out, guests):
         return cursor.lastrowid
 
 
+# =====================================================
+# GET BOOKED DATES (FOR CALENDAR)
+# =====================================================
 def get_booked_dates():
     with sqlite3.connect(DB_PATH) as conn:
         cursor = conn.cursor()
@@ -72,7 +84,9 @@ def get_booked_dates():
     return list(set(blocked))
 
 
-# ✅ ДОБАВЬ ЭТУ ФУНКЦИЮ (ЧТОБЫ RAILWAY НЕ ПАДАЛ)
+# =====================================================
+# GET ALL BOOKINGS (FOR ADMIN PANEL)
+# =====================================================
 def get_all_bookings():
     with sqlite3.connect(DB_PATH) as conn:
         cursor = conn.cursor()
@@ -96,3 +110,17 @@ def get_all_bookings():
         }
         for r in rows
     ]
+
+
+# =====================================================
+# ADMIN COMPATIBILITY (FIX RAILWAY CRASH)
+# =====================================================
+def update_booking_status(booking_id, status="active"):
+    """
+    Заглушка, чтобы admin.py не ломал импорт.
+    Можно расширить позже.
+    """
+    return {
+        "booking_id": booking_id,
+        "status": status
+    }
