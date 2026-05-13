@@ -49,3 +49,24 @@ def get_all_bookings():
         """).fetchall()
 
         return [dict(row) for row in rows]
+
+
+# =====================================================
+# UPDATE STATUS
+# =====================================================
+
+def update_booking_status(
+    booking_id: int,
+    status: str
+):
+
+    with get_db() as conn:
+
+        conn.execute("""
+            UPDATE bookings
+            SET status = ?
+            WHERE id = ?
+        """, (
+            status,
+            booking_id
+        ))
