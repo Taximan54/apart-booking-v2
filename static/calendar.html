@@ -6,86 +6,82 @@
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
 <style>
-    body {
-        font-family: -apple-system, Arial;
-        background: #f5f6f8;
-        margin: 0;
-        padding: 16px;
-    }
+body {
+    font-family: Arial;
+    background: #f5f6f8;
+    margin: 0;
+    padding: 16px;
+}
 
-    .title {
-        font-size: 20px;
-        font-weight: 700;
-        margin-bottom: 10px;
-    }
+.title {
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 10px;
+}
 
-    .card {
-        background: #fff;
-        padding: 14px;
-        border-radius: 14px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.06);
-        margin-bottom: 12px;
-    }
+.card {
+    background: white;
+    padding: 14px;
+    border-radius: 14px;
+    margin-bottom: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+}
 
-    .month {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        font-weight: 600;
-        margin-bottom: 10px;
-    }
+.month {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    font-weight: bold;
+}
 
-    .grid {
-        display: grid;
-        grid-template-columns: repeat(7, 1fr);
-        gap: 6px;
-        text-align: center;
-    }
+.grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 5px;
+    text-align: center;
+}
 
-    .day-name {
-        font-size: 12px;
-        color: gray;
-    }
+.day {
+    padding: 10px 0;
+    border-radius: 10px;
+    background: #f1f1f1;
+    cursor: pointer;
+    font-size: 14px;
+}
 
-    .day {
-        padding: 10px 0;
-        border-radius: 10px;
-        cursor: pointer;
-        font-size: 14px;
-        background: #f1f1f1;
-    }
+.day:hover {
+    background: #ddd;
+}
 
-    .day:hover {
-        background: #ddd;
-    }
+.start {
+    background: #111;
+    color: white;
+}
 
-    .selected {
-        background: #111;
-        color: white;
-    }
+.end {
+    background: #444;
+    color: white;
+}
 
-    .disabled {
-        background: #eee;
-        color: #aaa;
-        pointer-events: none;
-    }
+.in-range {
+    background: #bbb;
+}
 
-    select {
-        width: 100%;
-        padding: 12px;
-        border-radius: 10px;
-        border: 1px solid #ddd;
-    }
+.disabled {
+    background: #eee;
+    color: #aaa;
+    pointer-events: none;
+}
 
-    .btn {
-        width: 100%;
-        padding: 14px;
-        border: none;
-        border-radius: 12px;
-        background: #111;
-        color: white;
-        font-weight: bold;
-    }
+.btn {
+    width: 100%;
+    padding: 14px;
+    border: none;
+    border-radius: 12px;
+    background: #111;
+    color: white;
+    font-weight: bold;
+}
 </style>
 </head>
 
@@ -95,121 +91,130 @@
 
 <div class="card">
 
-    <div class="month">
-        <button onclick="prevMonth()">←</button>
-        <div id="monthTitle"></div>
-        <button onclick="nextMonth()">→</button>
-    </div>
+<div class="month">
+    <button onclick="prev()">←</button>
+    <div id="month"></div>
+    <button onclick="next()">→</button>
+</div>
 
-    <div class="grid" id="days"></div>
+<div class="grid" id="calendar"></div>
 
 </div>
 
 <div class="card">
-
-    <h3>⏰ Время</h3>
-    <select id="time">
-        <option>12:00</option>
-        <option>14:00</option>
-        <option>16:00</option>
-        <option>18:00</option>
-        <option>20:00</option>
-    </select>
-
+<h3>👥 Гости</h3>
+<select id="guests">
+    <option value="1">1</option>
+    <option value="2" selected>2</option>
+    <option value="3">3</option>
+    <option value="4">4</option>
+</select>
 </div>
 
-<div class="card">
-
-    <h3>👥 Гости</h3>
-    <select id="guests">
-        <option value="1">1</option>
-        <option value="2" selected>2</option>
-        <option value="3">3</option>
-        <option value="4">4</option>
-    </select>
-
-</div>
-
-<button class="btn" onclick="sendBooking()">Забронировать</button>
+<button class="btn" onclick="send()">Забронировать</button>
 
 <script>
 const tg = window.Telegram.WebApp;
 tg.expand();
 
-let selectedDate = null;
-
 let current = new Date();
 
+let startDate = null;
+let endDate = null;
+
+// 🚨 ЗАНЯТЫЕ ДАТЫ (пока хардкод, потом из backend)
+let blocked = [
+    "2026-05-10",
+    "2026-05-11"
+];
+
 const months = [
- "Январь","Февраль","Март","Апрель","Май","Июнь",
- "Июль","Август","Сентябрь","Октябрь","Ноябрь","Декабрь"
+"Янв","Фев","Мар","Апр","Май","Июн",
+"Июл","Авг","Сен","Окт","Ноя","Дек"
 ];
 
 function render() {
 
-    const year = current.getFullYear();
-    const month = current.getMonth();
+    const y = current.getFullYear();
+    const m = current.getMonth();
 
-    document.getElementById("monthTitle").innerText =
-        months[month] + " " + year;
+    document.getElementById("month").innerText =
+        months[m] + " " + y;
 
-    const daysEl = document.getElementById("days");
-    daysEl.innerHTML = "";
+    const cal = document.getElementById("calendar");
+    cal.innerHTML = "";
 
-    const firstDay = new Date(year, month, 1).getDay();
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const first = new Date(y,m,1).getDay();
+    const days = new Date(y,m+1,0).getDate();
 
-    const offset = (firstDay === 0 ? 6 : firstDay - 1);
-
-    for (let i = 0; i < offset; i++) {
-        daysEl.innerHTML += `<div></div>`;
+    for(let i=0;i<(first===0?6:first-1);i++){
+        cal.innerHTML += "<div></div>";
     }
 
-    for (let d = 1; d <= daysInMonth; d++) {
+    for(let d=1; d<=days; d++){
 
-        let fullDate = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+        let date = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
 
-        daysEl.innerHTML += `
-            <div class="day" onclick="selectDate('${fullDate}', this)">
+        let cls = "day";
+
+        if(blocked.includes(date)){
+            cls += " disabled";
+        }
+
+        if(startDate === date) cls += " start";
+        if(endDate === date) cls += " end";
+
+        if(startDate && endDate && date > startDate && date < endDate){
+            cls += " in-range";
+        }
+
+        cal.innerHTML += `
+            <div class="${cls}" onclick="selectDate('${date}')">
                 ${d}
             </div>
         `;
     }
 }
 
-function selectDate(date, el) {
+function selectDate(date){
 
-    document.querySelectorAll(".day").forEach(d => d.classList.remove("selected"));
+    if(!startDate || (startDate && endDate)) {
+        startDate = date;
+        endDate = null;
+    } else {
+        if(date < startDate){
+            endDate = startDate;
+            startDate = date;
+        } else {
+            endDate = date;
+        }
+    }
 
-    el.classList.add("selected");
-
-    selectedDate = date;
-}
-
-function prevMonth() {
-    current.setMonth(current.getMonth() - 1);
     render();
 }
 
-function nextMonth() {
-    current.setMonth(current.getMonth() + 1);
+function prev(){
+    current.setMonth(current.getMonth()-1);
     render();
 }
 
-function sendBooking() {
+function next(){
+    current.setMonth(current.getMonth()+1);
+    render();
+}
 
-    if (!selectedDate) {
-        alert("Выберите дату");
+function send(){
+
+    if(!startDate || !endDate){
+        alert("Выберите диапазон дат");
         return;
     }
 
-    const data = {
-        date: selectedDate,
-        time: document.getElementById("time").value,
+    tg.sendData(JSON.stringify({
+        check_in: startDate,
+        check_out: endDate,
         guests: Number(document.getElementById("guests").value)
-    };
-
-    tg.sendData(JSON.stringify(data));
+    }));
 
     tg.close();
 }
