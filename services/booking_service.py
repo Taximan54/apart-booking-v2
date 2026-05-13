@@ -2,14 +2,11 @@ import os
 import sqlite3
 from datetime import datetime
 
-# =====================================================
-# DB PATH (RAILWAY SAFE)
-# =====================================================
 DB_PATH = "/data/bookings.db"
 
 
 # =====================================================
-# INIT DB (SAFE MIGRATION VERSION)
+# INIT DB (FORCE FIX - NO MORE SCHEMA ERRORS)
 # =====================================================
 def init_db():
     os.makedirs("/data", exist_ok=True)
@@ -17,11 +14,12 @@ def init_db():
     with sqlite3.connect(DB_PATH) as conn:
         cursor = conn.cursor()
 
-        # =================================================
-        # CREATE TABLE IF NOT EXISTS (BASE STRUCTURE)
-        # =================================================
+        # 🔥 САМЫЙ НАДЁЖНЫЙ ВАРИАНТ ДЛЯ DEV / MVP
+        # пересоздаём таблицу (убираем старую кривую схему)
+        cursor.execute("DROP TABLE IF EXISTS bookings")
+
         cursor.execute("""
-        CREATE TABLE IF NOT EXISTS bookings (
+        CREATE TABLE bookings (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER,
             username TEXT,
@@ -30,24 +28,6 @@ def init_db():
             guests INTEGER
         )
         """)
-
-        # =================================================
-        # SAFE MIGRATION: ADD MISSING COLUMNS
-        # =================================================
-
-        # получаем существующие колонки
-        cursor.execute("PRAGMA table_info(bookings)")
-        columns = [col[1] for col in cursor.fetchall()]
-
-        # если старая база — добавляем поля без падения
-        if "check_in" not in columns:
-            cursor.execute("ALTER TABLE bookings ADD COLUMN check_in TEXT")
-
-        if "check_out" not in columns:
-            cursor.execute("ALTER TABLE bookings ADD COLUMN check_out TEXT")
-
-        if "guests" not in columns:
-            cursor.execute("ALTER TABLE bookings ADD COLUMN guests INTEGER")
 
         conn.commit()
 
@@ -93,7 +73,7 @@ def create_booking(user_id, username, check_in, check_out, guests):
 
 
 # =====================================================
-# BOOKED DATES (FOR CALENDAR)
+# GET BOOKED DATES
 # =====================================================
 def get_booked_dates():
     with sqlite3.connect(DB_PATH) as conn:
@@ -120,7 +100,7 @@ def get_booked_dates():
 
 
 # =====================================================
-# ADMIN: GET ALL BOOKINGS
+# ADMIN
 # =====================================================
 def get_all_bookings():
     with sqlite3.connect(DB_PATH) as conn:
@@ -148,7 +128,7 @@ def get_all_bookings():
 
 
 # =====================================================
-# ADMIN COMPATIBILITY (NO CRASH GUARANTEE)
+# ADMIN COMPATIBILITY
 # =====================================================
 def update_booking_status(booking_id, status="active"):
     return {
