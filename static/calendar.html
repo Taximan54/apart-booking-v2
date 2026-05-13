@@ -1,68 +1,92 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <title>Городская Пауза — бронирование</title>
+<meta charset="UTF-8">
+<title>Городская Пауза — календарь</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
 
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+    body {
+        font-family: -apple-system, Arial;
+        background: #f5f6f8;
+        margin: 0;
+        padding: 16px;
+    }
 
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, Arial;
-            background: #f5f6f8;
-            margin: 0;
-            padding: 20px;
-        }
+    .title {
+        font-size: 20px;
+        font-weight: 700;
+        margin-bottom: 10px;
+    }
 
-        .card {
-            background: white;
-            padding: 16px;
-            border-radius: 14px;
-            margin-bottom: 14px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.06);
-        }
+    .card {
+        background: #fff;
+        padding: 14px;
+        border-radius: 14px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+        margin-bottom: 12px;
+    }
 
-        h2 {
-            font-size: 16px;
-            margin: 0 0 10px 0;
-        }
+    .month {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-weight: 600;
+        margin-bottom: 10px;
+    }
 
-        input, select {
-            width: 100%;
-            padding: 12px;
-            border-radius: 10px;
-            border: 1px solid #ddd;
-            font-size: 14px;
-        }
+    .grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 6px;
+        text-align: center;
+    }
 
-        .btn {
-            width: 100%;
-            padding: 14px;
-            border: none;
-            border-radius: 12px;
-            background: #111;
-            color: white;
-            font-size: 15px;
-            font-weight: bold;
-            cursor: pointer;
-        }
+    .day-name {
+        font-size: 12px;
+        color: gray;
+    }
 
-        .btn:active {
-            transform: scale(0.98);
-        }
+    .day {
+        padding: 10px 0;
+        border-radius: 10px;
+        cursor: pointer;
+        font-size: 14px;
+        background: #f1f1f1;
+    }
 
-        .title {
-            font-size: 20px;
-            font-weight: bold;
-            margin-bottom: 20px;
-        }
+    .day:hover {
+        background: #ddd;
+    }
 
-        .hint {
-            font-size: 12px;
-            color: gray;
-            margin-top: 6px;
-        }
-    </style>
+    .selected {
+        background: #111;
+        color: white;
+    }
+
+    .disabled {
+        background: #eee;
+        color: #aaa;
+        pointer-events: none;
+    }
+
+    select {
+        width: 100%;
+        padding: 12px;
+        border-radius: 10px;
+        border: 1px solid #ddd;
+    }
+
+    .btn {
+        width: 100%;
+        padding: 14px;
+        border: none;
+        border-radius: 12px;
+        background: #111;
+        color: white;
+        font-weight: bold;
+    }
+</style>
 </head>
 
 <body>
@@ -70,61 +94,127 @@
 <div class="title">🏠 Городская Пауза</div>
 
 <div class="card">
-    <h2>📅 Дата заезда</h2>
-    <input type="date" id="date">
-    <div class="hint">Выберите день бронирования</div>
+
+    <div class="month">
+        <button onclick="prevMonth()">←</button>
+        <div id="monthTitle"></div>
+        <button onclick="nextMonth()">→</button>
+    </div>
+
+    <div class="grid" id="days"></div>
+
 </div>
 
 <div class="card">
-    <h2>⏰ Время заезда</h2>
+
+    <h3>⏰ Время</h3>
     <select id="time">
-        <option value="12:00">12:00</option>
-        <option value="14:00">14:00</option>
-        <option value="16:00">16:00</option>
-        <option value="18:00">18:00</option>
-        <option value="20:00">20:00</option>
+        <option>12:00</option>
+        <option>14:00</option>
+        <option>16:00</option>
+        <option>18:00</option>
+        <option>20:00</option>
     </select>
+
 </div>
 
 <div class="card">
-    <h2>👥 Гости</h2>
+
+    <h3>👥 Гости</h3>
     <select id="guests">
-        <option value="1">1 гость</option>
-        <option value="2" selected>2 гостя</option>
-        <option value="3">3 гостя</option>
-        <option value="4">4 гостя</option>
+        <option value="1">1</option>
+        <option value="2" selected>2</option>
+        <option value="3">3</option>
+        <option value="4">4</option>
     </select>
+
 </div>
 
-<button class="btn" onclick="sendBooking()">
-    Забронировать
-</button>
+<button class="btn" onclick="sendBooking()">Забронировать</button>
 
 <script>
 const tg = window.Telegram.WebApp;
 tg.expand();
 
+let selectedDate = null;
+
+let current = new Date();
+
+const months = [
+ "Январь","Февраль","Март","Апрель","Май","Июнь",
+ "Июль","Август","Сентябрь","Октябрь","Ноябрь","Декабрь"
+];
+
+function render() {
+
+    const year = current.getFullYear();
+    const month = current.getMonth();
+
+    document.getElementById("monthTitle").innerText =
+        months[month] + " " + year;
+
+    const daysEl = document.getElementById("days");
+    daysEl.innerHTML = "";
+
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+    const offset = (firstDay === 0 ? 6 : firstDay - 1);
+
+    for (let i = 0; i < offset; i++) {
+        daysEl.innerHTML += `<div></div>`;
+    }
+
+    for (let d = 1; d <= daysInMonth; d++) {
+
+        let fullDate = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+
+        daysEl.innerHTML += `
+            <div class="day" onclick="selectDate('${fullDate}', this)">
+                ${d}
+            </div>
+        `;
+    }
+}
+
+function selectDate(date, el) {
+
+    document.querySelectorAll(".day").forEach(d => d.classList.remove("selected"));
+
+    el.classList.add("selected");
+
+    selectedDate = date;
+}
+
+function prevMonth() {
+    current.setMonth(current.getMonth() - 1);
+    render();
+}
+
+function nextMonth() {
+    current.setMonth(current.getMonth() + 1);
+    render();
+}
+
 function sendBooking() {
 
-    const date = document.getElementById("date").value;
-    const time = document.getElementById("time").value;
-    const guests = document.getElementById("guests").value;
-
-    if (!date) {
+    if (!selectedDate) {
         alert("Выберите дату");
         return;
     }
 
     const data = {
-        date: date,
-        time: time,
-        guests: Number(guests)
+        date: selectedDate,
+        time: document.getElementById("time").value,
+        guests: Number(document.getElementById("guests").value)
     };
 
     tg.sendData(JSON.stringify(data));
 
     tg.close();
 }
+
+render();
 </script>
 
 </body>
