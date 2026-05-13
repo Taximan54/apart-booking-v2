@@ -1,9 +1,23 @@
 import os
 
-BOT_TOKEN = os.environ["BOT_TOKEN"]
+# =====================================================
+# BOT TOKEN
+# =====================================================
+BOT_TOKEN = os.getenv("BOT_TOKEN")
 
+# =====================================================
+# ADMINS
+# =====================================================
 ADMIN_IDS = [
     1008661058
 ]
 
-WEBAPP_URL = "https://apart-booking-production.up.railway.app"
+# =====================================================
+# BASE URL (RAILWAY DOMAIN)
+# =====================================================
+BASE_URL = "https://apart-booking-v2-production.up.railway.app"
+
+# =====================================================
+# WEBAPP (КАЛЕНДАРЬ)
+# =====================================================
+WEBAPP_URL = f"{BASE_URL}/static/calendar.html"

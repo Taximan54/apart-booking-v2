@@ -27,13 +27,13 @@ app = FastAPI()
 
 
 # =====================================================
-# STATIC FILES
+# STATIC FILES (WEBAPP + ASSETS)
 # =====================================================
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
 # =====================================================
-# BOT
+# BOT INIT
 # =====================================================
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
@@ -43,15 +43,17 @@ dp.include_router(admin_router)
 
 
 # =====================================================
-# WEB PAGE
+# ROOT PAGE (TEST)
 # =====================================================
 @app.get("/", response_class=HTMLResponse)
 async def home():
     return """
     <html>
-        <head><title>Городская Пауза</title></head>
+        <head>
+            <title>Городская Пауза</title>
+        </head>
         <body style="font-family:Arial;padding:40px;">
-            <h1>Городская Пауза</h1>
+            <h1>🏠 Городская Пауза</h1>
             <p>Сайт работает 🚀</p>
         </body>
     </html>
@@ -59,7 +61,7 @@ async def home():
 
 
 # =====================================================
-# START BOT
+# START BOT (RAILWAY SAFE)
 # =====================================================
 @app.on_event("startup")
 async def startup():
