@@ -22,19 +22,19 @@ init_db()
 
 
 # =====================================================
-# FASTAPI APP
+# APP
 # =====================================================
 app = FastAPI()
 
 
 # =====================================================
-# STATIC FILES (WEBAPP)
+# STATIC
 # =====================================================
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
 # =====================================================
-# BOT INIT
+# BOT
 # =====================================================
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
@@ -44,15 +44,13 @@ dp.include_router(admin_router)
 
 
 # =====================================================
-# ROOT TEST PAGE
+# HOME PAGE
 # =====================================================
 @app.get("/", response_class=HTMLResponse)
 async def home():
     return """
     <html>
-        <head>
-            <title>Городская Пауза</title>
-        </head>
+        <head><title>Городская Пауза</title></head>
         <body style="font-family:Arial;padding:40px;">
             <h1>🏠 Городская Пауза</h1>
             <p>Сайт работает 🚀</p>
@@ -62,14 +60,11 @@ async def home():
 
 
 # =====================================================
-# API: BOOKED DATES (AIRBNB FEATURE)
+# API: BOOKED DATES
 # =====================================================
 @app.get("/api/booked-dates")
 async def booked_dates():
-    try:
-        return JSONResponse(get_booked_dates())
-    except Exception as e:
-        return JSONResponse({"error": str(e)}, status_code=500)
+    return JSONResponse(get_booked_dates())
 
 
 # =====================================================

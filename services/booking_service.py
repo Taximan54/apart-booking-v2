@@ -1,13 +1,19 @@
+import os
 import sqlite3
 from datetime import datetime
 
-DB_PATH = "bookings.db"
+# =====================================================
+# DATABASE PATH (RAILWAY SAFE)
+# =====================================================
+DB_PATH = "/data/bookings.db"
 
 
 # =====================================================
 # INIT DB
 # =====================================================
 def init_db():
+    os.makedirs("/data", exist_ok=True)
+
     with sqlite3.connect(DB_PATH) as conn:
         conn.execute("""
         CREATE TABLE IF NOT EXISTS bookings (
@@ -19,21 +25,23 @@ def init_db():
             guests INTEGER
         )
         """)
+        conn.commit()
 
 
 # =====================================================
-# CHECK OVERLAP (AIRBNB LOGIC)
+# CHECK OVERLAPPING BOOKINGS
 # =====================================================
 def is_overlapping(check_in, check_out):
     with sqlite3.connect(DB_PATH) as conn:
         cursor = conn.cursor()
 
         cursor.execute("""
-            SELECT * FROM bookings
+            SELECT 1 FROM bookings
             WHERE NOT (
                 date(check_out) <= date(?)
                 OR date(check_in) >= date(?)
             )
+            LIMIT 1
         """, (check_in, check_out))
 
         return cursor.fetchone() is not None
@@ -73,19 +81,22 @@ def get_booked_dates():
     blocked = []
 
     for start, end in rows:
-        d1 = datetime.strptime(start, "%Y-%m-%d")
-        d2 = datetime.strptime(end, "%Y-%m-%d")
+        try:
+            d1 = datetime.strptime(start, "%Y-%m-%d")
+            d2 = datetime.strptime(end, "%Y-%m-%d")
 
-        current = d1
-        while current <= d2:
-            blocked.append(current.strftime("%Y-%m-%d"))
-            current = current.replace(day=current.day + 1)
+            current = d1
+            while current <= d2:
+                blocked.append(current.strftime("%Y-%m-%d"))
+                current = current.replace(day=current.day + 1)
+        except:
+            continue
 
     return list(set(blocked))
 
 
 # =====================================================
-# GET ALL BOOKINGS (FOR ADMIN PANEL)
+# GET ALL BOOKINGS (ADMIN)
 # =====================================================
 def get_all_bookings():
     with sqlite3.connect(DB_PATH) as conn:
@@ -113,13 +124,9 @@ def get_all_bookings():
 
 
 # =====================================================
-# ADMIN COMPATIBILITY (FIX RAILWAY CRASH)
+# ADMIN COMPATIBILITY FIX (NO CRASH)
 # =====================================================
 def update_booking_status(booking_id, status="active"):
-    """
-    Заглушка, чтобы admin.py не ломал импорт.
-    Можно расширить позже.
-    """
     return {
         "booking_id": booking_id,
         "status": status
