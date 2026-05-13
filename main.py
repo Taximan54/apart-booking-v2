@@ -1,7 +1,7 @@
 import asyncio
 
 from fastapi import FastAPI
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
 from aiogram import Bot, Dispatcher
@@ -12,13 +12,14 @@ from handlers.user import router as user_router
 from handlers.admin import router as admin_router
 
 from database.models import init_db
-from services.booking_service import get_booked_dates
+from services.booking_service import init_db as init_booking_db
 
 
 # =====================================================
 # INIT DB
 # =====================================================
 init_db()
+init_booking_db()
 
 
 # =====================================================
@@ -26,10 +27,6 @@ init_db()
 # =====================================================
 app = FastAPI()
 
-
-# =====================================================
-# STATIC
-# =====================================================
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
@@ -44,35 +41,19 @@ dp.include_router(admin_router)
 
 
 # =====================================================
-# HOME PAGE
+# BOT RUNNER (CRITICAL FIX)
 # =====================================================
-@app.get("/", response_class=HTMLResponse)
-async def home():
-    return """
-    <html>
-        <head><title>Городская Пауза</title></head>
-        <body style="font-family:Arial;padding:40px;">
-            <h1>🏠 Городская Пауза</h1>
-            <p>Сайт работает 🚀</p>
-        </body>
-    </html>
-    """
+async def start_bot():
+    await dp.start_polling(bot)
 
 
 # =====================================================
-# API: BOOKED DATES
-# =====================================================
-@app.get("/api/booked-dates")
-async def booked_dates():
-    return JSONResponse(get_booked_dates())
-
-
-# =====================================================
-# START BOT
+# STARTUP
 # =====================================================
 @app.on_event("startup")
 async def startup():
-    asyncio.create_task(dp.start_polling(bot))
+    # важно: НЕ create_task без await защиты
+    asyncio.create_task(start_bot())
 
 
 # =====================================================
@@ -81,3 +62,21 @@ async def startup():
 @app.on_event("shutdown")
 async def shutdown():
     await bot.session.close()
+
+
+# =====================================================
+# ROOT
+# =====================================================
+@app.get("/", response_class=HTMLResponse)
+async def home():
+    return """
+    <html>
+        <head>
+            <title>Городская Пауза</title>
+        </head>
+        <body style="font-family:Arial;padding:40px;">
+            <h1>🏠 Городская Пауза</h1>
+            <p>Сайт работает 🚀</p>
+        </body>
+    </html>
+    """

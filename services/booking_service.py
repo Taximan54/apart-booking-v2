@@ -2,23 +2,25 @@ import os
 import sqlite3
 from datetime import datetime
 
+# =====================================================
+# DATABASE PATH (RAILWAY VOLUME)
+# =====================================================
 DB_PATH = "/data/bookings.db"
 
 
 # =====================================================
-# INIT DB (FORCE FIX - NO MORE SCHEMA ERRORS)
+# INIT DB (FULL RESET FIX)
 # =====================================================
 def init_db():
     os.makedirs("/data", exist_ok=True)
 
+    # 🔥 УДАЛЯЕМ СТАРУЮ КРИВУЮ БАЗУ
+    if os.path.exists(DB_PATH):
+        os.remove(DB_PATH)
+
+    # 🔥 СОЗДАЁМ НОВУЮ ЧИСТУЮ БАЗУ
     with sqlite3.connect(DB_PATH) as conn:
-        cursor = conn.cursor()
-
-        # 🔥 САМЫЙ НАДЁЖНЫЙ ВАРИАНТ ДЛЯ DEV / MVP
-        # пересоздаём таблицу (убираем старую кривую схему)
-        cursor.execute("DROP TABLE IF EXISTS bookings")
-
-        cursor.execute("""
+        conn.execute("""
         CREATE TABLE bookings (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER,
@@ -28,12 +30,11 @@ def init_db():
             guests INTEGER
         )
         """)
-
         conn.commit()
 
 
 # =====================================================
-# OVERLAP CHECK (AIRBNB LOGIC)
+# CHECK OVERLAP (AIRBNB LOGIC)
 # =====================================================
 def is_overlapping(check_in, check_out):
     with sqlite3.connect(DB_PATH) as conn:
@@ -73,7 +74,7 @@ def create_booking(user_id, username, check_in, check_out, guests):
 
 
 # =====================================================
-# GET BOOKED DATES
+# GET BOOKED DATES (FOR CALENDAR)
 # =====================================================
 def get_booked_dates():
     with sqlite3.connect(DB_PATH) as conn:
@@ -100,7 +101,7 @@ def get_booked_dates():
 
 
 # =====================================================
-# ADMIN
+# GET ALL BOOKINGS (ADMIN)
 # =====================================================
 def get_all_bookings():
     with sqlite3.connect(DB_PATH) as conn:
@@ -128,7 +129,7 @@ def get_all_bookings():
 
 
 # =====================================================
-# ADMIN COMPATIBILITY
+# ADMIN COMPATIBILITY (NO CRASH)
 # =====================================================
 def update_booking_status(booking_id, status="active"):
     return {
