@@ -13,7 +13,7 @@ from services.booking_service import init_db, get_booked_ranges
 
 
 # =====================================================
-# INIT DB
+# INIT DB (ОДИН РАЗ)
 # =====================================================
 init_db()
 
@@ -36,7 +36,7 @@ dp.include_router(admin_router)
 
 
 # =====================================================
-# API FOR CALENDAR
+# API ДЛЯ КАЛЕНДАРЯ
 # =====================================================
 @app.get("/api/booked-dates")
 async def booked_dates():

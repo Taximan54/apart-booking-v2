@@ -25,14 +25,8 @@ async def start(m: types.Message):
     await m.answer("🏠 Городская Пауза", reply_markup=kb())
 
 
-# =====================================================
-# WEBAPP HANDLER (CRITICAL)
-# =====================================================
-@router.message()
+@router.message(F.web_app_data)
 async def webapp_handler(message: types.Message):
-
-    if not message.web_app_data:
-        return
 
     data = json.loads(message.web_app_data.data)
 
@@ -49,3 +43,13 @@ async def webapp_handler(message: types.Message):
 
     except Exception as e:
         await message.answer(f"❌ Ошибка бронирования: {e}")
+
+
+@router.message(F.text == "📸 Фото квартиры")
+async def photos(m: types.Message):
+    await m.answer("📸 Фото раздел")
+
+
+@router.message(F.text == "📋 Описание квартиры")
+async def desc(m: types.Message):
+    await m.answer("🏠 Описание квартиры")

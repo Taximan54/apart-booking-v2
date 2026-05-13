@@ -1,123 +1,57 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="UTF-8">
-    <title>Городская Пауза — бронирование</title>
+<meta charset="UTF-8">
+<title>Booking</title>
 
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
 
-    <style>
-        body {
-            font-family: Arial;
-            padding: 20px;
-        }
+<style>
+body {
+    font-family: Arial;
+    padding: 20px;
+    background: #f5f5f5;
+}
 
-        h2 {
-            margin-bottom: 10px;
-        }
-
-        .card {
-            padding: 15px;
-            border-radius: 12px;
-            border: 1px solid #ddd;
-            margin-bottom: 15px;
-        }
-
-        input, select, button {
-            width: 100%;
-            padding: 10px;
-            margin-top: 8px;
-            border-radius: 8px;
-            border: 1px solid #ccc;
-        }
-
-        button {
-            background: black;
-            color: white;
-            font-weight: bold;
-            cursor: pointer;
-        }
-
-        button:active {
-            transform: scale(0.98);
-        }
-    </style>
+.card {
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+}
+input, button {
+    width: 100%;
+    padding: 10px;
+    margin-top: 10px;
+}
+button {
+    background: black;
+    color: white;
+}
+</style>
 </head>
 
 <body>
 
-<h2>📅 Выберите дату</h2>
-
 <div class="card">
+    <h2>🏠 Booking</h2>
 
-    <input type="date" id="date">
+    <input type="date" id="checkin">
+    <input type="date" id="checkout">
 
+    <button onclick="send()">Забронировать</button>
 </div>
-
-
-<h2>⏰ Время</h2>
-
-<div class="card">
-
-    <select id="time">
-
-        <option value="12:00">12:00</option>
-        <option value="14:00">14:00</option>
-        <option value="16:00">16:00</option>
-        <option value="18:00">18:00</option>
-        <option value="20:00">20:00</option>
-
-    </select>
-
-</div>
-
-
-<h2>👥 Гости</h2>
-
-<div class="card">
-
-    <select id="guests">
-
-        <option value="1">1 гость</option>
-        <option value="2">2 гостя</option>
-        <option value="3">3 гостя</option>
-        <option value="4">4 гостя</option>
-
-    </select>
-
-</div>
-
-
-<button onclick="sendBooking()">
-    Забронировать
-</button>
-
 
 <script>
-
 const tg = window.Telegram.WebApp;
 tg.expand();
 
-function sendBooking() {
-
-    const date = document.getElementById("date").value;
-    const time = document.getElementById("time").value;
-    const guests = document.getElementById("guests").value;
-
-    if (!date) {
-        alert("Выберите дату");
-        return;
-    }
-
-    const data = {
-        date: date,
-        time: time,
-        guests: guests
-    };
-
-    tg.sendData(JSON.stringify(data));
+function send() {
+    tg.sendData(JSON.stringify({
+        check_in: document.getElementById("checkin").value,
+        check_out: document.getElementById("checkout").value,
+        guests: 2
+    }));
 }
-
 </script>
 
 </body>

@@ -24,13 +24,12 @@ def init_db():
 
 
 # =====================================================
-# CREATE BOOKING
+# CREATE BOOKING (С ЗАЩИТОЙ ОТ ПЕРЕСЕЧЕНИЙ)
 # =====================================================
 def create_booking(user_id, username, check_in, check_out, guests):
     with sqlite3.connect(DB_PATH) as conn:
         cursor = conn.cursor()
 
-        # проверка пересечений
         cursor.execute("""
         SELECT 1 FROM bookings
         WHERE NOT (
@@ -52,7 +51,7 @@ def create_booking(user_id, username, check_in, check_out, guests):
 
 
 # =====================================================
-# CALENDAR (WEBAPP)
+# WEBAPP: занятые даты
 # =====================================================
 def get_booked_ranges():
     with sqlite3.connect(DB_PATH) as conn:
@@ -66,7 +65,7 @@ def get_booked_ranges():
 
 
 # =====================================================
-# ADMIN COMPATIBILITY LAYER (ВАЖНО!)
+# ADMIN (НЕ ЛОМАЕТСЯ ДАЖЕ ЕСЛИ СТАРЫЙ КОД ЕСТЬ)
 # =====================================================
 def get_all_bookings():
     with sqlite3.connect(DB_PATH) as conn:
@@ -76,8 +75,4 @@ def get_all_bookings():
 
 
 def update_booking_status(*args, **kwargs):
-    """
-    Заглушка, чтобы старый admin.py НЕ ломал проект.
-    Если админка не готова — просто не падаем.
-    """
     return True
