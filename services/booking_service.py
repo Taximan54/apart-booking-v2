@@ -4,6 +4,9 @@ import sqlite3
 DB_PATH = "/data/bookings.db"
 
 
+# =====================================================
+# INIT DB
+# =====================================================
 def init_db():
     os.makedirs("/data", exist_ok=True)
 
@@ -20,10 +23,14 @@ def init_db():
         """)
 
 
+# =====================================================
+# CREATE BOOKING
+# =====================================================
 def create_booking(user_id, username, check_in, check_out, guests):
     with sqlite3.connect(DB_PATH) as conn:
         cursor = conn.cursor()
 
+        # проверка пересечений
         cursor.execute("""
         SELECT 1 FROM bookings
         WHERE NOT (
@@ -44,6 +51,9 @@ def create_booking(user_id, username, check_in, check_out, guests):
         return cursor.lastrowid
 
 
+# =====================================================
+# CALENDAR (WEBAPP)
+# =====================================================
 def get_booked_ranges():
     with sqlite3.connect(DB_PATH) as conn:
         cursor = conn.cursor()
@@ -53,3 +63,21 @@ def get_booked_ranges():
             {"check_in": r[0], "check_out": r[1]}
             for r in cursor.fetchall()
         ]
+
+
+# =====================================================
+# ADMIN COMPATIBILITY LAYER (ВАЖНО!)
+# =====================================================
+def get_all_bookings():
+    with sqlite3.connect(DB_PATH) as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM bookings ORDER BY id DESC")
+        return cursor.fetchall()
+
+
+def update_booking_status(*args, **kwargs):
+    """
+    Заглушка, чтобы старый admin.py НЕ ломал проект.
+    Если админка не готова — просто не падаем.
+    """
+    return True
