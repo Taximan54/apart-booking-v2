@@ -3,19 +3,24 @@ import sqlite3
 from datetime import datetime
 
 # =====================================================
-# DATABASE PATH (RAILWAY SAFE)
+# DB PATH (RAILWAY SAFE)
 # =====================================================
 DB_PATH = "/data/bookings.db"
 
 
 # =====================================================
-# INIT DB
+# INIT DB (SAFE MIGRATION VERSION)
 # =====================================================
 def init_db():
     os.makedirs("/data", exist_ok=True)
 
     with sqlite3.connect(DB_PATH) as conn:
-        conn.execute("""
+        cursor = conn.cursor()
+
+        # =================================================
+        # CREATE TABLE IF NOT EXISTS (BASE STRUCTURE)
+        # =================================================
+        cursor.execute("""
         CREATE TABLE IF NOT EXISTS bookings (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER,
@@ -25,11 +30,30 @@ def init_db():
             guests INTEGER
         )
         """)
+
+        # =================================================
+        # SAFE MIGRATION: ADD MISSING COLUMNS
+        # =================================================
+
+        # получаем существующие колонки
+        cursor.execute("PRAGMA table_info(bookings)")
+        columns = [col[1] for col in cursor.fetchall()]
+
+        # если старая база — добавляем поля без падения
+        if "check_in" not in columns:
+            cursor.execute("ALTER TABLE bookings ADD COLUMN check_in TEXT")
+
+        if "check_out" not in columns:
+            cursor.execute("ALTER TABLE bookings ADD COLUMN check_out TEXT")
+
+        if "guests" not in columns:
+            cursor.execute("ALTER TABLE bookings ADD COLUMN guests INTEGER")
+
         conn.commit()
 
 
 # =====================================================
-# CHECK OVERLAPPING BOOKINGS
+# OVERLAP CHECK (AIRBNB LOGIC)
 # =====================================================
 def is_overlapping(check_in, check_out):
     with sqlite3.connect(DB_PATH) as conn:
@@ -69,7 +93,7 @@ def create_booking(user_id, username, check_in, check_out, guests):
 
 
 # =====================================================
-# GET BOOKED DATES (FOR CALENDAR)
+# BOOKED DATES (FOR CALENDAR)
 # =====================================================
 def get_booked_dates():
     with sqlite3.connect(DB_PATH) as conn:
@@ -96,7 +120,7 @@ def get_booked_dates():
 
 
 # =====================================================
-# GET ALL BOOKINGS (ADMIN)
+# ADMIN: GET ALL BOOKINGS
 # =====================================================
 def get_all_bookings():
     with sqlite3.connect(DB_PATH) as conn:
@@ -124,7 +148,7 @@ def get_all_bookings():
 
 
 # =====================================================
-# ADMIN COMPATIBILITY FIX (NO CRASH)
+# ADMIN COMPATIBILITY (NO CRASH GUARANTEE)
 # =====================================================
 def update_booking_status(booking_id, status="active"):
     return {
