@@ -146,3 +146,23 @@ async def admin(message: types.Message):
     await message.answer(
         "🛠 Админка скоро будет перенесена отдельно"
     )
+
+from aiogram.types import Message
+
+from services.booking_service import create_booking
+
+
+@router.message()
+async def test_booking(message: Message):
+
+    booking_id = create_booking(
+        user_id=message.from_user.id,
+        username=message.from_user.username or "unknown",
+        date="2026-05-15",
+        time="19:00",
+        guests=2
+    )
+
+    await message.answer(
+        f"✅ Booking created: {booking_id}"
+    )

@@ -1,29 +1,17 @@
 import sqlite3
+from contextlib import contextmanager
 
-DB_NAME = "database/database.db"
+# ⚠️ ВАЖНО: Railway volume путь
+DB_PATH = "/data/bookings.db"
 
 
-def get_connection():
-    conn = sqlite3.connect(DB_NAME)
+@contextmanager
+def get_db():
+    conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
-    return conn
 
-
-def init_db():
-
-    conn = get_connection()
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS bookings (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            checkin TEXT,
-            checkout TEXT,
-            nights INTEGER,
-            total INTEGER,
-            status TEXT
-        )
-    """)
-
-    conn.commit()
-    conn.close()
+    try:
+        yield conn
+        conn.commit()
+    finally:
+        conn.close()
