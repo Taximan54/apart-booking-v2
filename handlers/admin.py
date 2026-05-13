@@ -1,66 +1,42 @@
-from aiogram import Router, types
-from aiogram.types import (
-    ReplyKeyboardMarkup,
-    KeyboardButton
-)
+from aiogram import Router
+from aiogram.filters import Command
+from aiogram.types import Message
 
-from config import ADMIN_IDS
+from services.booking_service import get_all_bookings
+
 
 router = Router()
 
+
 # =====================================================
-# АДМИНКА
+# BOOKINGS
 # =====================================================
 
-@router.message(lambda m: m.text == "🛠 Админка")
-async def admin_panel(message: types.Message):
+@router.message(Command("bookings"))
+async def bookings(message: Message):
 
-    if message.from_user.id not in ADMIN_IDS:
+    bookings = get_all_bookings()
+
+    if not bookings:
+
+        await message.answer(
+            "❌ Бронирований нет"
+        )
+
         return
 
-    keyboard = ReplyKeyboardMarkup(
+    text = "📋 Все бронирования:\n\n"
 
-        keyboard=[
+    for booking in bookings:
 
-            [
-                KeyboardButton(text="📋 Все брони"),
-                KeyboardButton(text="📊 Статистика")
-            ],
+        text += (
+            f"ID: {booking['id']}\n"
+            f"User: @{booking['username']}\n"
+            f"Date: {booking['date']}\n"
+            f"Time: {booking['time']}\n"
+            f"Guests: {booking['guests']}\n"
+            f"Status: {booking['status']}\n"
+            f"-------------------\n"
+        )
 
-            [
-                KeyboardButton(text="❌ Удалить бронь"),
-                KeyboardButton(text="📅 Заблокировать даты")
-            ],
-
-            [
-                KeyboardButton(text="🔓 Разблокировать даты"),
-                KeyboardButton(text="💰 Изменить цену")
-            ],
-
-            [
-                KeyboardButton(text="👤 Клиенты"),
-                KeyboardButton(text="💬 Рассылка")
-            ],
-
-            [
-                KeyboardButton(text="📈 Доход"),
-                KeyboardButton(text="🕒 Последние брони")
-            ],
-
-            [
-                KeyboardButton(text="🧹 Очистить брони")
-            ],
-
-            [
-                KeyboardButton(text="🏠 Главное меню")
-            ]
-
-        ],
-
-        resize_keyboard=True
-    )
-
-    await message.answer(
-        "🛠 Панель администратора",
-        reply_markup=keyboard
-    )
+    await message.answer(text)
