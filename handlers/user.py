@@ -156,23 +156,22 @@ async def admin(message: Message):
 @router.message(F.web_app_data)
 async def webapp_booking(message: Message):
 
-    data = json.loads(message.web_app_data.data)
+    try:
+        data = json.loads(message.web_app_data.data)
 
-    booking_id = create_booking(
-        user_id=message.from_user.id,
-        username=message.from_user.username or "unknown",
-        date=f"{data['check_in']} → {data['check_out']}",
-        time="full_day",
-        guests=int(data.get("guests", 1))
-    )
+        booking_id = create_booking(
+            user_id=message.from_user.id,
+            username=message.from_user.username or "unknown",
+            date=data["check_in"],
+            time=f"{data['check_in']} → {data['check_out']}",
+            guests=int(data.get("guests", 1))
+        )
 
-    await message.answer(
-        f"✅ Бронь #{booking_id}\n"
-        f"📅 {data['check_in']} → {data['check_out']}\n"
-        f"👥 {data['guests']} гостей"
-    )
+        await message.answer(
+            f"✅ Бронь #{booking_id}\n"
+            f"📅 {data['check_in']} → {data['check_out']}\n"
+            f"👥 {data['guests']} гостей"
+        )
 
     except Exception as e:
-        await message.answer(
-            f"❌ Ошибка бронирования: {e}"
-        )
+        await message.answer(f"❌ Ошибка бронирования: {str(e)}")
