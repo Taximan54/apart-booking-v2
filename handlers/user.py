@@ -5,18 +5,28 @@ from aiogram.types import (
     KeyboardButton,
     WebAppInfo,
     FSInputFile,
-    InputMediaPhoto
+    InputMediaPhoto,
+    Message
 )
 
 from config import WEBAPP_URL
 
+from services.booking_service import create_booking
+
+
 router = Router()
+
+
+# =====================================================
+# PHOTOS
+# =====================================================
 
 PHOTOS = [
     "static/images/1.JPG",
     "static/images/2.JPG",
     "static/images/3.JPG"
 ]
+
 
 # =====================================================
 # PHOTO SEND
@@ -46,6 +56,7 @@ async def send_photos(message):
             )
 
     await message.answer_media_group(media)
+
 
 # =====================================================
 # MAIN KEYBOARD
@@ -89,6 +100,7 @@ def main_keyboard():
         resize_keyboard=True
     )
 
+
 # =====================================================
 # START
 # =====================================================
@@ -101,6 +113,7 @@ async def start(message: types.Message):
         reply_markup=main_keyboard()
     )
 
+
 # =====================================================
 # PHOTO
 # =====================================================
@@ -109,6 +122,7 @@ async def start(message: types.Message):
 async def photos(message: types.Message):
 
     await send_photos(message)
+
 
 # =====================================================
 # DESCRIPTION
@@ -136,6 +150,7 @@ async def description(message: types.Message):
 """
     )
 
+
 # =====================================================
 # ADMIN
 # =====================================================
@@ -147,10 +162,10 @@ async def admin(message: types.Message):
         "🛠 Админка скоро будет перенесена отдельно"
     )
 
-from aiogram.types import Message
 
-from services.booking_service import create_booking
-
+# =====================================================
+# SQLITE TEST
+# =====================================================
 
 @router.message()
 async def test_booking(message: Message):
