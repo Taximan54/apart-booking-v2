@@ -70,3 +70,29 @@ def get_booked_dates():
             current = current.replace(day=current.day + 1)
 
     return list(set(blocked))
+
+
+# ✅ ДОБАВЬ ЭТУ ФУНКЦИЮ (ЧТОБЫ RAILWAY НЕ ПАДАЛ)
+def get_all_bookings():
+    with sqlite3.connect(DB_PATH) as conn:
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT id, user_id, username, check_in, check_out, guests
+            FROM bookings
+            ORDER BY id DESC
+        """)
+
+        rows = cursor.fetchall()
+
+    return [
+        {
+            "id": r[0],
+            "user_id": r[1],
+            "username": r[2],
+            "check_in": r[3],
+            "check_out": r[4],
+            "guests": r[5],
+        }
+        for r in rows
+    ]
