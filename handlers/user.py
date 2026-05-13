@@ -162,8 +162,8 @@ async def webapp_booking(message: Message):
         booking_id = create_booking(
             user_id=message.from_user.id,
             username=message.from_user.username or "unknown",
-            date=data["check_in"],
-            time=f"{data['check_in']} → {data['check_out']}",
+            check_in=data["check_in"],
+            check_out=data["check_out"],
             guests=int(data.get("guests", 1))
         )
 
@@ -174,4 +174,4 @@ async def webapp_booking(message: Message):
         )
 
     except Exception as e:
-        await message.answer(f"❌ Ошибка бронирования: {str(e)}")
+        await message.answer(f"❌ Ошибка: {str(e)}")

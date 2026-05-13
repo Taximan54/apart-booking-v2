@@ -1,7 +1,7 @@
 import asyncio
 
 from fastapi import FastAPI
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from aiogram import Bot, Dispatcher
@@ -12,10 +12,11 @@ from handlers.user import router as user_router
 from handlers.admin import router as admin_router
 
 from database.models import init_db
+from services.booking_service import get_booked_dates
 
 
 # =====================================================
-# INIT DB (ОДИН РАЗ ПРИ СТАРТЕ)
+# INIT DB
 # =====================================================
 init_db()
 
@@ -27,7 +28,7 @@ app = FastAPI()
 
 
 # =====================================================
-# STATIC FILES (WEBAPP + ASSETS)
+# STATIC FILES (WEBAPP)
 # =====================================================
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
@@ -43,7 +44,7 @@ dp.include_router(admin_router)
 
 
 # =====================================================
-# ROOT PAGE (TEST)
+# ROOT TEST PAGE
 # =====================================================
 @app.get("/", response_class=HTMLResponse)
 async def home():
@@ -61,7 +62,18 @@ async def home():
 
 
 # =====================================================
-# START BOT (RAILWAY SAFE)
+# API: BOOKED DATES (AIRBNB FEATURE)
+# =====================================================
+@app.get("/api/booked-dates")
+async def booked_dates():
+    try:
+        return JSONResponse(get_booked_dates())
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
+# =====================================================
+# START BOT
 # =====================================================
 @app.on_event("startup")
 async def startup():
@@ -69,7 +81,7 @@ async def startup():
 
 
 # =====================================================
-# SHUTDOWN CLEANUP
+# SHUTDOWN
 # =====================================================
 @app.on_event("shutdown")
 async def shutdown():

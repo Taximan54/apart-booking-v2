@@ -1,72 +1,72 @@
-from database.db import get_db
+import sqlite3
+from datetime import datetime
+
+DB_PATH = "bookings.db"
 
 
-# =====================================================
-# CREATE BOOKING
-# =====================================================
+def init_db():
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.execute("""
+        CREATE TABLE IF NOT EXISTS bookings (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            username TEXT,
+            check_in TEXT,
+            check_out TEXT,
+            guests INTEGER
+        )
+        """)
 
-def create_booking(
-    user_id: int,
-    username: str,
-    date: str,
-    time: str,
-    guests: int
-):
-    with get_db() as conn:
 
-        cursor = conn.execute("""
-            INSERT INTO bookings (
-                user_id,
-                username,
-                date,
-                time,
-                guests
+def is_overlapping(check_in, check_out):
+    with sqlite3.connect(DB_PATH) as conn:
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT * FROM bookings
+            WHERE NOT (
+                date(check_out) <= date(?)
+                OR date(check_in) >= date(?)
             )
+        """, (check_in, check_out))
+
+        return cursor.fetchone() is not None
+
+
+def create_booking(user_id, username, check_in, check_out, guests):
+
+    if is_overlapping(check_in, check_out):
+        raise Exception("Даты уже заняты")
+
+    with sqlite3.connect(DB_PATH) as conn:
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            INSERT INTO bookings (user_id, username, check_in, check_out, guests)
             VALUES (?, ?, ?, ?, ?)
-        """, (
-            user_id,
-            username,
-            date,
-            time,
-            guests
-        ))
+        """, (user_id, username, check_in, check_out, guests))
+
+        conn.commit()
 
         return cursor.lastrowid
 
 
-# =====================================================
-# GET ALL BOOKINGS
-# =====================================================
+def get_booked_dates():
+    with sqlite3.connect(DB_PATH) as conn:
+        cursor = conn.cursor()
 
-def get_all_bookings():
+        cursor.execute("SELECT check_in, check_out FROM bookings")
+        rows = cursor.fetchall()
 
-    with get_db() as conn:
+    blocked = []
 
-        rows = conn.execute("""
-            SELECT *
-            FROM bookings
-            ORDER BY created_at DESC
-        """).fetchall()
+    for start, end in rows:
+        d1 = datetime.strptime(start, "%Y-%m-%d")
+        d2 = datetime.strptime(end, "%Y-%m-%d")
 
-        return [dict(row) for row in rows]
+        current = d1
+        while current <= d2:
+            blocked.append(current.strftime("%Y-%m-%d"))
+            current = current.replace(day=current.day + 1)
 
-
-# =====================================================
-# UPDATE STATUS
-# =====================================================
-
-def update_booking_status(
-    booking_id: int,
-    status: str
-):
-
-    with get_db() as conn:
-
-        conn.execute("""
-            UPDATE bookings
-            SET status = ?
-            WHERE id = ?
-        """, (
-            status,
-            booking_id
-        ))
+    return list(set(blocked))
