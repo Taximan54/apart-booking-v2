@@ -4,6 +4,10 @@ import os
 DB_PATH = "data/bookings.db"
 
 
+# =====================================================
+# INIT DB
+# =====================================================
+
 def init_db():
 
     os.makedirs("data", exist_ok=True)
@@ -27,6 +31,10 @@ def init_db():
 
         conn.commit()
 
+
+# =====================================================
+# CREATE BOOKING
+# =====================================================
 
 def create_booking(
     user_id,
@@ -64,6 +72,10 @@ def create_booking(
         return cursor.lastrowid
 
 
+# =====================================================
+# GET BOOKINGS
+# =====================================================
+
 def get_all_bookings():
 
     with sqlite3.connect(DB_PATH) as conn:
@@ -85,6 +97,10 @@ def get_all_bookings():
         return cursor.fetchall()
 
 
+# =====================================================
+# UPDATE STATUS
+# =====================================================
+
 def update_booking_status(booking_id, status):
 
     with sqlite3.connect(DB_PATH) as conn:
@@ -99,6 +115,29 @@ def update_booking_status(booking_id, status):
 
         conn.commit()
 
+
+# =====================================================
+# CANCEL BOOKING
+# =====================================================
+
+def cancel_booking(booking_id):
+
+    with sqlite3.connect(DB_PATH) as conn:
+
+        cursor = conn.cursor()
+
+        cursor.execute("""
+        UPDATE bookings
+        SET status = 'cancelled'
+        WHERE id = ?
+        """, (booking_id,))
+
+        conn.commit()
+
+
+# =====================================================
+# BOOKED DATES
+# =====================================================
 
 def get_booked_ranges():
 
