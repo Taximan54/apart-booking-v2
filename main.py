@@ -1,4 +1,8 @@
 import asyncio
+import os
+
+if os.path.exists("data/bookings.db"):
+    os.remove("data/bookings.db")
 
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
