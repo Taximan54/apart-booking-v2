@@ -1,13 +1,26 @@
+```python
 import sqlite3
+from pathlib import Path
 
-DB_PATH = "/data/bookings.db"
+# =====================================================
+# DATABASE PATH
+# =====================================================
 
+DB_PATH = "data/bookings.db"
+
+# =====================================================
+# CREATE DATA FOLDER
+# =====================================================
+
+Path("data").mkdir(exist_ok=True)
 
 # =====================================================
 # INIT DB
 # =====================================================
 
-def init_booking_table():
+def init_db():
+
+    Path(DB_PATH).touch(exist_ok=True)
 
     with sqlite3.connect(DB_PATH) as conn:
 
@@ -24,9 +37,11 @@ def init_booking_table():
             check_in TEXT,
             check_out TEXT,
 
-            guests INTEGER,
+            guests INTEGER DEFAULT 1,
 
-            status TEXT DEFAULT 'confirmed'
+            status TEXT DEFAULT 'confirmed',
+
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
         """)
 
@@ -42,34 +57,28 @@ def create_booking(
     username,
     check_in,
     check_out,
-    guests
+    guests=1
 ):
 
     with sqlite3.connect(DB_PATH) as conn:
 
         cursor = conn.cursor()
 
-        # =========================================
-        # CHECK OVERLAP
-        # =========================================
-
+        # ПРОВЕРКА ПЕРЕСЕЧЕНИЯ ДАТ
         cursor.execute("""
-        SELECT * FROM bookings
-        WHERE status = 'confirmed'
+        SELECT *
+        FROM bookings
+        WHERE status IN ('confirmed', 'blocked')
         AND (
             check_in <= ?
             AND check_out >= ?
         )
         """, (check_out, check_in))
 
-        exists = cursor.fetchone()
+        conflict = cursor.fetchone()
 
-        if exists:
+        if conflict:
             raise Exception("Даты уже заняты")
-
-        # =========================================
-        # CREATE
-        # =========================================
 
         cursor.execute("""
         INSERT INTO bookings (
@@ -78,16 +87,19 @@ def create_booking(
             username,
             check_in,
             check_out,
-            guests
+            guests,
+            status
 
-        ) VALUES (?, ?, ?, ?, ?)
+        )
+        VALUES (?, ?, ?, ?, ?, ?)
         """, (
 
             user_id,
             username,
             check_in,
             check_out,
-            guests
+            guests,
+            "confirmed"
 
         ))
 
@@ -118,67 +130,11 @@ def get_all_bookings():
         ORDER BY id DESC
         """)
 
-        rows = cursor.fetchall()
-
-    return rows
+        return cursor.fetchall()
 
 
 # =====================================================
-# CANCEL BOOKING
-# =====================================================
-
-def cancel_booking(booking_id):
-
-    with sqlite3.connect(DB_PATH) as conn:
-
-        cursor = conn.cursor()
-
-        cursor.execute("""
-        UPDATE bookings
-        SET status = 'cancelled'
-        WHERE id = ?
-        """, (booking_id,))
-
-        conn.commit()
-
-
-# =====================================================
-# BLOCK DATES
-# =====================================================
-
-def block_dates(check_in, check_out):
-
-    with sqlite3.connect(DB_PATH) as conn:
-
-        cursor = conn.cursor()
-
-        cursor.execute("""
-        INSERT INTO bookings (
-
-            user_id,
-            username,
-            check_in,
-            check_out,
-            guests,
-            status
-
-        ) VALUES (?, ?, ?, ?, ?, ?)
-        """, (
-
-            0,
-            "BLOCKED",
-            check_in,
-            check_out,
-            0,
-            "blocked"
-
-        ))
-
-        conn.commit()
-
-
-# =====================================================
-# BOOKED RANGES
+# GET BOOKED RANGES
 # =====================================================
 
 def get_booked_ranges():
@@ -188,7 +144,9 @@ def get_booked_ranges():
         cursor = conn.cursor()
 
         cursor.execute("""
-        SELECT check_in, check_out
+        SELECT
+            check_in,
+            check_out
         FROM bookings
         WHERE status IN ('confirmed', 'blocked')
         """)
@@ -197,8 +155,46 @@ def get_booked_ranges():
 
     return [
         {
-            "check_in": r[0],
-            "check_out": r[1]
+            "check_in": row[0],
+            "check_out": row[1]
         }
-        for r in rows
+        for row in rows
     ]
+
+
+# =====================================================
+# UPDATE BOOKING STATUS
+# =====================================================
+
+def update_booking_status(booking_id, status):
+
+    with sqlite3.connect(DB_PATH) as conn:
+
+        cursor = conn.cursor()
+
+        cursor.execute("""
+        UPDATE bookings
+        SET status = ?
+        WHERE id = ?
+        """, (status, booking_id))
+
+        conn.commit()
+
+
+# =====================================================
+# DELETE BOOKING
+# =====================================================
+
+def delete_booking(booking_id):
+
+    with sqlite3.connect(DB_PATH) as conn:
+
+        cursor = conn.cursor()
+
+        cursor.execute("""
+        DELETE FROM bookings
+        WHERE id = ?
+        """, (booking_id,))
+
+        conn.commit()
+```
