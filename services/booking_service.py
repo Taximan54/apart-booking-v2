@@ -73,7 +73,7 @@ def create_booking(
 
 
 # =====================================================
-# GET BOOKINGS
+# GET ALL BOOKINGS
 # =====================================================
 
 def get_all_bookings():
@@ -91,52 +91,14 @@ def get_all_bookings():
             guests,
             status
         FROM bookings
-        ORDER BY check_in
+        ORDER BY id DESC
         """)
 
         return cursor.fetchall()
 
 
 # =====================================================
-# UPDATE STATUS
-# =====================================================
-
-def update_booking_status(booking_id, status):
-
-    with sqlite3.connect(DB_PATH) as conn:
-
-        cursor = conn.cursor()
-
-        cursor.execute("""
-        UPDATE bookings
-        SET status = ?
-        WHERE id = ?
-        """, (status, booking_id))
-
-        conn.commit()
-
-
-# =====================================================
-# CANCEL BOOKING
-# =====================================================
-
-def cancel_booking(booking_id):
-
-    with sqlite3.connect(DB_PATH) as conn:
-
-        cursor = conn.cursor()
-
-        cursor.execute("""
-        UPDATE bookings
-        SET status = 'cancelled'
-        WHERE id = ?
-        """, (booking_id,))
-
-        conn.commit()
-
-
-# =====================================================
-# BOOKED DATES
+# GET BOOKED RANGES
 # =====================================================
 
 def get_booked_ranges():
@@ -160,3 +122,54 @@ def get_booked_ranges():
         }
         for row in rows
     ]
+
+
+# =====================================================
+# CANCEL BOOKING
+# =====================================================
+
+def cancel_booking(booking_id):
+
+    with sqlite3.connect(DB_PATH) as conn:
+
+        cursor = conn.cursor()
+
+        cursor.execute("""
+        UPDATE bookings
+        SET status = 'cancelled'
+        WHERE id = ?
+        """, (booking_id,))
+
+        conn.commit()
+
+
+# =====================================================
+# BLOCK DATES
+# =====================================================
+
+def block_dates(check_in, check_out):
+
+    with sqlite3.connect(DB_PATH) as conn:
+
+        cursor = conn.cursor()
+
+        cursor.execute("""
+        INSERT INTO bookings (
+            user_id,
+            username,
+            check_in,
+            check_out,
+            guests,
+            status
+        )
+        VALUES (?, ?, ?, ?, ?, ?)
+        """, (
+            0,
+            "ADMIN_BLOCK",
+            check_in,
+            check_out,
+            0,
+            "blocked"
+        ))
+
+        conn.commit()
