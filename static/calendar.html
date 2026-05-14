@@ -2,39 +2,51 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Booking Calendar</title>
+<title>Airbnb Calendar</title>
 
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
 <style>
 body {
     font-family: Arial;
+    background: #f5f5f5;
     padding: 20px;
-    background: #f4f4f4;
 }
 
 .card {
     background: white;
     padding: 20px;
-    border-radius: 12px;
-    max-width: 400px;
+    border-radius: 16px;
+    max-width: 420px;
     margin: auto;
     box-shadow: 0 10px 30px rgba(0,0,0,0.1);
 }
 
-input, button {
-    width: 100%;
-    padding: 12px;
-    margin-top: 10px;
-    font-size: 16px;
-    border-radius: 8px;
-    border: 1px solid #ddd;
+.grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 5px;
+    margin-top: 15px;
 }
 
-button {
+.day {
+    padding: 10px;
+    text-align: center;
+    border-radius: 8px;
+    cursor: pointer;
+    background: #eee;
+    font-size: 14px;
+}
+
+.day.disabled {
+    background: #ddd;
+    color: #999;
+    pointer-events: none;
+}
+
+.day.selected {
     background: black;
     color: white;
-    border: none;
 }
 </style>
 </head>
@@ -42,12 +54,13 @@ button {
 <body>
 
 <div class="card">
-    <h2>🏠 Booking</h2>
+    <h2>🏠 Select Dates</h2>
 
-    <input type="date" id="checkin">
-    <input type="date" id="checkout">
+    <div id="calendar" class="grid"></div>
 
-    <button onclick="send()">Забронировать</button>
+    <button onclick="send()" style="margin-top:15px;width:100%;padding:12px;background:black;color:white;border:none;border-radius:10px;">
+        Забронировать
+    </button>
 </div>
 
 <script>
@@ -55,28 +68,82 @@ const tg = window.Telegram.WebApp;
 tg.expand();
 
 let booked = [];
+let start = null;
+let end = null;
 
 fetch("/api/booked-dates")
     .then(r => r.json())
-    .then(data => booked = data);
+    .then(data => {
+        booked = data;
+        render();
+    });
 
-function send() {
-    const checkin = document.getElementById("checkin").value;
-    const checkout = document.getElementById("checkout").value;
+function isBooked(date) {
+    return booked.some(b =>
+        date >= b.check_in && date <= b.check_out
+    );
+}
 
-    if (!checkin || !checkout) {
-        alert("Выбери даты");
-        return;
+// ==========================
+// BUILD SIMPLE 30 DAYS VIEW
+// ==========================
+function render() {
+    const cal = document.getElementById("calendar");
+    cal.innerHTML = "";
+
+    const today = new Date();
+
+    for (let i = 0; i < 30; i++) {
+        const d = new Date();
+        d.setDate(today.getDate() + i);
+
+        const iso = d.toISOString().split("T")[0];
+
+        const div = document.createElement("div");
+        div.className = "day";
+
+        if (isBooked(iso)) {
+            div.classList.add("disabled");
+        }
+
+        if (start && end && iso >= start && iso <= end) {
+            div.classList.add("selected");
+        }
+
+        div.innerText = d.getDate();
+
+        div.onclick = () => selectDate(iso);
+
+        cal.appendChild(div);
+    }
+}
+
+function selectDate(date) {
+
+    if (!start || (start && end)) {
+        start = date;
+        end = null;
+    } else {
+        if (date < start) {
+            alert("Нельзя выбрать раньше");
+            return;
+        }
+
+        end = date;
     }
 
-    if (checkin > checkout) {
-        alert("Ошибка дат");
+    render();
+}
+
+function send() {
+    if (!start || !end) {
+        alert("Выбери диапазон");
         return;
     }
 
     tg.sendData(JSON.stringify({
-        check_in: checkin,
-        check_out: checkout,
+        check_in: start,
+        check_out: end,
         guests: 2
     }));
 }
