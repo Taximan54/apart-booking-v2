@@ -173,3 +173,6 @@ def block_dates(check_in, check_out):
         ))
 
         conn.commit()
+
+print("BOOKING SERVICE LOADED OK")
+print(cancel_booking)
