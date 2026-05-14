@@ -1,124 +1,121 @@
-from aiogram import Router, F
-from aiogram.filters import Command
-from aiogram.types import (
-    Message,
-    InlineKeyboardMarkup,
-    InlineKeyboardButton,
-    CallbackQuery
-)
+from aiogram import Router, types
+
+from config import ADMIN_IDS
 
 from services.booking_service import (
     get_all_bookings,
-    update_booking_status
+    cancel_booking,
+    block_dates
 )
-
 
 router = Router()
 
 
 # =====================================================
-# INLINE KEYBOARD
+# ADMIN PANEL
 # =====================================================
 
-def booking_keyboard(booking_id: int):
+@router.message(lambda m: m.text == "🛠 Админка")
+async def admin_panel(message: types.Message):
 
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
-
-            [
-                InlineKeyboardButton(
-                    text="✅ Confirm",
-                    callback_data=f"confirm_{booking_id}"
-                ),
-
-                InlineKeyboardButton(
-                    text="❌ Cancel",
-                    callback_data=f"cancel_{booking_id}"
-                )
-            ]
-
-        ]
-    )
-
-
-# =====================================================
-# BOOKINGS LIST
-# =====================================================
-
-@router.message(Command("bookings"))
-async def bookings(message: Message):
-
-    bookings = get_all_bookings()
-
-    if not bookings:
-
-        await message.answer(
-            "❌ Бронирований нет"
-        )
-
+    if message.from_user.id not in ADMIN_IDS:
         return
 
-    for booking in bookings:
+    text = """
+🛠 ADMIN PANEL
 
-        text = (
-            f"📋 Бронирование #{booking['id']}\n\n"
+📋 /bookings — все брони
+❌ /cancel ID — отмена
+🚫 /block YYYY-MM-DD YYYY-MM-DD
+"""
 
-            f"👤 User: @{booking['username']}\n"
-            f"📅 Date: {booking['date']}\n"
-            f"⏰ Time: {booking['time']}\n"
-            f"👥 Guests: {booking['guests']}\n"
-            f"📌 Status: {booking['status']}"
-        )
-
-        await message.answer(
-            text,
-            reply_markup=booking_keyboard(
-                booking['id']
-            )
-        )
+    await message.answer(text)
 
 
 # =====================================================
-# CONFIRM BOOKING
+# ALL BOOKINGS
 # =====================================================
 
-@router.callback_query(F.data.startswith("confirm_"))
-async def confirm_booking(callback: CallbackQuery):
+@router.message(lambda m: m.text.startswith("/bookings"))
+async def bookings(message: types.Message):
 
-    booking_id = int(
-        callback.data.split("_")[1]
-    )
+    if message.from_user.id not in ADMIN_IDS:
+        return
 
-    update_booking_status(
-        booking_id,
-        "confirmed"
-    )
+    rows = get_all_bookings()
 
-    await callback.message.edit_text(
-        f"✅ Booking #{booking_id} confirmed"
-    )
+    if not rows:
+        await message.answer("Броней нет")
+        return
 
-    await callback.answer()
+    text = "📋 БРОНИ:\n\n"
+
+    for row in rows:
+
+        text += f"""
+ID: {row[0]}
+USER: {row[1]}
+DATES: {row[2]} → {row[3]}
+GUESTS: {row[4]}
+STATUS: {row[5]}
+
+"""
+
+    await message.answer(text)
 
 
 # =====================================================
 # CANCEL BOOKING
 # =====================================================
 
-@router.callback_query(F.data.startswith("cancel_"))
-async def cancel_booking(callback: CallbackQuery):
+@router.message(lambda m: m.text.startswith("/cancel"))
+async def cancel(message: types.Message):
 
-    booking_id = int(
-        callback.data.split("_")[1]
-    )
+    if message.from_user.id not in ADMIN_IDS:
+        return
 
-    update_booking_status(
-        booking_id,
-        "cancelled"
-    )
+    try:
 
-    await callback.message.edit_text(
-        f"❌ Booking #{booking_id} cancelled"
-    )
+        booking_id = int(message.text.split()[1])
 
-    await callback.answer()
+        cancel_booking(booking_id)
+
+        await message.answer(
+            f"❌ Бронь #{booking_id} отменена"
+        )
+
+    except Exception as e:
+
+        await message.answer(
+            f"Ошибка: {e}"
+        )
+
+
+# =====================================================
+# BLOCK DATES
+# =====================================================
+
+@router.message(lambda m: m.text.startswith("/block"))
+async def block(message: types.Message):
+
+    if message.from_user.id not in ADMIN_IDS:
+        return
+
+    try:
+
+        parts = message.text.split()
+
+        check_in = parts[1]
+        check_out = parts[2]
+
+        block_dates(check_in, check_out)
+
+        await message.answer(
+            f"🚫 Даты заблокированы:\n{check_in} → {check_out}"
+        )
+
+    except Exception as e:
+
+        await message.answer(
+            f"Ошибка: {e}"
+        )
