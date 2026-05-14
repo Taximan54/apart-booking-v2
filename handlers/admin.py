@@ -1,11 +1,12 @@
 from aiogram import Router, types
+from aiogram.types import InlineKeyboardMarkup
+from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from config import ADMIN_IDS
 
 from services.booking_service import (
     get_all_bookings,
-    cancel_booking,
-    block_dates
+    cancel_booking
 )
 
 router = Router()
@@ -21,101 +22,91 @@ async def admin_panel(message: types.Message):
     if message.from_user.id not in ADMIN_IDS:
         return
 
-    text = """
-🛠 ADMIN PANEL
+    kb = InlineKeyboardBuilder()
 
-📋 /bookings — все брони
-❌ /cancel ID — отмена
-🚫 /block YYYY-MM-DD YYYY-MM-DD
-"""
+    kb.button(
+        text="📋 Все брони",
+        callback_data="admin_bookings"
+    )
 
-    await message.answer(text)
+    kb.button(
+        text="📅 Календарь",
+        callback_data="admin_calendar"
+    )
+
+    kb.button(
+        text="💰 Цены",
+        callback_data="admin_prices"
+    )
+
+    kb.adjust(1)
+
+    await message.answer(
+
+        "🛠 ADMIN PANEL",
+
+        reply_markup=kb.as_markup()
+
+    )
 
 
 # =====================================================
-# ALL BOOKINGS
+# BOOKINGS
 # =====================================================
 
-@router.message(lambda m: m.text.startswith("/bookings"))
-async def bookings(message: types.Message):
-
-    if message.from_user.id not in ADMIN_IDS:
-        return
+@router.callback_query(lambda c: c.data == "admin_bookings")
+async def admin_bookings(callback: types.CallbackQuery):
 
     rows = get_all_bookings()
 
     if not rows:
-        await message.answer("Броней нет")
-        return
 
-    text = "📋 БРОНИ:\n\n"
+        await callback.message.answer(
+            "Броней нет"
+        )
+
+        return
 
     for row in rows:
 
-        text += f"""
-ID: {row[0]}
-USER: {row[1]}
-DATES: {row[2]} → {row[3]}
-GUESTS: {row[4]}
-STATUS: {row[5]}
+        kb = InlineKeyboardBuilder()
 
+        kb.button(
+            text="❌ Отменить",
+            callback_data=f"cancel_{row[0]}"
+        )
+
+        text = f"""
+🏠 BOOKING #{row[0]}
+
+👤 {row[1]}
+📅 {row[2]} → {row[3]}
+👥 {row[4]}
+📌 {row[5]}
 """
 
-    await message.answer(text)
+        await callback.message.answer(
 
+            text,
 
-# =====================================================
-# CANCEL BOOKING
-# =====================================================
+            reply_markup=kb.as_markup()
 
-@router.message(lambda m: m.text.startswith("/cancel"))
-async def cancel(message: types.Message):
-
-    if message.from_user.id not in ADMIN_IDS:
-        return
-
-    try:
-
-        booking_id = int(message.text.split()[1])
-
-        cancel_booking(booking_id)
-
-        await message.answer(
-            f"❌ Бронь #{booking_id} отменена"
-        )
-
-    except Exception as e:
-
-        await message.answer(
-            f"Ошибка: {e}"
         )
 
 
 # =====================================================
-# BLOCK DATES
+# CANCEL
 # =====================================================
 
-@router.message(lambda m: m.text.startswith("/block"))
-async def block(message: types.Message):
+@router.callback_query(lambda c: c.data.startswith("cancel_"))
+async def cancel(callback: types.CallbackQuery):
 
-    if message.from_user.id not in ADMIN_IDS:
-        return
+    booking_id = int(
+        callback.data.split("_")[1]
+    )
 
-    try:
+    cancel_booking(booking_id)
 
-        parts = message.text.split()
-
-        check_in = parts[1]
-        check_out = parts[2]
-
-        block_dates(check_in, check_out)
-
-        await message.answer(
-            f"🚫 Даты заблокированы:\n{check_in} → {check_out}"
-        )
-
-    except Exception as e:
-
-        await message.answer(
-            f"Ошибка: {e}"
-        )
+    await callback.message.answer(
+        f"❌ Бронь #{booking_id} отменена"
+    )

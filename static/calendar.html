@@ -1,152 +1,345 @@
 <!DOCTYPE html>
 <html>
 <head>
+
 <meta charset="UTF-8">
-<title>Airbnb Calendar</title>
+
+<title>Premium Apart</title>
 
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
 <style>
+
 body {
+    margin: 0;
+    padding: 0;
+    background: #f3f4f6;
     font-family: Arial;
-    background: #f5f5f5;
+}
+
+.wrapper {
+    max-width: 500px;
+    margin: auto;
     padding: 20px;
 }
 
 .card {
     background: white;
-    padding: 20px;
-    border-radius: 16px;
-    max-width: 420px;
-    margin: auto;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    border-radius: 24px;
+    padding: 24px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.08);
 }
 
-.grid {
+.title {
+    font-size: 28px;
+    font-weight: bold;
+    margin-bottom: 20px;
+}
+
+.month {
+    margin-bottom: 20px;
+}
+
+.month-title {
+    font-size: 20px;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+.weekdays {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
-    gap: 5px;
-    margin-top: 15px;
-}
-
-.day {
-    padding: 10px;
-    text-align: center;
-    border-radius: 8px;
-    cursor: pointer;
-    background: #eee;
+    margin-bottom: 10px;
+    color: #777;
     font-size: 14px;
 }
 
-.day.disabled {
-    background: #ddd;
-    color: #999;
-    pointer-events: none;
+.days {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 8px;
+}
+
+.day {
+    aspect-ratio: 1;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 14px;
+    transition: 0.2s;
+}
+
+.day:hover {
+    background: #eee;
 }
 
 .day.selected {
     background: black;
     color: white;
 }
+
+.day.in-range {
+    background: #dbeafe;
+}
+
+.day.disabled {
+    color: #bbb;
+    background: #f3f4f6;
+    pointer-events: none;
+}
+
+.button {
+    margin-top: 20px;
+    width: 100%;
+    border: none;
+    background: black;
+    color: white;
+    padding: 16px;
+    border-radius: 14px;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+.info {
+    margin-top: 15px;
+    color: #444;
+}
+
 </style>
+
 </head>
 
 <body>
 
+<div class="wrapper">
+
 <div class="card">
-    <h2>🏠 Select Dates</h2>
 
-    <div id="calendar" class="grid"></div>
+<div class="title">
+🏠 Select Dates
+</div>
 
-    <button onclick="send()" style="margin-top:15px;width:100%;padding:12px;background:black;color:white;border:none;border-radius:10px;">
-        Забронировать
-    </button>
+<div class="month">
+
+<div class="month-title">
+May 2026
+</div>
+
+<div class="weekdays">
+<div>Mo</div>
+<div>Tu</div>
+<div>We</div>
+<div>Th</div>
+<div>Fr</div>
+<div>Sa</div>
+<div>Su</div>
+</div>
+
+<div class="days" id="days"></div>
+
+</div>
+
+<div class="info" id="info">
+Выберите даты
+</div>
+
+<button class="button" onclick="sendBooking()">
+Забронировать
+</button>
+
+</div>
+
 </div>
 
 <script>
+
 const tg = window.Telegram.WebApp;
 tg.expand();
 
-let booked = [];
-let start = null;
-let end = null;
+let bookedRanges = [];
 
-fetch("/api/booked-dates")
-    .then(r => r.json())
-    .then(data => {
-        booked = data;
-        render();
-    });
+let checkIn = null;
+let checkOut = null;
+
+const daysContainer = document.getElementById("days");
+
+
+// =====================================================
+// LOAD BOOKED DATES
+// =====================================================
+
+async function loadBooked() {
+
+    try {
+
+        const response = await fetch("/api/booked-dates");
+
+        bookedRanges = await response.json();
+
+    } catch (e) {
+
+        console.log(e);
+
+    }
+
+    renderCalendar();
+}
+
+
+// =====================================================
+// CHECK BOOKED
+// =====================================================
 
 function isBooked(date) {
-    return booked.some(b =>
-        date >= b.check_in && date <= b.check_out
-    );
+
+    return bookedRanges.some(range => {
+
+        return (
+            date >= range.check_in &&
+            date <= range.check_out
+        );
+
+    });
+
 }
 
-// ==========================
-// BUILD SIMPLE 30 DAYS VIEW
-// ==========================
-function render() {
-    const cal = document.getElementById("calendar");
-    cal.innerHTML = "";
 
-    const today = new Date();
+// =====================================================
+// RENDER
+// =====================================================
 
-    for (let i = 0; i < 30; i++) {
-        const d = new Date();
-        d.setDate(today.getDate() + i);
+function renderCalendar() {
 
-        const iso = d.toISOString().split("T")[0];
+    daysContainer.innerHTML = "";
+
+    for (let day = 1; day <= 31; day++) {
+
+        const date = `2026-05-${String(day).padStart(2, "0")}`;
 
         const div = document.createElement("div");
+
         div.className = "day";
 
-        if (isBooked(iso)) {
+        div.innerText = day;
+
+        if (isBooked(date)) {
+
             div.classList.add("disabled");
+
         }
 
-        if (start && end && iso >= start && iso <= end) {
+        if (checkIn === date || checkOut === date) {
+
             div.classList.add("selected");
+
         }
 
-        div.innerText = d.getDate();
+        if (
+            checkIn &&
+            checkOut &&
+            date > checkIn &&
+            date < checkOut
+        ) {
 
-        div.onclick = () => selectDate(iso);
+            div.classList.add("in-range");
 
-        cal.appendChild(div);
+        }
+
+        div.onclick = () => selectDate(date);
+
+        daysContainer.appendChild(div);
+
     }
+
 }
+
+
+// =====================================================
+// SELECT DATE
+// =====================================================
 
 function selectDate(date) {
 
-    if (!start || (start && end)) {
-        start = date;
-        end = null;
+    if (!checkIn || (checkIn && checkOut)) {
+
+        checkIn = date;
+        checkOut = null;
+
     } else {
-        if (date < start) {
-            alert("Нельзя выбрать раньше");
+
+        if (date < checkIn) {
+
+            alert("Дата выезда раньше заезда");
+
             return;
         }
 
-        end = date;
+        checkOut = date;
+
     }
 
-    render();
+    updateInfo();
+
+    renderCalendar();
+
 }
 
-function send() {
-    if (!start || !end) {
+
+// =====================================================
+// INFO
+// =====================================================
+
+function updateInfo() {
+
+    const info = document.getElementById("info");
+
+    if (!checkIn) {
+
+        info.innerText = "Выберите даты";
+
+        return;
+    }
+
+    if (!checkOut) {
+
+        info.innerText = `Заезд: ${checkIn}`;
+
+        return;
+    }
+
+    info.innerText =
+        `${checkIn} → ${checkOut}`;
+
+}
+
+
+// =====================================================
+// SEND BOOKING
+// =====================================================
+
+function sendBooking() {
+
+    if (!checkIn || !checkOut) {
+
         alert("Выбери диапазон");
+
         return;
     }
 
     tg.sendData(JSON.stringify({
-        check_in: start,
-        check_out: end,
+
+        check_in: checkIn,
+        check_out: checkOut,
         guests: 2
+
     }));
+
 }
+
+loadBooked();
+
 </script>
 
 </body>
