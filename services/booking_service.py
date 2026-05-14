@@ -1,13 +1,8 @@
-```python
 import sqlite3
 import os
 
 DB_PATH = "data/bookings.db"
 
-
-# =====================================================
-# INIT DB
-# =====================================================
 
 def init_db():
 
@@ -32,10 +27,6 @@ def init_db():
 
         conn.commit()
 
-
-# =====================================================
-# CREATE BOOKING
-# =====================================================
 
 def create_booking(
     user_id,
@@ -73,10 +64,6 @@ def create_booking(
         return cursor.lastrowid
 
 
-# =====================================================
-# GET ALL BOOKINGS
-# =====================================================
-
 def get_all_bookings():
 
     with sqlite3.connect(DB_PATH) as conn:
@@ -98,10 +85,6 @@ def get_all_bookings():
         return cursor.fetchall()
 
 
-# =====================================================
-# UPDATE STATUS
-# =====================================================
-
 def update_booking_status(booking_id, status):
 
     with sqlite3.connect(DB_PATH) as conn:
@@ -116,10 +99,6 @@ def update_booking_status(booking_id, status):
 
         conn.commit()
 
-
-# =====================================================
-# BOOKED RANGES
-# =====================================================
 
 def get_booked_ranges():
 
