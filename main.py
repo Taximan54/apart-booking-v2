@@ -1,8 +1,4 @@
 import asyncio
-import os
-
-if os.path.exists("data/bookings.db"):
-    os.remove("data/bookings.db")
 
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
@@ -16,7 +12,7 @@ from handlers.user import router as user_router
 from handlers.admin import router as admin_router
 
 from services.booking_service import (
-    init_booking_table,
+    init_db,
     get_booked_ranges
 )
 
@@ -25,7 +21,7 @@ from services.booking_service import (
 # INIT DB
 # =====================================================
 
-init_booking_table()
+init_db()
 
 
 # =====================================================
