@@ -110,3 +110,50 @@ async def cancel(callback: types.CallbackQuery):
     await callback.message.answer(
         f"❌ Бронь #{booking_id} отменена"
     )
+
+
+# =====================================================
+# CALENDAR
+# =====================================================
+
+@router.callback_query(lambda c: c.data == "admin_calendar")
+async def admin_calendar(callback: types.CallbackQuery):
+
+    rows = get_all_bookings()
+
+    if not rows:
+
+        await callback.message.answer(
+            "Календарь пуст"
+        )
+
+        return
+
+    text = "📅 Занятые даты:\n\n"
+
+    for row in rows:
+
+        text += (
+            f"#{row[0]} | "
+            f"{row[2]} → {row[3]} | "
+            f"{row[5]}\n"
+        )
+
+    await callback.message.answer(text)
+
+
+# =====================================================
+# PRICES
+# =====================================================
+
+@router.callback_query(lambda c: c.data == "admin_prices")
+async def admin_prices(callback: types.CallbackQuery):
+
+    await callback.message.answer(
+
+        "💰 Цены:\n\n"
+        "Будни: 120€\n"
+        "Выходные: 150€\n"
+        "Уборка: 30€"
+
+    )
