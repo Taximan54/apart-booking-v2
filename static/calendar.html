@@ -1,110 +1,145 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
 
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <title>Premium Apart</title>
 
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
+<link
+rel="stylesheet"
+href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css"
+/>
+
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/ru.js"></script>
+
 <style>
+
+* {
+    box-sizing: border-box;
+}
 
 body {
     margin: 0;
     padding: 0;
     background: #f3f4f6;
-    font-family: Arial;
+    font-family: Arial, sans-serif;
+    color: #111827;
 }
 
 .wrapper {
-    max-width: 500px;
+    max-width: 520px;
     margin: auto;
     padding: 20px;
 }
 
 .card {
     background: white;
-    border-radius: 24px;
+    border-radius: 28px;
     padding: 24px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+    box-shadow: 0 10px 35px rgba(0,0,0,0.08);
 }
 
 .title {
-    font-size: 28px;
-    font-weight: bold;
-    margin-bottom: 20px;
-}
-
-.month {
-    margin-bottom: 20px;
-}
-
-.month-title {
-    font-size: 20px;
+    font-size: 30px;
     font-weight: bold;
     margin-bottom: 10px;
 }
 
-.weekdays {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    margin-bottom: 10px;
-    color: #777;
-    font-size: 14px;
+.subtitle {
+    color: #6b7280;
+    margin-bottom: 24px;
+    font-size: 15px;
 }
 
-.days {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 8px;
+.calendar-box {
+    margin-bottom: 20px;
 }
 
-.day {
-    aspect-ratio: 1;
-    border-radius: 50%;
+.input {
+    width: 100%;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    padding: 16px;
+    font-size: 16px;
+    outline: none;
+}
+
+.info {
+    margin-top: 18px;
+    background: #f9fafb;
+    border-radius: 16px;
+    padding: 16px;
+    line-height: 1.6;
+}
+
+.row {
     display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    font-size: 14px;
-    transition: 0.2s;
+    justify-content: space-between;
+    margin-bottom: 8px;
 }
 
-.day:hover {
-    background: #eee;
+.label {
+    color: #6b7280;
 }
 
-.day.selected {
-    background: black;
-    color: white;
-}
-
-.day.in-range {
-    background: #dbeafe;
-}
-
-.day.disabled {
-    color: #bbb;
-    background: #f3f4f6;
-    pointer-events: none;
+.value {
+    font-weight: bold;
 }
 
 .button {
-    margin-top: 20px;
     width: 100%;
     border: none;
     background: black;
     color: white;
-    padding: 16px;
-    border-radius: 14px;
+    padding: 18px;
+    border-radius: 18px;
     font-size: 16px;
     cursor: pointer;
+    margin-top: 20px;
+    transition: 0.2s;
 }
 
-.info {
-    margin-top: 15px;
-    color: #444;
+.button:hover {
+    opacity: 0.92;
+}
+
+.button:disabled {
+    background: #9ca3af;
+    cursor: not-allowed;
+}
+
+.status {
+    margin-top: 14px;
+    color: #6b7280;
+    font-size: 14px;
+}
+
+.flatpickr-calendar {
+    border-radius: 22px !important;
+    box-shadow: 0 15px 40px rgba(0,0,0,0.12) !important;
+}
+
+.flatpickr-day.selected {
+    background: black !important;
+    border-color: black !important;
+}
+
+.flatpickr-day.inRange {
+    background: #dbeafe !important;
+    border-color: #dbeafe !important;
+    box-shadow: none !important;
+}
+
+.flatpickr-day.flatpickr-disabled {
+    background: #ef4444 !important;
+    color: white !important;
+    opacity: 0.5;
+    border-radius: 50%;
 }
 
 </style>
@@ -118,36 +153,55 @@ body {
 <div class="card">
 
 <div class="title">
-🏠 Select Dates
+🏠 Premium Apart
 </div>
 
-<div class="month">
-
-<div class="month-title">
-May 2026
+<div class="subtitle">
+Выберите даты проживания
 </div>
 
-<div class="weekdays">
-<div>Mo</div>
-<div>Tu</div>
-<div>We</div>
-<div>Th</div>
-<div>Fr</div>
-<div>Sa</div>
-<div>Su</div>
-</div>
+<div class="calendar-box">
 
-<div class="days" id="days"></div>
+<input
+type="text"
+id="calendar"
+class="input"
+placeholder="Выберите даты"
+/>
 
 </div>
 
-<div class="info" id="info">
-Выберите даты
+<div class="info">
+
+<div class="row">
+<div class="label">Заезд</div>
+<div class="value" id="checkin-value">—</div>
 </div>
 
-<button class="button" onclick="sendBooking()">
+<div class="row">
+<div class="label">Выезд</div>
+<div class="value" id="checkout-value">—</div>
+</div>
+
+<div class="row">
+<div class="label">Ночей</div>
+<div class="value" id="nights-value">0</div>
+</div>
+
+</div>
+
+<button
+class="button"
+id="book-btn"
+disabled
+onclick="sendBooking()"
+>
 Забронировать
 </button>
+
+<div class="status">
+🔴 Красные даты заняты
+</div>
 
 </div>
 
@@ -156,161 +210,189 @@ May 2026
 <script>
 
 const tg = window.Telegram.WebApp;
+
 tg.expand();
 
-let bookedRanges = [];
+let bookedDates = [];
 
-let checkIn = null;
-let checkOut = null;
-
-const daysContainer = document.getElementById("days");
+let selectedCheckIn = null;
+let selectedCheckOut = null;
 
 
 // =====================================================
-// LOAD BOOKED DATES
+// LOAD BOOKINGS
 // =====================================================
 
-async function loadBooked() {
+async function loadBookedDates() {
 
     try {
 
         const response = await fetch("/api/booked-dates");
 
-        bookedRanges = await response.json();
+        const ranges = await response.json();
+
+        bookedDates = expandBookedRanges(ranges);
+
+        initCalendar();
 
     } catch (e) {
 
-        console.log(e);
+        console.error(e);
 
     }
 
-    renderCalendar();
 }
 
 
 // =====================================================
-// CHECK BOOKED
+// EXPAND RANGES
 // =====================================================
 
-function isBooked(date) {
+function expandBookedRanges(ranges) {
 
-    return bookedRanges.some(range => {
+    const disabled = [];
 
-        return (
-            date >= range.check_in &&
-            date <= range.check_out
-        );
+    ranges.forEach(range => {
+
+        const start = new Date(range.check_in);
+        const end = new Date(range.check_out);
+
+        const current = new Date(start);
+
+        while (current < end) {
+
+    disabled.push(formatDate(current));
+
+    current.setDate(current.getDate() + 1);
+
+}
 
     });
 
-}
-
-
-// =====================================================
-// RENDER
-// =====================================================
-
-function renderCalendar() {
-
-    daysContainer.innerHTML = "";
-
-    for (let day = 1; day <= 31; day++) {
-
-        const date = `2026-05-${String(day).padStart(2, "0")}`;
-
-        const div = document.createElement("div");
-
-        div.className = "day";
-
-        div.innerText = day;
-
-        if (isBooked(date)) {
-
-            div.classList.add("disabled");
-
-        }
-
-        if (checkIn === date || checkOut === date) {
-
-            div.classList.add("selected");
-
-        }
-
-        if (
-            checkIn &&
-            checkOut &&
-            date > checkIn &&
-            date < checkOut
-        ) {
-
-            div.classList.add("in-range");
-
-        }
-
-        div.onclick = () => selectDate(date);
-
-        daysContainer.appendChild(div);
-
-    }
+    return disabled;
 
 }
 
 
 // =====================================================
-// SELECT DATE
+// FORMAT DATE
 // =====================================================
 
-function selectDate(date) {
+function formatDate(date) {
 
-    if (!checkIn || (checkIn && checkOut)) {
+    const y = date.getFullYear();
 
-        checkIn = date;
-        checkOut = null;
+    const m = String(date.getMonth() + 1)
+        .padStart(2, "0");
 
-    } else {
+    const d = String(date.getDate())
+        .padStart(2, "0");
 
-        if (date < checkIn) {
-
-            alert("Дата выезда раньше заезда");
-
-            return;
-        }
-
-        checkOut = date;
-
-    }
-
-    updateInfo();
-
-    renderCalendar();
+    return `${y}-${m}-${d}`;
 
 }
 
 
 // =====================================================
-// INFO
+// CALCULATE NIGHTS
+// =====================================================
+
+function calculateNights(start, end) {
+
+    const s = new Date(start);
+    const e = new Date(end);
+
+    const diff = e - s;
+
+    return Math.ceil(
+        diff / (1000 * 60 * 60 * 24)
+    );
+
+}
+
+
+// =====================================================
+// UPDATE INFO
 // =====================================================
 
 function updateInfo() {
 
-    const info = document.getElementById("info");
+    document.getElementById("checkin-value")
+        .innerText = selectedCheckIn || "—";
 
-    if (!checkIn) {
+    document.getElementById("checkout-value")
+        .innerText = selectedCheckOut || "—";
 
-        info.innerText = "Выберите даты";
+    if (selectedCheckIn && selectedCheckOut) {
 
-        return;
+        const nights = calculateNights(
+            selectedCheckIn,
+            selectedCheckOut
+        );
+
+        document.getElementById("nights-value")
+            .innerText = nights;
+
+        document.getElementById("book-btn")
+            .disabled = false;
+
+    } else {
+
+        document.getElementById("nights-value")
+            .innerText = "0";
+
+        document.getElementById("book-btn")
+            .disabled = true;
+
     }
 
-    if (!checkOut) {
+}
 
-        info.innerText = `Заезд: ${checkIn}`;
 
-        return;
-    }
+// =====================================================
+// INIT CALENDAR
+// =====================================================
 
-    info.innerText =
-        `${checkIn} → ${checkOut}`;
+function initCalendar() {
+
+    flatpickr("#calendar", {
+
+        mode: "range",
+
+        minDate: "today",
+
+        dateFormat: "Y-m-d",
+
+        locale: "ru",
+
+        showMonths: 2,
+
+        disable: bookedDates,
+
+        inline: true,
+
+        onChange: function(selectedDates) {
+
+            if (selectedDates.length === 2) {
+
+                selectedCheckIn =
+                    formatDate(selectedDates[0]);
+
+                selectedCheckOut =
+                    formatDate(selectedDates[1]);
+
+            } else {
+
+                selectedCheckIn = null;
+                selectedCheckOut = null;
+
+            }
+
+            updateInfo();
+
+        }
+
+    });
 
 }
 
@@ -321,24 +403,30 @@ function updateInfo() {
 
 function sendBooking() {
 
-    if (!checkIn || !checkOut) {
+    if (!selectedCheckIn || !selectedCheckOut) {
 
-        alert("Выбери диапазон");
+        alert("Выберите даты");
 
         return;
+
     }
 
     tg.sendData(JSON.stringify({
 
-        check_in: checkIn,
-        check_out: checkOut,
+        check_in: selectedCheckIn,
+        check_out: selectedCheckOut,
         guests: 2
 
     }));
 
 }
 
-loadBooked();
+
+// =====================================================
+// START
+// =====================================================
+
+loadBookedDates();
 
 </script>
 
