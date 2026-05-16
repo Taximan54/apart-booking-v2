@@ -1,10 +1,12 @@
-```html
 <!DOCTYPE html>
 <html lang="ru">
 <head>
 
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+/>
 
 <title>Premium Apart</title>
 
@@ -24,23 +26,23 @@ href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css"
 
 :root {
 
-    --bg: #f4f5f9;
+    --bg: #f7f7f7;
+    --card: #ffffff;
 
-    --card:
-        rgba(255,255,255,0.72);
+    --text: #222222;
+    --muted: #717171;
 
-    --text: #111111;
+    --border: #ebebeb;
 
-    --muted: #70757a;
+    --primary: #111111;
 
-    --accent: #111111;
-
-    --glass-border:
-        rgba(255,255,255,0.55);
+    --range: #f2f2f2;
 
     --shadow:
-        0 10px 40px rgba(15,23,42,0.08),
-        0 2px 12px rgba(15,23,42,0.05);
+        0 1px 2px rgba(0,0,0,0.04),
+        0 8px 24px rgba(0,0,0,0.06);
+
+    --radius: 28px;
 
 }
 
@@ -58,160 +60,71 @@ body {
     margin: 0;
     padding: 0;
 
-    min-height: 100vh;
-
-    font-family: 'Inter', sans-serif;
-
-    background:
-        radial-gradient(
-            circle at top left,
-            #ffffff,
-            #f5f7fb 40%,
-            #eef2f7 100%
-        );
+    background: var(--bg);
 
     color: var(--text);
 
-    overflow-x: hidden;
+    font-family: 'Inter', sans-serif;
+
+    min-height: 100vh;
 
 }
-
-/* ===================================================== */
-/* BACKGROUND GLOW */
-/* ===================================================== */
-
-body::before {
-
-    content: "";
-
-    position: fixed;
-
-    inset: 0;
-
-    background:
-
-        radial-gradient(
-            circle at top right,
-            rgba(255,255,255,0.9),
-            transparent 30%
-        ),
-
-        radial-gradient(
-            circle at bottom left,
-            rgba(255,255,255,0.45),
-            transparent 40%
-        );
-
-    pointer-events: none;
-
-}
-
-/* ===================================================== */
-/* WRAPPER */
-/* ===================================================== */
 
 .wrapper {
 
     width: 100%;
-
     max-width: 760px;
 
     margin: auto;
 
     padding:
         calc(env(safe-area-inset-top) + 18px)
-        18px
-        140px;
+        16px
+        160px;
 
 }
 
 /* ===================================================== */
-/* CARD */
+/* HERO */
 /* ===================================================== */
 
-.card {
+.hero {
 
-    position: relative;
-
-    background: var(--card);
-
-    backdrop-filter: blur(28px);
-    -webkit-backdrop-filter: blur(28px);
-
-    border:
-        1px solid var(--glass-border);
-
-    border-radius: 38px;
-
-    padding: 30px 26px;
-
-    box-shadow: var(--shadow);
-
-    overflow: hidden;
-
-    animation:
-        fadeUp 0.7s ease;
+    margin-bottom: 20px;
 
 }
 
-@keyframes fadeUp {
+.badge {
 
-    from {
+    display: inline-flex;
 
-        opacity: 0;
+    align-items: center;
 
-        transform:
-            translateY(18px);
+    gap: 6px;
 
-    }
+    padding: 8px 14px;
 
-    to {
+    background: white;
 
-        opacity: 1;
+    border: 1px solid var(--border);
 
-        transform:
-            translateY(0);
+    border-radius: 999px;
 
-    }
+    font-size: 13px;
 
-}
+    font-weight: 600;
 
-/* ===================================================== */
-/* LIGHT EFFECT */
-/* ===================================================== */
-
-.card::before {
-
-    content: "";
-
-    position: absolute;
-
-    top: -120px;
-    right: -120px;
-
-    width: 260px;
-    height: 260px;
-
-    background:
-        radial-gradient(
-            circle,
-            rgba(255,255,255,0.9),
-            transparent 70%
-        );
+    margin-bottom: 16px;
 
 }
-
-/* ===================================================== */
-/* TITLE */
-/* ===================================================== */
 
 .title {
 
-    font-size: 40px;
+    font-size: 36px;
 
     font-weight: 800;
 
-    letter-spacing: -2px;
+    letter-spacing: -1.8px;
 
     line-height: 1.05;
 
@@ -223,35 +136,67 @@ body::before {
 
     font-size: 15px;
 
-    line-height: 1.6;
-
     color: var(--muted);
 
-    margin-bottom: 30px;
+    line-height: 1.6;
 
 }
 
 /* ===================================================== */
-/* CALENDAR CONTAINER */
+/* CARD */
 /* ===================================================== */
 
-.calendar-box {
+.card {
 
-    position: relative;
+    background: var(--card);
 
-    padding: 12px;
+    border-radius: var(--radius);
 
-    border-radius: 32px;
+    border: 1px solid var(--border);
 
-    background:
-        linear-gradient(
-            180deg,
-            rgba(255,255,255,0.7),
-            rgba(255,255,255,0.4)
-        );
+    box-shadow: var(--shadow);
 
-    border:
-        1px solid rgba(255,255,255,0.65);
+    overflow: hidden;
+
+}
+
+/* ===================================================== */
+/* CALENDAR */
+/* ===================================================== */
+
+.calendar-section {
+
+    padding: 24px;
+
+}
+
+.calendar-header {
+
+    display: flex;
+
+    justify-content: space-between;
+
+    align-items: center;
+
+    margin-bottom: 18px;
+
+}
+
+.calendar-title {
+
+    font-size: 22px;
+
+    font-weight: 700;
+
+    letter-spacing: -0.6px;
+
+}
+
+.calendar-sub {
+
+    font-size: 14px;
+
+    color: var(--muted);
 
 }
 
@@ -260,146 +205,52 @@ body::before {
 }
 
 /* ===================================================== */
-/* INFO */
+/* INFO GRID */
 /* ===================================================== */
 
-.info {
+.info-grid {
 
-    margin-top: 26px;
+    display: grid;
 
-    background:
-        linear-gradient(
-            180deg,
-            rgba(255,255,255,0.82),
-            rgba(255,255,255,0.58)
-        );
+    grid-template-columns: repeat(3, 1fr);
 
-    border-radius: 28px;
-
-    padding: 10px 22px;
-
-    border:
-        1px solid rgba(255,255,255,0.7);
-
-    backdrop-filter: blur(18px);
+    border-top: 1px solid var(--border);
 
 }
 
-.row {
-
-    display: flex;
-
-    justify-content: space-between;
-
-    align-items: center;
-
-    padding: 18px 0;
-
-}
-
-.row:not(:last-child) {
-
-    border-bottom:
-        1px solid rgba(0,0,0,0.05);
-
-}
-
-.label {
-
-    font-size: 14px;
-
-    color: var(--muted);
-
-    font-weight: 500;
-
-}
-
-.value {
-
-    font-size: 16px;
-
-    font-weight: 700;
-
-}
-
-/* ===================================================== */
-/* BUTTON */
-/* ===================================================== */
-
-.button {
-
-    width: 100%;
-
-    border: none;
-
-    border-radius: 24px;
+.info-item {
 
     padding: 20px;
 
-    margin-top: 28px;
+}
 
-    background:
-        linear-gradient(
-            135deg,
-            #111111,
-            #2a2a2a
-        );
+.info-item:not(:last-child) {
 
-    color: white;
+    border-right: 1px solid var(--border);
 
-    font-size: 16px;
+}
+
+.info-label {
+
+    font-size: 12px;
+
+    color: var(--muted);
+
+    text-transform: uppercase;
 
     font-weight: 700;
 
-    cursor: pointer;
+    margin-bottom: 8px;
 
-    transition:
-        transform 0.18s ease,
-        box-shadow 0.18s ease,
-        opacity 0.18s ease;
-
-    box-shadow:
-        0 10px 30px rgba(0,0,0,0.18);
+    letter-spacing: 0.5px;
 
 }
 
-.button:hover {
+.info-value {
 
-    transform:
-        translateY(-2px);
+    font-size: 15px;
 
-}
-
-.button:active {
-
-    transform:
-        scale(0.985);
-
-}
-
-.button:disabled {
-
-    opacity: 0.45;
-
-    cursor: not-allowed;
-
-    box-shadow: none;
-
-}
-
-/* ===================================================== */
-/* STATUS */
-/* ===================================================== */
-
-.status {
-
-    margin-top: 16px;
-
-    text-align: center;
-
-    font-size: 13px;
-
-    color: var(--muted);
+    font-weight: 700;
 
 }
 
@@ -411,45 +262,63 @@ body::before {
 
     width: 100% !important;
 
-    background: transparent !important;
-
     border: none !important;
 
     box-shadow: none !important;
+
+    background: transparent !important;
 
 }
 
 .flatpickr-months {
 
-    margin-bottom: 20px;
+    margin-bottom: 18px;
+
+}
+
+.flatpickr-month {
+
+    height: 42px !important;
 
 }
 
 .flatpickr-current-month {
 
-    font-size: 26px !important;
+    font-size: 20px !important;
 
-    font-weight: 800 !important;
+    font-weight: 700 !important;
 
-    letter-spacing: -1px;
+    padding-top: 0 !important;
+
+}
+
+.flatpickr-current-month .flatpickr-monthDropdown-months {
+
+    font-weight: 700 !important;
 
 }
 
 .flatpickr-weekdays {
 
-    margin-bottom: 12px;
+    margin-bottom: 10px;
 
 }
 
 .flatpickr-weekday {
 
-    color: #9aa0a6 !important;
+    color: #8e8e93 !important;
 
     font-size: 12px !important;
 
     font-weight: 700 !important;
 
     text-transform: uppercase;
+
+}
+
+.flatpickr-days {
+
+    width: 100% !important;
 
 }
 
@@ -467,70 +336,56 @@ body::before {
 
     border: none !important;
 
-    border-radius: 20px !important;
+    border-radius: 50% !important;
 
-    height: 58px !important;
+    height: 48px !important;
 
-    line-height: 58px !important;
+    line-height: 48px !important;
 
-    max-width: 58px !important;
+    max-width: 48px !important;
 
-    font-size: 15px;
+    font-size: 14px;
 
     font-weight: 600;
 
+    color: var(--text);
+
     transition:
-        all 0.16s ease;
+        background 0.18s ease,
+        transform 0.12s ease,
+        color 0.18s ease;
 
 }
 
 .flatpickr-day:hover {
 
-    background:
-        rgba(17,17,17,0.06) !important;
+    background: #f2f2f2 !important;
 
-    transform:
-        scale(1.06);
+    transform: scale(1.04);
 
 }
 
-/* TODAY */
-
 .flatpickr-day.today {
 
-    border:
-        1.5px solid #111 !important;
+    border: 1.5px solid #111 !important;
 
     background: white !important;
 
 }
 
-/* SELECTED */
-
 .flatpickr-day.selected,
 .flatpickr-day.startRange,
 .flatpickr-day.endRange {
 
-    background:
-        linear-gradient(
-            135deg,
-            #111,
-            #2a2a2a
-        ) !important;
+    background: #111 !important;
 
     color: white !important;
 
-    box-shadow:
-        0 8px 22px rgba(0,0,0,0.18);
-
 }
-
-/* RANGE */
 
 .flatpickr-day.inRange {
 
-    background:
-        rgba(17,17,17,0.08) !important;
+    background: var(--range) !important;
 
     color: #111 !important;
 
@@ -540,60 +395,183 @@ body::before {
 
 .flatpickr-day.startRange {
 
-    border-top-left-radius: 20px !important;
-    border-bottom-left-radius: 20px !important;
+    border-top-left-radius: 999px !important;
+    border-bottom-left-radius: 999px !important;
 
 }
 
 .flatpickr-day.endRange {
 
-    border-top-right-radius: 20px !important;
-    border-bottom-right-radius: 20px !important;
+    border-top-right-radius: 999px !important;
+    border-bottom-right-radius: 999px !important;
 
 }
 
-/* DISABLED */
-
 .flatpickr-day.flatpickr-disabled {
 
-    background:
-        rgba(255,80,80,0.08) !important;
+    color: #d93025 !important;
 
-    color: #ff4d4f !important;
+    background: #fff5f5 !important;
 
-    opacity: 0.8;
+    opacity: 0.65;
 
     text-decoration: line-through;
 
 }
 
-/* OTHER MONTH */
-
 .flatpickr-day.prevMonthDay,
 .flatpickr-day.nextMonthDay {
 
-    opacity: 0.18;
+    opacity: 0.15;
 
 }
-
-/* NAVIGATION */
 
 .flatpickr-prev-month,
 .flatpickr-next-month {
 
-    top: 8px !important;
-
-    padding: 8px !important;
+    top: 6px !important;
 
 }
 
 .flatpickr-prev-month:hover,
 .flatpickr-next-month:hover {
 
-    background:
-        rgba(17,17,17,0.05);
+    background: #f5f5f5;
 
-    border-radius: 14px;
+    border-radius: 12px;
+
+}
+
+.flatpickr-prev-month svg,
+.flatpickr-next-month svg {
+
+    width: 16px !important;
+    height: 16px !important;
+
+}
+
+/* ===================================================== */
+/* STICKY FOOTER */
+/* ===================================================== */
+
+.footer {
+
+    position: fixed;
+
+    left: 0;
+    right: 0;
+    bottom: 0;
+
+    z-index: 999;
+
+    background: rgba(255,255,255,0.92);
+
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+
+    border-top: 1px solid rgba(0,0,0,0.06);
+
+    padding:
+        14px
+        16px
+        calc(env(safe-area-inset-bottom) + 18px);
+
+}
+
+.footer-inner {
+
+    max-width: 760px;
+
+    margin: auto;
+
+    display: flex;
+
+    justify-content: space-between;
+
+    align-items: center;
+
+    gap: 14px;
+
+}
+
+.price-box {
+
+    display: flex;
+
+    flex-direction: column;
+
+}
+
+.price {
+
+    font-size: 22px;
+
+    font-weight: 800;
+
+    letter-spacing: -0.8px;
+
+}
+
+.price-sub {
+
+    font-size: 13px;
+
+    color: var(--muted);
+
+    margin-top: 3px;
+
+}
+
+.book-btn {
+
+    border: none;
+
+    background: #111;
+
+    color: white;
+
+    height: 56px;
+
+    padding: 0 28px;
+
+    border-radius: 18px;
+
+    font-size: 15px;
+
+    font-weight: 700;
+
+    cursor: pointer;
+
+    transition:
+        transform 0.14s ease,
+        opacity 0.14s ease;
+
+    box-shadow:
+        0 10px 25px rgba(0,0,0,0.12);
+
+}
+
+.book-btn:hover {
+
+    transform: translateY(-1px);
+
+}
+
+.book-btn:active {
+
+    transform: scale(0.98);
+
+}
+
+.book-btn:disabled {
+
+    opacity: 0.4;
+
+    cursor: not-allowed;
+
+    transform: none;
+
+    box-shadow: none;
 
 }
 
@@ -606,65 +584,102 @@ body::before {
     .wrapper {
 
         padding:
-            calc(env(safe-area-inset-top) + 8px)
-            10px
-            140px;
-
-    }
-
-    .card {
-
-        border-radius: 28px;
-
-        padding: 22px 18px;
+            calc(env(safe-area-inset-top) + 14px)
+            12px
+            150px;
 
     }
 
     .title {
 
-        font-size: 32px;
+        font-size: 30px;
 
     }
 
-    .flatpickr-current-month {
+    .calendar-section {
 
-        font-size: 22px !important;
+        padding: 20px 16px;
+
+    }
+
+    .info-grid {
+
+        grid-template-columns: 1fr;
+
+    }
+
+    .info-item:not(:last-child) {
+
+        border-right: none;
+
+        border-bottom: 1px solid var(--border);
 
     }
 
     .flatpickr-day {
 
-        height: 50px !important;
+        height: 44px !important;
 
-        line-height: 50px !important;
+        line-height: 44px !important;
 
-        max-width: 50px !important;
+        max-width: 44px !important;
 
-        border-radius: 18px !important;
+    }
+
+    .footer-inner {
+
+        align-items: stretch;
+
+    }
+
+    .book-btn {
+
+        min-width: 150px;
 
     }
 
 }
 
 </style>
-
 </head>
 
 <body>
 
 <div class="wrapper">
 
-<div class="card">
+<div class="hero">
+
+<div class="badge">
+⭐ Городская Пауза
+</div>
 
 <div class="title">
-🏠 Городская Пауза
+Premium Apart
 </div>
 
 <div class="subtitle">
-Выберите даты проживания
+Выберите даты проживания и подтвердите бронирование
 </div>
 
-<div class="calendar-box">
+</div>
+
+<div class="card">
+
+<div class="calendar-section">
+
+<div class="calendar-header">
+
+<div>
+<div class="calendar-title">
+Выбор дат
+</div>
+
+<div class="calendar-sub">
+Красные даты недоступны
+</div>
+</div>
+
+</div>
 
 <input
 type="text"
@@ -674,58 +689,80 @@ class="input"
 
 </div>
 
-<div class="info">
+<div class="info-grid">
 
-<div class="row">
-<div class="label">Заезд</div>
-<div class="value" id="checkin-value">—</div>
+<div class="info-item">
+
+<div class="info-label">
+Заезд
 </div>
 
-<div class="row">
-<div class="label">Выезд</div>
-<div class="value" id="checkout-value">—</div>
-</div>
-
-<div class="row">
-<div class="label">Ночей</div>
-<div class="value" id="nights-value">0</div>
+<div class="info-value" id="checkin-value">
+—
 </div>
 
 </div>
 
-<div class="status">
-🔴 Красные даты заняты
+<div class="info-item">
+
+<div class="info-label">
+Выезд
+</div>
+
+<div class="info-value" id="checkout-value">
+—
+</div>
+
+</div>
+
+<div class="info-item">
+
+<div class="info-label">
+Ночей
+</div>
+
+<div class="info-value" id="nights-value">
+0
 </div>
 
 </div>
 
 </div>
 
+</div>
+
+</div>
+
+<!-- ===================================================== -->
 <!-- STICKY FOOTER -->
+<!-- ===================================================== -->
 
-<div class="sticky-booking">
+<div class="footer">
 
-    <div class="sticky-left">
+<div class="footer-inner">
 
-        <div class="sticky-price">
-            €120
-            <span>/ night</span>
-        </div>
+<div class="price-box">
 
-        <div class="sticky-dates" id="sticky-dates">
-            Выберите даты
-        </div>
+<div class="price" id="total-price">
+€0
+</div>
 
-    </div>
+<div class="price-sub">
+Общая стоимость
+</div>
 
-    <button
-        class="sticky-button"
-        id="sticky-button"
-        onclick="sendBooking()"
-        disabled
-    >
-        Забронировать
-    </button>
+</div>
+
+<button
+class="book-btn"
+id="book-btn"
+disabled
+onclick="sendBooking()"
+>
+Забронировать
+</button>
+
+</div>
 
 </div>
 
@@ -740,8 +777,12 @@ let bookedDates = [];
 let selectedCheckIn = null;
 let selectedCheckOut = null;
 
+const PRICE_PER_NIGHT = 120;
 
+
+// =====================================================
 // LOAD BOOKINGS
+// =====================================================
 
 async function loadBookedDates() {
 
@@ -764,7 +805,9 @@ async function loadBookedDates() {
 }
 
 
+// =====================================================
 // EXPAND RANGES
+// =====================================================
 
 function expandBookedRanges(ranges) {
 
@@ -773,15 +816,20 @@ function expandBookedRanges(ranges) {
     ranges.forEach(range => {
 
         const start = new Date(range.check_in);
+
         const end = new Date(range.check_out);
 
         const current = new Date(start);
 
         while (current < end) {
 
-            disabled.push(formatDate(current));
+            disabled.push(
+                formatDate(current)
+            );
 
-            current.setDate(current.getDate() + 1);
+            current.setDate(
+                current.getDate() + 1
+            );
 
         }
 
@@ -792,86 +840,113 @@ function expandBookedRanges(ranges) {
 }
 
 
+// =====================================================
 // FORMAT DATE
+// =====================================================
 
 function formatDate(date) {
 
     const y = date.getFullYear();
 
-    const m = String(date.getMonth() + 1)
-        .padStart(2, "0");
+    const m = String(
+        date.getMonth() + 1
+    ).padStart(2, "0");
 
-    const d = String(date.getDate())
-        .padStart(2, "0");
+    const d = String(
+        date.getDate()
+    ).padStart(2, "0");
 
     return `${y}-${m}-${d}`;
 
 }
 
 
+// =====================================================
 // CALCULATE NIGHTS
+// =====================================================
 
 function calculateNights(start, end) {
 
     const s = new Date(start);
+
     const e = new Date(end);
 
-    const diff = e - s;
-
     return Math.ceil(
-        diff / (1000 * 60 * 60 * 24)
+        (e - s) / (1000 * 60 * 60 * 24)
     );
 
 }
 
 
+// =====================================================
 // UPDATE INFO
+// =====================================================
 
 function updateInfo() {
 
-    document.getElementById("checkin-value")
-        .innerText = selectedCheckIn || "—";
+    document.getElementById(
+        "checkin-value"
+    ).innerText =
+        selectedCheckIn || "—";
 
-    document.getElementById("checkout-value")
-        .innerText = selectedCheckOut || "—";
+    document.getElementById(
+        "checkout-value"
+    ).innerText =
+        selectedCheckOut || "—";
 
-    const stickyDates =
-        document.getElementById("sticky-dates");
-
-    const stickyButton =
-        document.getElementById("sticky-button");
-
-    if (selectedCheckIn && selectedCheckOut) {
-
-        const nights = calculateNights(
-            selectedCheckIn,
-            selectedCheckOut
+    const nightsElement =
+        document.getElementById(
+            "nights-value"
         );
 
-        document.getElementById("nights-value")
-            .innerText = nights;
+    const totalElement =
+        document.getElementById(
+            "total-price"
+        );
 
-        stickyButton.disabled = false;
+    const button =
+        document.getElementById(
+            "book-btn"
+        );
 
-        stickyDates.innerText =
-            `${selectedCheckIn} → ${selectedCheckOut}`;
+    if (
+        selectedCheckIn &&
+        selectedCheckOut
+    ) {
+
+        const nights =
+            calculateNights(
+                selectedCheckIn,
+                selectedCheckOut
+            );
+
+        nightsElement.innerText =
+            nights;
+
+        const total =
+            nights * PRICE_PER_NIGHT;
+
+        totalElement.innerText =
+            `€${total}`;
+
+        button.disabled = false;
 
     } else {
 
-        document.getElementById("nights-value")
-            .innerText = "0";
+        nightsElement.innerText = "0";
 
-        stickyButton.disabled = true;
+        totalElement.innerText = "€0";
 
-        stickyDates.innerText =
-            "Выберите даты";
+        button.disabled = true;
 
     }
 
 }
 
 
+// =====================================================
 // INIT CALENDAR
+// =====================================================
 
 function initCalendar() {
 
@@ -885,25 +960,32 @@ function initCalendar() {
 
         locale: "ru",
 
+        inline: true,
+
         showMonths: 2,
 
         disable: bookedDates,
 
-        inline: true,
-
         onChange: function(selectedDates) {
 
-            if (selectedDates.length === 2) {
+            if (
+                selectedDates.length === 2
+            ) {
 
                 selectedCheckIn =
-                    formatDate(selectedDates[0]);
+                    formatDate(
+                        selectedDates[0]
+                    );
 
                 selectedCheckOut =
-                    formatDate(selectedDates[1]);
+                    formatDate(
+                        selectedDates[1]
+                    );
 
             } else {
 
                 selectedCheckIn = null;
+
                 selectedCheckOut = null;
 
             }
@@ -917,13 +999,20 @@ function initCalendar() {
 }
 
 
+// =====================================================
 // SEND BOOKING
+// =====================================================
 
 function sendBooking() {
 
-    if (!selectedCheckIn || !selectedCheckOut) {
+    if (
+        !selectedCheckIn ||
+        !selectedCheckOut
+    ) {
 
-        alert("Выберите даты");
+        alert(
+            "Выберите даты"
+        );
 
         return;
 
@@ -932,7 +1021,9 @@ function sendBooking() {
     tg.sendData(JSON.stringify({
 
         check_in: selectedCheckIn,
+
         check_out: selectedCheckOut,
+
         guests: 2
 
     }));
@@ -940,7 +1031,9 @@ function sendBooking() {
 }
 
 
+// =====================================================
 // START
+// =====================================================
 
 loadBookedDates();
 
@@ -948,4 +1041,3 @@ loadBookedDates();
 
 </body>
 </html>
-```
