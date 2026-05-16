@@ -284,9 +284,11 @@ body {
 
 .flatpickr-current-month {
 
-    font-size: 20px !important;
+    font-size: 24px !important;
 
-    font-weight: 700 !important;
+    font-weight: 800 !important;
+
+    letter-spacing: -1px;
 
     padding-top: 0 !important;
 
@@ -294,7 +296,7 @@ body {
 
 .flatpickr-current-month .flatpickr-monthDropdown-months {
 
-    font-weight: 700 !important;
+    font-weight: 800 !important;
 
 }
 
@@ -336,7 +338,7 @@ body {
 
     border: none !important;
 
-    border-radius: 50% !important;
+    border-radius: 18px !important;
 
     height: 48px !important;
 
@@ -351,17 +353,21 @@ body {
     color: var(--text);
 
     transition:
-        background 0.18s ease,
-        transform 0.12s ease,
-        color 0.18s ease;
+        background 0.22s ease,
+        transform 0.16s ease,
+        color 0.22s ease,
+        box-shadow 0.22s ease;
 
 }
 
 .flatpickr-day:hover {
 
-    background: #f2f2f2 !important;
+    background: #f3f4f6 !important;
 
-    transform: scale(1.04);
+    transform: scale(1.06);
+
+    box-shadow:
+        0 4px 10px rgba(0,0,0,0.06);
 
 }
 
@@ -391,19 +397,54 @@ body {
 
     border-radius: 0 !important;
 
+    box-shadow: none !important;
+
+    position: relative;
+
+}
+
+/* seamless range */
+
+.flatpickr-day.startRange.inRange,
+.flatpickr-day.endRange.inRange {
+
+    background: #111 !important;
+
+    color: white !important;
+
+}
+
+.flatpickr-day.startRange + .inRange {
+
+    box-shadow:
+        inset 8px 0 0 var(--range) !important;
+
+}
+
+.flatpickr-day.inRange + .endRange {
+
+    box-shadow:
+        inset -8px 0 0 var(--range) !important;
+
 }
 
 .flatpickr-day.startRange {
 
-    border-top-left-radius: 999px !important;
-    border-bottom-left-radius: 999px !important;
+    border-top-left-radius: 18px !important;
+    border-bottom-left-radius: 18px !important;
+
+    border-top-right-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
 
 }
 
 .flatpickr-day.endRange {
 
-    border-top-right-radius: 999px !important;
-    border-bottom-right-radius: 999px !important;
+    border-top-right-radius: 18px !important;
+    border-bottom-right-radius: 18px !important;
+
+    border-top-left-radius: 0 !important;
+    border-bottom-left-radius: 0 !important;
 
 }
 
@@ -464,12 +505,15 @@ body {
 
     z-index: 999;
 
-    background: rgba(255,255,255,0.92);
+    background: rgba(255,255,255,0.82);
 
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
 
     border-top: 1px solid rgba(0,0,0,0.06);
+
+    box-shadow:
+        0 -8px 30px rgba(0,0,0,0.06);
 
     padding:
         14px
@@ -526,7 +570,12 @@ body {
 
     border: none;
 
-    background: #111;
+    background:
+        linear-gradient(
+            135deg,
+            #111111,
+            #1f1f1f
+        );
 
     color: white;
 
