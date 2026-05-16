@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -17,7 +18,6 @@ href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css"
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/ru.js"></script>
 
-```html
 <style>
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
@@ -111,7 +111,7 @@ body::before {
     padding:
         calc(env(safe-area-inset-top) + 18px)
         18px
-        calc(env(safe-area-inset-bottom) + 120px);
+        calc(env(safe-area-inset-bottom) + 140px);
 
 }
 
@@ -208,9 +208,7 @@ body::before {
     display: none;
 }
 
-/* ===================================================== */
-/* INFO CARD */
-/* ===================================================== */
+/* INFO */
 
 .info {
 
@@ -271,10 +269,6 @@ body::before {
     letter-spacing: -0.2px;
 
 }
-
-/* ===================================================== */
-/* BUTTON */
-/* ===================================================== */
 
 .button {
 
@@ -339,10 +333,6 @@ body::before {
 
 }
 
-/* ===================================================== */
-/* STATUS */
-/* ===================================================== */
-
 .status {
 
     margin-top: 16px;
@@ -355,9 +345,7 @@ body::before {
 
 }
 
-/* ===================================================== */
 /* FLATPICKR */
-/* ===================================================== */
 
 .flatpickr-calendar {
 
@@ -392,12 +380,6 @@ body::before {
     letter-spacing: -1px;
 
     padding-top: 0 !important;
-
-}
-
-.flatpickr-current-month .flatpickr-monthDropdown-months {
-
-    font-weight: 800 !important;
 
 }
 
@@ -451,8 +433,7 @@ body::before {
 
     color: #222;
 
-    transition:
-        all 0.16s ease;
+    transition: all 0.16s ease;
 
 }
 
@@ -474,8 +455,6 @@ body::before {
 
 }
 
-/* SELECTED */
-
 .flatpickr-day.selected,
 .flatpickr-day.startRange,
 .flatpickr-day.endRange {
@@ -493,8 +472,6 @@ body::before {
         0 6px 18px rgba(0,0,0,0.16);
 
 }
-
-/* RANGE */
 
 .flatpickr-day.inRange {
 
@@ -521,8 +498,6 @@ body::before {
 
 }
 
-/* DISABLED */
-
 .flatpickr-day.flatpickr-disabled {
 
     background:
@@ -536,16 +511,12 @@ body::before {
 
 }
 
-/* OTHER MONTH */
-
 .flatpickr-day.prevMonthDay,
 .flatpickr-day.nextMonthDay {
 
     opacity: 0.18;
 
 }
-
-/* ARROWS */
 
 .flatpickr-prev-month,
 .flatpickr-next-month {
@@ -574,9 +545,146 @@ body::before {
 
 }
 
-/* ===================================================== */
+/* STICKY BOOKING */
+
+.sticky-booking {
+
+    position: fixed;
+
+    left: 0;
+    right: 0;
+    bottom: 0;
+
+    z-index: 9999;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    gap: 16px;
+
+    padding:
+        18px
+        20px
+        calc(env(safe-area-inset-bottom) + 18px);
+
+    background:
+        rgba(255,255,255,0.82);
+
+    backdrop-filter: blur(30px);
+    -webkit-backdrop-filter: blur(30px);
+
+    border-top:
+        1px solid rgba(255,255,255,0.7);
+
+    box-shadow:
+        0 -10px 30px rgba(0,0,0,0.06);
+
+}
+
+.sticky-left {
+
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 4px;
+
+}
+
+.sticky-price {
+
+    font-size: 20px;
+
+    font-weight: 800;
+
+    letter-spacing: -0.5px;
+
+    color: #111;
+
+}
+
+.sticky-price span {
+
+    font-size: 14px;
+
+    font-weight: 500;
+
+    color: #70757a;
+
+}
+
+.sticky-dates {
+
+    font-size: 13px;
+
+    color: #70757a;
+
+    font-weight: 500;
+
+}
+
+.sticky-button {
+
+    border: none;
+
+    padding:
+        16px
+        28px;
+
+    border-radius: 18px;
+
+    background:
+        linear-gradient(
+            135deg,
+            #ff385c,
+            #e61e4d
+        );
+
+    color: white;
+
+    font-size: 15px;
+
+    font-weight: 700;
+
+    letter-spacing: -0.2px;
+
+    cursor: pointer;
+
+    transition:
+        transform 0.16s ease,
+        opacity 0.16s ease;
+
+    box-shadow:
+        0 10px 25px rgba(230,30,77,0.28);
+
+}
+
+.sticky-button:hover {
+
+    transform: translateY(-2px);
+
+}
+
+.sticky-button:active {
+
+    transform: scale(0.98);
+
+}
+
+.sticky-button:disabled {
+
+    opacity: 0.45;
+
+    cursor: not-allowed;
+
+    box-shadow: none;
+
+}
+
 /* MOBILE */
-/* ===================================================== */
 
 @media (max-width: 640px) {
 
@@ -585,7 +693,7 @@ body::before {
         padding:
             calc(env(safe-area-inset-top) + 8px)
             10px
-            calc(env(safe-area-inset-bottom) + 120px);
+            calc(env(safe-area-inset-bottom) + 140px);
 
     }
 
@@ -621,9 +729,19 @@ body::before {
 
     }
 
+    .sticky-booking {
+
+        padding:
+            16px
+            16px
+            calc(env(safe-area-inset-bottom) + 16px);
+
+    }
+
 }
 
 </style>
+
 </head>
 
 <body>
@@ -646,7 +764,6 @@ body::before {
 type="text"
 id="calendar"
 class="input"
-placeholder="Выберите даты"
 />
 
 </div>
@@ -670,20 +787,39 @@ placeholder="Выберите даты"
 
 </div>
 
-<button
-class="button"
-id="book-btn"
-disabled
-onclick="sendBooking()"
->
-Забронировать
-</button>
-
 <div class="status">
 🔴 Красные даты заняты
 </div>
 
 </div>
+
+</div>
+
+<!-- STICKY FOOTER -->
+
+<div class="sticky-booking">
+
+    <div class="sticky-left">
+
+        <div class="sticky-price">
+            €120
+            <span>/ night</span>
+        </div>
+
+        <div class="sticky-dates" id="sticky-dates">
+            Выберите даты
+        </div>
+
+    </div>
+
+    <button
+        class="sticky-button"
+        id="sticky-button"
+        onclick="sendBooking()"
+        disabled
+    >
+        Reserve
+    </button>
 
 </div>
 
@@ -699,9 +835,7 @@ let selectedCheckIn = null;
 let selectedCheckOut = null;
 
 
-// =====================================================
 // LOAD BOOKINGS
-// =====================================================
 
 async function loadBookedDates() {
 
@@ -724,9 +858,7 @@ async function loadBookedDates() {
 }
 
 
-// =====================================================
 // EXPAND RANGES
-// =====================================================
 
 function expandBookedRanges(ranges) {
 
@@ -741,11 +873,11 @@ function expandBookedRanges(ranges) {
 
         while (current < end) {
 
-    disabled.push(formatDate(current));
+            disabled.push(formatDate(current));
 
-    current.setDate(current.getDate() + 1);
+            current.setDate(current.getDate() + 1);
 
-}
+        }
 
     });
 
@@ -754,9 +886,7 @@ function expandBookedRanges(ranges) {
 }
 
 
-// =====================================================
 // FORMAT DATE
-// =====================================================
 
 function formatDate(date) {
 
@@ -773,9 +903,7 @@ function formatDate(date) {
 }
 
 
-// =====================================================
 // CALCULATE NIGHTS
-// =====================================================
 
 function calculateNights(start, end) {
 
@@ -791,9 +919,7 @@ function calculateNights(start, end) {
 }
 
 
-// =====================================================
 // UPDATE INFO
-// =====================================================
 
 function updateInfo() {
 
@@ -802,6 +928,12 @@ function updateInfo() {
 
     document.getElementById("checkout-value")
         .innerText = selectedCheckOut || "—";
+
+    const stickyDates =
+        document.getElementById("sticky-dates");
+
+    const stickyButton =
+        document.getElementById("sticky-button");
 
     if (selectedCheckIn && selectedCheckOut) {
 
@@ -813,25 +945,27 @@ function updateInfo() {
         document.getElementById("nights-value")
             .innerText = nights;
 
-        document.getElementById("book-btn")
-            .disabled = false;
+        stickyButton.disabled = false;
+
+        stickyDates.innerText =
+            `${selectedCheckIn} → ${selectedCheckOut}`;
 
     } else {
 
         document.getElementById("nights-value")
             .innerText = "0";
 
-        document.getElementById("book-btn")
-            .disabled = true;
+        stickyButton.disabled = true;
+
+        stickyDates.innerText =
+            "Выберите даты";
 
     }
 
 }
 
 
-// =====================================================
 // INIT CALENDAR
-// =====================================================
 
 function initCalendar() {
 
@@ -877,9 +1011,7 @@ function initCalendar() {
 }
 
 
-// =====================================================
 // SEND BOOKING
-// =====================================================
 
 function sendBooking() {
 
@@ -902,9 +1034,7 @@ function sendBooking() {
 }
 
 
-// =====================================================
 // START
-// =====================================================
 
 loadBookedDates();
 
@@ -912,3 +1042,4 @@ loadBookedDates();
 
 </body>
 </html>
+```
