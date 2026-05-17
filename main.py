@@ -18,7 +18,7 @@ from services.booking_service import (
 
 
 # =====================================================
-# INIT DB
+# INIT DATABASE
 # =====================================================
 
 init_db()
@@ -66,13 +66,79 @@ async def home():
 
         <head>
             <title>Premium Apart</title>
+
+            <meta
+                name="viewport"
+                content="width=device-width, initial-scale=1.0"
+            />
+
+            <style>
+
+                body {
+
+                    margin: 0;
+                    padding: 40px;
+
+                    font-family: Arial;
+
+                    background: #f7f7f7;
+
+                    color: #111;
+
+                }
+
+                .card {
+
+                    max-width: 500px;
+
+                    margin: auto;
+
+                    background: white;
+
+                    padding: 32px;
+
+                    border-radius: 24px;
+
+                    box-shadow:
+                        0 8px 24px rgba(0,0,0,0.06);
+
+                }
+
+                h1 {
+
+                    margin-top: 0;
+
+                }
+
+                .status {
+
+                    color: #16a34a;
+
+                    font-weight: 600;
+
+                }
+
+            </style>
+
         </head>
 
-        <body style="font-family:Arial;padding:40px;">
+        <body>
 
-            <h1>🏠 Premium Apart</h1>
+            <div class="card">
 
-            <p>System Online 🚀</p>
+                <h1>
+                    🏠 Premium Apart
+                </h1>
+
+                <p class="status">
+                    System Online 🚀
+                </p>
+
+                <p>
+                    SQLite Database Connected
+                </p>
+
+            </div>
 
         </body>
 
@@ -87,7 +153,23 @@ async def home():
 @app.get("/api/booked-dates")
 async def booked_dates():
 
-    return get_booked_ranges()
+    bookings = get_booked_ranges()
+
+    return bookings
+
+
+# =====================================================
+# HEALTH CHECK
+# =====================================================
+
+@app.get("/health")
+async def health():
+
+    return {
+        "status": "ok",
+        "database": "sqlite",
+        "app": "premium-apart"
+    }
 
 
 # =====================================================
@@ -96,6 +178,8 @@ async def booked_dates():
 
 @app.on_event("startup")
 async def startup():
+
+    print("🚀 APPLICATION STARTED")
 
     asyncio.create_task(
         dp.start_polling(bot)
@@ -108,5 +192,7 @@ async def startup():
 
 @app.on_event("shutdown")
 async def shutdown():
+
+    print("🛑 APPLICATION STOPPED")
 
     await bot.session.close()
