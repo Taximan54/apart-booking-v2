@@ -255,7 +255,7 @@ body {
 }
 
 /* ===================================================== */
-/* FLATPICKR */
+/* FLATPICKR FIXED PREMIUM UI */
 /* ===================================================== */
 
 .flatpickr-calendar {
@@ -272,37 +272,39 @@ body {
 
 .flatpickr-months {
 
-    margin-bottom: 18px;
+    margin-bottom: 14px;
 
 }
 
 .flatpickr-month {
 
-    height: 42px !important;
+    height: 40px !important;
 
 }
 
 .flatpickr-current-month {
 
-    font-size: 24px !important;
+    font-size: 16px !important;
 
-    font-weight: 800 !important;
+    font-weight: 700 !important;
 
-    letter-spacing: -1px;
+    padding-top: 4px !important;
 
-    padding-top: 0 !important;
+    white-space: nowrap !important;
+
+    letter-spacing: -0.3px;
 
 }
 
 .flatpickr-current-month .flatpickr-monthDropdown-months {
 
-    font-weight: 800 !important;
+    font-weight: 700 !important;
 
 }
 
 .flatpickr-weekdays {
 
-    margin-bottom: 10px;
+    margin-bottom: 8px;
 
 }
 
@@ -315,6 +317,18 @@ body {
     font-weight: 700 !important;
 
     text-transform: uppercase;
+
+    text-align: center !important;
+
+}
+
+/* ===================================================== */
+/* GRID FIX */
+/* ===================================================== */
+
+.flatpickr-rContainer {
+
+    width: 100% !important;
 
 }
 
@@ -334,17 +348,25 @@ body {
 
 }
 
+/* ===================================================== */
+/* DAYS */
+/* ===================================================== */
+
 .flatpickr-day {
+
+    width: 42px !important;
+
+    max-width: 42px !important;
+
+    height: 42px !important;
+
+    line-height: 42px !important;
+
+    margin: 1px auto;
 
     border: none !important;
 
-    border-radius: 18px !important;
-
-    height: 48px !important;
-
-    line-height: 48px !important;
-
-    max-width: 48px !important;
+    border-radius: 50% !important;
 
     font-size: 14px;
 
@@ -353,23 +375,23 @@ body {
     color: var(--text);
 
     transition:
-        background 0.22s ease,
-        transform 0.16s ease,
-        color 0.22s ease,
-        box-shadow 0.22s ease;
+        background 0.16s ease,
+        transform 0.12s ease,
+        color 0.16s ease;
 
 }
 
 .flatpickr-day:hover {
 
-    background: #f3f4f6 !important;
+    background: #f3f3f3 !important;
 
-    transform: scale(1.06);
-
-    box-shadow:
-        0 4px 10px rgba(0,0,0,0.06);
+    transform: scale(1.05);
 
 }
+
+/* ===================================================== */
+/* TODAY */
+/* ===================================================== */
 
 .flatpickr-day.today {
 
@@ -379,6 +401,10 @@ body {
 
 }
 
+/* ===================================================== */
+/* SELECTED */
+/* ===================================================== */
+
 .flatpickr-day.selected,
 .flatpickr-day.startRange,
 .flatpickr-day.endRange {
@@ -387,11 +413,17 @@ body {
 
     color: white !important;
 
+    box-shadow: none !important;
+
 }
+
+/* ===================================================== */
+/* RANGE */
+/* ===================================================== */
 
 .flatpickr-day.inRange {
 
-    background: var(--range) !important;
+    background: #ececec !important;
 
     color: #111 !important;
 
@@ -399,54 +431,27 @@ body {
 
     box-shadow: none !important;
 
-    position: relative;
-
-}
-
-/* seamless range */
-
-.flatpickr-day.startRange.inRange,
-.flatpickr-day.endRange.inRange {
-
-    background: #111 !important;
-
-    color: white !important;
-
-}
-
-.flatpickr-day.startRange + .inRange {
-
-    box-shadow:
-        inset 8px 0 0 var(--range) !important;
-
-}
-
-.flatpickr-day.inRange + .endRange {
-
-    box-shadow:
-        inset -8px 0 0 var(--range) !important;
-
 }
 
 .flatpickr-day.startRange {
 
-    border-top-left-radius: 18px !important;
-    border-bottom-left-radius: 18px !important;
+    border-top-left-radius: 999px !important;
 
-    border-top-right-radius: 0 !important;
-    border-bottom-right-radius: 0 !important;
+    border-bottom-left-radius: 999px !important;
 
 }
 
 .flatpickr-day.endRange {
 
-    border-top-right-radius: 18px !important;
-    border-bottom-right-radius: 18px !important;
+    border-top-right-radius: 999px !important;
 
-    border-top-left-radius: 0 !important;
-    border-bottom-left-radius: 0 !important;
+    border-bottom-right-radius: 999px !important;
 
 }
+
+/* ===================================================== */
+/* DISABLED */
+/* ===================================================== */
 
 .flatpickr-day.flatpickr-disabled {
 
@@ -460,6 +465,10 @@ body {
 
 }
 
+/* ===================================================== */
+/* OTHER MONTH */
+/* ===================================================== */
+
 .flatpickr-day.prevMonthDay,
 .flatpickr-day.nextMonthDay {
 
@@ -467,17 +476,23 @@ body {
 
 }
 
+/* ===================================================== */
+/* ARROWS */
+/* ===================================================== */
+
 .flatpickr-prev-month,
 .flatpickr-next-month {
 
-    top: 6px !important;
+    top: 4px !important;
+
+    padding: 8px !important;
 
 }
 
 .flatpickr-prev-month:hover,
 .flatpickr-next-month:hover {
 
-    background: #f5f5f5;
+    background: #f3f3f3;
 
     border-radius: 12px;
 
@@ -487,7 +502,62 @@ body {
 .flatpickr-next-month svg {
 
     width: 16px !important;
+
     height: 16px !important;
+
+}
+
+/* ===================================================== */
+/* INFO GRID FIX */
+/* ===================================================== */
+
+.info-item {
+
+    padding: 14px 16px;
+
+}
+
+/* ===================================================== */
+/* FOOTER BUTTON FIX */
+/* ===================================================== */
+
+.book-btn {
+
+    height: 48px;
+
+    padding: 0 22px;
+
+    border-radius: 16px;
+
+    font-size: 15px;
+
+}
+
+/* ===================================================== */
+/* MOBILE */
+/* ===================================================== */
+
+@media (max-width: 640px) {
+
+    .flatpickr-day {
+
+        width: 40px !important;
+
+        max-width: 40px !important;
+
+        height: 40px !important;
+
+        line-height: 40px !important;
+
+        font-size: 13px;
+
+    }
+
+    .flatpickr-current-month {
+
+        font-size: 15px !important;
+
+    }
 
 }
 
