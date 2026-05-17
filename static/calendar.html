@@ -2,7 +2,8 @@
 <html lang="ru">
 <head>
 
-<meta charset="UTF-8">
+<meta charset="UTF-8" />
+
 <meta
     name="viewport"
     content="width=device-width, initial-scale=1.0, viewport-fit=cover"
@@ -13,8 +14,8 @@
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
 <link
-rel="stylesheet"
-href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css"
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css"
 />
 
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
@@ -27,40 +28,53 @@ href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css"
 :root {
 
     --bg: #f7f7f7;
+
     --card: #ffffff;
 
     --text: #222222;
+
     --muted: #717171;
 
     --border: #ebebeb;
 
     --primary: #111111;
 
-    --range: #f2f2f2;
+    --range: #f3f4f6;
 
     --shadow:
         0 1px 2px rgba(0,0,0,0.04),
-        0 8px 24px rgba(0,0,0,0.06);
+        0 10px 32px rgba(0,0,0,0.06);
 
     --radius: 28px;
 
 }
 
 * {
+
     box-sizing: border-box;
+
     -webkit-tap-highlight-color: transparent;
+
 }
 
 html {
+
     scroll-behavior: smooth;
+
 }
 
 body {
 
     margin: 0;
+
     padding: 0;
 
-    background: var(--bg);
+    background:
+        linear-gradient(
+            180deg,
+            #fafafa 0%,
+            #f5f5f5 100%
+        );
 
     color: var(--text);
 
@@ -73,6 +87,7 @@ body {
 .wrapper {
 
     width: 100%;
+
     max-width: 760px;
 
     margin: auto;
@@ -115,6 +130,9 @@ body {
     font-weight: 600;
 
     margin-bottom: 16px;
+
+    box-shadow:
+        0 2px 8px rgba(0,0,0,0.04);
 
 }
 
@@ -161,34 +179,30 @@ body {
 }
 
 /* ===================================================== */
-/* CALENDAR */
+/* CALENDAR SECTION */
 /* ===================================================== */
 
 .calendar-section {
 
-    padding: 24px;
+    padding: 24px 18px 18px;
 
 }
 
 .calendar-header {
 
-    display: flex;
-
-    justify-content: space-between;
-
-    align-items: center;
-
-    margin-bottom: 18px;
+    margin-bottom: 20px;
 
 }
 
 .calendar-title {
 
-    font-size: 22px;
+    font-size: 24px;
 
-    font-weight: 700;
+    font-weight: 800;
 
-    letter-spacing: -0.6px;
+    letter-spacing: -0.8px;
+
+    margin-bottom: 6px;
 
 }
 
@@ -201,78 +215,34 @@ body {
 }
 
 .input {
+
     display: none;
-}
-
-/* ===================================================== */
-/* INFO GRID */
-/* ===================================================== */
-
-.info-grid {
-
-    display: grid;
-
-    grid-template-columns: repeat(3, 1fr);
-
-    border-top: 1px solid var(--border);
-
-}
-
-.info-item {
-
-    padding: 20px;
-
-}
-
-.info-item:not(:last-child) {
-
-    border-right: 1px solid var(--border);
-
-}
-
-.info-label {
-
-    font-size: 12px;
-
-    color: var(--muted);
-
-    text-transform: uppercase;
-
-    font-weight: 700;
-
-    margin-bottom: 8px;
-
-    letter-spacing: 0.5px;
-
-}
-
-.info-value {
-
-    font-size: 15px;
-
-    font-weight: 700;
 
 }
 
 /* ===================================================== */
-/* FLATPICKR FIXED PREMIUM UI */
+/* FLATPICKR */
 /* ===================================================== */
 
 .flatpickr-calendar {
 
     width: 100% !important;
 
+    background: transparent !important;
+
     border: none !important;
 
     box-shadow: none !important;
 
-    background: transparent !important;
-
 }
+
+/* MONTH HEADER */
 
 .flatpickr-months {
 
-    margin-bottom: 14px;
+    margin-bottom: 18px;
+
+    position: relative;
 
 }
 
@@ -284,47 +254,69 @@ body {
 
 .flatpickr-current-month {
 
-    font-size: 16px !important;
+    display: flex !important;
 
-    font-weight: 700 !important;
+    justify-content: center;
 
-    padding-top: 4px !important;
+    align-items: center;
 
-    white-space: nowrap !important;
+    padding-top: 0 !important;
 
-    letter-spacing: -0.3px;
+    font-size: 18px !important;
+
+    font-weight: 800 !important;
+
+    letter-spacing: -0.4px;
+
+    width: 100%;
 
 }
 
 .flatpickr-current-month .flatpickr-monthDropdown-months {
 
-    font-weight: 700 !important;
+    font-weight: 800 !important;
 
 }
 
+/* WEEK DAYS */
+
 .flatpickr-weekdays {
 
-    margin-bottom: 8px;
+    margin-bottom: 12px;
+
+}
+
+.flatpickr-weekdaycontainer {
+
+    display: grid !important;
+
+    grid-template-columns: repeat(7, 1fr);
 
 }
 
 .flatpickr-weekday {
 
+    display: flex !important;
+
+    align-items: center;
+
+    justify-content: center;
+
+    width: 100% !important;
+
     color: #8e8e93 !important;
 
-    font-size: 12px !important;
+    font-size: 11px !important;
 
     font-weight: 700 !important;
 
     text-transform: uppercase;
 
-    text-align: center !important;
+    letter-spacing: 0.3px;
 
 }
 
-/* ===================================================== */
-/* GRID FIX */
-/* ===================================================== */
+/* DAYS GRID */
 
 .flatpickr-rContainer {
 
@@ -348,50 +340,48 @@ body {
 
 }
 
-/* ===================================================== */
-/* DAYS */
-/* ===================================================== */
+/* DAY */
 
 .flatpickr-day {
 
-    width: 42px !important;
+    width: 44px !important;
 
-    max-width: 42px !important;
+    max-width: 44px !important;
 
-    height: 42px !important;
+    height: 44px !important;
 
-    line-height: 42px !important;
+    line-height: 44px !important;
 
-    margin: 1px auto;
+    border-radius: 50% !important;
 
     border: none !important;
 
-    border-radius: 50% !important;
+    margin: 2px auto;
 
     font-size: 14px;
 
     font-weight: 600;
 
-    color: var(--text);
+    color: #222;
 
     transition:
-        background 0.16s ease,
-        transform 0.12s ease,
-        color 0.16s ease;
+        transform 0.14s ease,
+        background 0.18s ease,
+        color 0.18s ease;
 
 }
+
+/* HOVER */
 
 .flatpickr-day:hover {
 
-    background: #f3f3f3 !important;
+    background: #f2f2f2 !important;
 
-    transform: scale(1.05);
+    transform: scale(1.06);
 
 }
 
-/* ===================================================== */
 /* TODAY */
-/* ===================================================== */
 
 .flatpickr-day.today {
 
@@ -401,9 +391,7 @@ body {
 
 }
 
-/* ===================================================== */
 /* SELECTED */
-/* ===================================================== */
 
 .flatpickr-day.selected,
 .flatpickr-day.startRange,
@@ -413,17 +401,16 @@ body {
 
     color: white !important;
 
-    box-shadow: none !important;
+    box-shadow:
+        0 6px 16px rgba(0,0,0,0.14);
 
 }
 
-/* ===================================================== */
 /* RANGE */
-/* ===================================================== */
 
 .flatpickr-day.inRange {
 
-    background: #ececec !important;
+    background: var(--range) !important;
 
     color: #111 !important;
 
@@ -449,43 +436,49 @@ body {
 
 }
 
-/* ===================================================== */
 /* DISABLED */
-/* ===================================================== */
 
 .flatpickr-day.flatpickr-disabled {
 
-    color: #d93025 !important;
+    background:
+        rgba(255, 90, 95, 0.16) !important;
 
-    background: #fff5f5 !important;
+    color:
+        #ff4d4f !important;
 
-    opacity: 0.65;
+    opacity: 1 !important;
 
-    text-decoration: line-through;
+    font-weight: 700;
+
+    text-decoration: none;
+
+    box-shadow:
+        inset 0 0 0 1px
+        rgba(255, 90, 95, 0.14);
 
 }
 
-/* ===================================================== */
 /* OTHER MONTH */
-/* ===================================================== */
 
 .flatpickr-day.prevMonthDay,
 .flatpickr-day.nextMonthDay {
 
-    opacity: 0.15;
+    opacity: 0.12;
 
 }
 
-/* ===================================================== */
 /* ARROWS */
-/* ===================================================== */
 
 .flatpickr-prev-month,
 .flatpickr-next-month {
 
-    top: 4px !important;
+    top: 2px !important;
 
     padding: 8px !important;
+
+    transition:
+        background 0.18s ease,
+        transform 0.12s ease;
 
 }
 
@@ -495,6 +488,13 @@ body {
     background: #f3f3f3;
 
     border-radius: 12px;
+
+}
+
+.flatpickr-prev-month:active,
+.flatpickr-next-month:active {
+
+    transform: scale(0.94);
 
 }
 
@@ -508,61 +508,57 @@ body {
 }
 
 /* ===================================================== */
-/* INFO GRID FIX */
+/* INFO GRID */
 /* ===================================================== */
+
+.info-grid {
+
+    display: grid;
+
+    grid-template-columns: repeat(3, 1fr);
+
+    border-top: 1px solid var(--border);
+
+}
 
 .info-item {
 
-    padding: 14px 16px;
+    padding: 18px;
 
 }
 
-/* ===================================================== */
-/* FOOTER BUTTON FIX */
-/* ===================================================== */
+.info-item:not(:last-child) {
 
-.book-btn {
+    border-right: 1px solid var(--border);
 
-    height: 48px;
+}
 
-    padding: 0 22px;
+.info-label {
 
-    border-radius: 16px;
+    font-size: 11px;
+
+    text-transform: uppercase;
+
+    color: var(--muted);
+
+    font-weight: 700;
+
+    letter-spacing: 0.5px;
+
+    margin-bottom: 8px;
+
+}
+
+.info-value {
 
     font-size: 15px;
 
-}
-
-/* ===================================================== */
-/* MOBILE */
-/* ===================================================== */
-
-@media (max-width: 640px) {
-
-    .flatpickr-day {
-
-        width: 40px !important;
-
-        max-width: 40px !important;
-
-        height: 40px !important;
-
-        line-height: 40px !important;
-
-        font-size: 13px;
-
-    }
-
-    .flatpickr-current-month {
-
-        font-size: 15px !important;
-
-    }
+    font-weight: 700;
 
 }
 
 /* ===================================================== */
-/* STICKY FOOTER */
+/* FOOTER */
 /* ===================================================== */
 
 .footer {
@@ -570,20 +566,25 @@ body {
     position: fixed;
 
     left: 0;
+
     right: 0;
+
     bottom: 0;
 
     z-index: 999;
 
-    background: rgba(255,255,255,0.82);
+    background:
+        rgba(255,255,255,0.86);
 
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(18px);
 
-    border-top: 1px solid rgba(0,0,0,0.06);
+    -webkit-backdrop-filter: blur(18px);
+
+    border-top:
+        1px solid rgba(0,0,0,0.06);
 
     box-shadow:
-        0 -8px 30px rgba(0,0,0,0.06);
+        0 -10px 30px rgba(0,0,0,0.06);
 
     padding:
         14px
@@ -600,9 +601,9 @@ body {
 
     display: flex;
 
-    justify-content: space-between;
-
     align-items: center;
+
+    justify-content: space-between;
 
     gap: 14px;
 
@@ -618,11 +619,11 @@ body {
 
 .price {
 
-    font-size: 22px;
+    font-size: 24px;
 
     font-weight: 800;
 
-    letter-spacing: -0.8px;
+    letter-spacing: -1px;
 
 }
 
@@ -632,7 +633,7 @@ body {
 
     color: var(--muted);
 
-    margin-top: 3px;
+    margin-top: 2px;
 
 }
 
@@ -649,7 +650,7 @@ body {
 
     color: white;
 
-    height: 56px;
+    height: 54px;
 
     padding: 0 28px;
 
@@ -684,7 +685,7 @@ body {
 
 .book-btn:disabled {
 
-    opacity: 0.4;
+    opacity: 0.45;
 
     cursor: not-allowed;
 
@@ -717,7 +718,21 @@ body {
 
     .calendar-section {
 
-        padding: 20px 16px;
+        padding: 20px 14px 14px;
+
+    }
+
+    .flatpickr-day {
+
+        width: 42px !important;
+
+        max-width: 42px !important;
+
+        height: 42px !important;
+
+        line-height: 42px !important;
+
+        font-size: 13px;
 
     }
 
@@ -732,16 +747,6 @@ body {
         border-right: none;
 
         border-bottom: 1px solid var(--border);
-
-    }
-
-    .flatpickr-day {
-
-        height: 44px !important;
-
-        line-height: 44px !important;
-
-        max-width: 44px !important;
 
     }
 
@@ -760,6 +765,7 @@ body {
 }
 
 </style>
+
 </head>
 
 <body>
@@ -788,7 +794,6 @@ Premium Apart
 
 <div class="calendar-header">
 
-<div>
 <div class="calendar-title">
 Выбор дат
 </div>
@@ -796,14 +801,13 @@ Premium Apart
 <div class="calendar-sub">
 Красные даты недоступны
 </div>
-</div>
 
 </div>
 
 <input
-type="text"
-id="calendar"
-class="input"
+    type="text"
+    id="calendar"
+    class="input"
 />
 
 </div>
@@ -816,7 +820,10 @@ class="input"
 Заезд
 </div>
 
-<div class="info-value" id="checkin-value">
+<div
+    class="info-value"
+    id="checkin-value"
+>
 —
 </div>
 
@@ -828,7 +835,10 @@ class="input"
 Выезд
 </div>
 
-<div class="info-value" id="checkout-value">
+<div
+    class="info-value"
+    id="checkout-value"
+>
 —
 </div>
 
@@ -840,7 +850,10 @@ class="input"
 Ночей
 </div>
 
-<div class="info-value" id="nights-value">
+<div
+    class="info-value"
+    id="nights-value"
+>
 0
 </div>
 
@@ -852,9 +865,7 @@ class="input"
 
 </div>
 
-<!-- ===================================================== -->
-<!-- STICKY FOOTER -->
-<!-- ===================================================== -->
+<!-- FOOTER -->
 
 <div class="footer">
 
@@ -862,7 +873,10 @@ class="input"
 
 <div class="price-box">
 
-<div class="price" id="total-price">
+<div
+    class="price"
+    id="total-price"
+>
 €0
 </div>
 
@@ -873,10 +887,10 @@ class="input"
 </div>
 
 <button
-class="book-btn"
-id="book-btn"
-disabled
-onclick="sendBooking()"
+    class="book-btn"
+    id="book-btn"
+    disabled
+    onclick="sendBooking()"
 >
 Забронировать
 </button>
@@ -894,24 +908,29 @@ tg.expand();
 let bookedDates = [];
 
 let selectedCheckIn = null;
+
 let selectedCheckOut = null;
 
 const PRICE_PER_NIGHT = 120;
 
-
-// =====================================================
-// LOAD BOOKINGS
-// =====================================================
+/* ===================================================== */
+/* LOAD BOOKINGS */
+/* ===================================================== */
 
 async function loadBookedDates() {
 
     try {
 
-        const response = await fetch("/api/booked-dates");
+        const response =
+            await fetch(
+                "/api/booked-dates"
+            );
 
-        const ranges = await response.json();
+        const ranges =
+            await response.json();
 
-        bookedDates = expandBookedRanges(ranges);
+        bookedDates =
+            expandBookedRanges(ranges);
 
         initCalendar();
 
@@ -923,10 +942,9 @@ async function loadBookedDates() {
 
 }
 
-
-// =====================================================
-// EXPAND RANGES
-// =====================================================
+/* ===================================================== */
+/* EXPAND RANGES */
+/* ===================================================== */
 
 function expandBookedRanges(ranges) {
 
@@ -934,11 +952,14 @@ function expandBookedRanges(ranges) {
 
     ranges.forEach(range => {
 
-        const start = new Date(range.check_in);
+        const start =
+            new Date(range.check_in);
 
-        const end = new Date(range.check_out);
+        const end =
+            new Date(range.check_out);
 
-        const current = new Date(start);
+        const current =
+            new Date(start);
 
         while (current < end) {
 
@@ -958,10 +979,9 @@ function expandBookedRanges(ranges) {
 
 }
 
-
-// =====================================================
-// FORMAT DATE
-// =====================================================
+/* ===================================================== */
+/* FORMAT DATE */
+/* ===================================================== */
 
 function formatDate(date) {
 
@@ -979,10 +999,9 @@ function formatDate(date) {
 
 }
 
-
-// =====================================================
-// CALCULATE NIGHTS
-// =====================================================
+/* ===================================================== */
+/* CALCULATE NIGHTS */
+/* ===================================================== */
 
 function calculateNights(start, end) {
 
@@ -996,10 +1015,9 @@ function calculateNights(start, end) {
 
 }
 
-
-// =====================================================
-// UPDATE INFO
-// =====================================================
+/* ===================================================== */
+/* UPDATE INFO */
+/* ===================================================== */
 
 function updateInfo() {
 
@@ -1062,65 +1080,126 @@ function updateInfo() {
 
 }
 
-
-// =====================================================
-// INIT CALENDAR
-// =====================================================
+/* ===================================================== */
+/* INIT CALENDAR */
+/* ===================================================== */
 
 function initCalendar() {
 
-    flatpickr("#calendar", {
+    const calendar = flatpickr(
+        "#calendar",
+        {
 
-        mode: "range",
+            mode: "range",
 
-        minDate: "today",
+            minDate: "today",
 
-        dateFormat: "Y-m-d",
+            dateFormat: "Y-m-d",
 
-        locale: "ru",
+            locale: "ru",
 
-        inline: true,
+            inline: true,
 
-        showMonths: 2,
+            showMonths: 1,
 
-        disable: bookedDates,
+            monthSelectorType: "static",
 
-        onChange: function(selectedDates) {
+            animate: true,
 
-            if (
-                selectedDates.length === 2
+            disable: bookedDates,
+
+            onChange: function(
+                selectedDates
             ) {
 
-                selectedCheckIn =
-                    formatDate(
-                        selectedDates[0]
-                    );
+                if (
+                    selectedDates.length === 2
+                ) {
 
-                selectedCheckOut =
-                    formatDate(
-                        selectedDates[1]
-                    );
+                    selectedCheckIn =
+                        formatDate(
+                            selectedDates[0]
+                        );
 
-            } else {
+                    selectedCheckOut =
+                        formatDate(
+                            selectedDates[1]
+                        );
 
-                selectedCheckIn = null;
+                } else {
 
-                selectedCheckOut = null;
+                    selectedCheckIn = null;
+
+                    selectedCheckOut = null;
+
+                }
+
+                updateInfo();
 
             }
 
-            updateInfo();
+        }
+    );
+
+    // SWIPE MONTHS
+
+    const calendarContainer =
+        document.querySelector(
+            ".flatpickr-calendar"
+        );
+
+    let touchStartX = 0;
+
+    let touchEndX = 0;
+
+    calendarContainer.addEventListener(
+        "touchstart",
+        e => {
+
+            touchStartX =
+                e.changedTouches[0].screenX;
+
+        },
+        false
+    );
+
+    calendarContainer.addEventListener(
+        "touchend",
+        e => {
+
+            touchEndX =
+                e.changedTouches[0].screenX;
+
+            handleSwipe();
+
+        },
+        false
+    );
+
+    function handleSwipe() {
+
+        const diff =
+            touchStartX - touchEndX;
+
+        if (diff > 50) {
+
+            calendar.changeMonth(1);
 
         }
 
-    });
+        if (diff < -50) {
+
+            calendar.changeMonth(-1);
+
+        }
+
+    }
 
 }
 
-
-// =====================================================
-// SEND BOOKING
-// =====================================================
+/* ===================================================== */
+/* SEND BOOKING */
+/* ===================================================== */
 
 function sendBooking() {
 
@@ -1149,10 +1228,9 @@ function sendBooking() {
 
 }
 
-
-// =====================================================
-// START
-// =====================================================
+/* ===================================================== */
+/* START */
+/* ===================================================== */
 
 loadBookedDates();
 
