@@ -1,3 +1,4 @@
+```python
 import json
 
 from aiogram import Router, types
@@ -25,9 +26,19 @@ router = Router()
 # =====================================================
 
 PHOTOS = [
-    "static/images/1.JPG",
-    "static/images/2.JPG",
-    "static/images/3.JPG"
+
+    "static/images/1.jpg",
+    "static/images/2.jpg",
+    "static/images/3.jpg",
+    "static/images/4.jpg",
+    "static/images/5.jpg",
+
+    "static/images/6.jpg",
+    "static/images/7.jpg",
+    "static/images/8.jpg",
+    "static/images/9.jpg",
+    "static/images/10.jpg"
+
 ]
 
 
@@ -44,9 +55,25 @@ async def send_photos(message):
         if i == 0:
 
             media.append(
+
                 InputMediaPhoto(
+
                     media=FSInputFile(photo),
-                    caption="🏠 Городская Пауза"
+
+                    caption="""
+🏠 Городская Пауза
+
+✨ Современные апартаменты
+📍 Удобное расположение
+🛏 Комфортное проживание
+📶 Быстрый Wi-Fi
+🍳 Полноценная кухня
+❄️ Кондиционер
+📺 Smart TV
+
+📅 Для бронирования:
+нажмите кнопку «Забронировать»
+"""
                 )
             )
 
@@ -110,7 +137,9 @@ def main_keyboard():
 async def start(message: types.Message):
 
     await message.answer(
+
         "Добро пожаловать в «Городская Пауза» ✨",
+
         reply_markup=main_keyboard()
     )
 
@@ -136,14 +165,17 @@ async def description(message: types.Message):
         """
 🏠 Городская Пауза
 
-✨ Комфортная квартира
-
-🛏 2 гостя
-📶 Wi-Fi
+✨ Современная квартира
+🛏 До 2 гостей
+📶 Высокоскоростной Wi-Fi
 ❄️ Кондиционер
-🛁 Ванна
-🍳 Кухня
+🛁 Ванная комната
+🍳 Полностью оборудованная кухня
 📺 Smart TV
+☕ Уютная атмосфера
+
+📅 Для просмотра свободных дат
+нажмите «Забронировать»
 """
     )
 
@@ -180,6 +212,8 @@ async def webapp_booking(message: Message):
 
 📅 {data['check_in']} → {data['check_out']}
 👥 {data.get('guests', 2)} гостей
+
+Спасибо за бронирование ✨
 """
         )
 
@@ -188,3 +222,4 @@ async def webapp_booking(message: Message):
         await message.answer(
             f"❌ Ошибка бронирования: {e}"
         )
+```
