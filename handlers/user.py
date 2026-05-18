@@ -1,4 +1,3 @@
-```python
 import json
 
 from aiogram import Router, types
@@ -222,4 +221,3 @@ async def webapp_booking(message: Message):
         await message.answer(
             f"❌ Ошибка бронирования: {e}"
         )
-```
