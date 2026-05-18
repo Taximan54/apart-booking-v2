@@ -1,8 +1,7 @@
 from aiogram import Router, types
 from aiogram.types import InlineKeyboardMarkup
-from aiogram.utils.keyboard import InlineKeyboardBuilder
-
-from config import ADMIN_IDS
+from aiogram.types import InlineKeyboardButton
+from aiogram.filters import Command
 
 from services.booking_service import (
     get_all_bookings,
@@ -13,93 +12,81 @@ router = Router()
 
 
 # =====================================================
+# ADMIN BUTTON
+# =====================================================
+
+ADMIN_PASSWORD = "1234"
+
+
+# =====================================================
 # ADMIN PANEL
 # =====================================================
 
 @router.message(lambda m: m.text == "🛠 Админка")
 async def admin_panel(message: types.Message):
 
-    if message.from_user.id not in ADMIN_IDS:
+    bookings = get_all_bookings()
+
+    if not bookings:
+
+        await message.answer(
+            "Броней пока нет"
+        )
+
         return
 
-    kb = InlineKeyboardBuilder()
+    text = "📋 Все брони:\n\n"
 
-    kb.button(
-        text="📋 Все брони",
-        callback_data="admin_bookings"
+    keyboard = []
+
+    for row in bookings:
+
+        booking_id = row["id"]
+
+        username = row["username"]
+
+        check_in = row["check_in"]
+
+        check_out = row["check_out"]
+
+        status = row["status"]
+
+        text += (
+            f"#{booking_id} | "
+            f"{check_in} → {check_out}\n"
+            f"👤 @{username}\n"
+            f"📌 {status}\n\n"
+        )
+
+        if status != "cancelled":
+
+            keyboard.append([
+
+                InlineKeyboardButton(
+                    text=f"❌ Отменить #{booking_id}",
+                    callback_data=f"cancel_{booking_id}"
+                )
+
+            ])
+
+    markup = InlineKeyboardMarkup(
+        inline_keyboard=keyboard
     )
-
-    kb.button(
-        text="📅 Календарь",
-        callback_data="admin_calendar"
-    )
-
-    kb.button(
-        text="💰 Цены",
-        callback_data="admin_prices"
-    )
-
-    kb.adjust(1)
 
     await message.answer(
-
-        "🛠 ADMIN PANEL",
-
-        reply_markup=kb.as_markup()
-
+        text,
+        reply_markup=markup
     )
 
 
 # =====================================================
-# BOOKINGS
-# =====================================================
-
-@router.callback_query(lambda c: c.data == "admin_bookings")
-async def admin_bookings(callback: types.CallbackQuery):
-
-    rows = get_all_bookings()
-
-    if not rows:
-
-        await callback.message.answer(
-            "Броней нет"
-        )
-
-        return
-
-    for row in rows:
-
-        kb = InlineKeyboardBuilder()
-
-        kb.button(
-            text="❌ Отменить",
-            callback_data=f"cancel_{row[0]}"
-        )
-
-        text = f"""
-🏠 BOOKING #{row[0]}
-
-👤 {row[1]}
-📅 {row[2]} → {row[3]}
-👥 {row[4]}
-📌 {row[5]}
-"""
-
-        await callback.message.answer(
-
-            text,
-
-            reply_markup=kb.as_markup()
-
-        )
-
-
-# =====================================================
-# CANCEL
+# CANCEL BOOKING
 # =====================================================
 
 @router.callback_query(lambda c: c.data.startswith("cancel_"))
-async def cancel(callback: types.CallbackQuery):
+async def cancel_booking_handler(
+    callback: types.CallbackQuery
+):
 
     booking_id = int(
         callback.data.split("_")[1]
@@ -107,53 +94,41 @@ async def cancel(callback: types.CallbackQuery):
 
     cancel_booking(booking_id)
 
-    await callback.message.answer(
+    await callback.answer(
+        "Бронь отменена"
+    )
+
+    await callback.message.edit_text(
         f"❌ Бронь #{booking_id} отменена"
     )
 
 
 # =====================================================
-# CALENDAR
+# ADMIN CALENDAR
 # =====================================================
 
-@router.callback_query(lambda c: c.data == "admin_calendar")
-async def admin_calendar(callback: types.CallbackQuery):
+@router.message(Command("calendar"))
+async def admin_calendar(message: types.Message):
 
-    rows = get_all_bookings()
+    bookings = get_all_bookings()
 
-    if not rows:
+    if not bookings:
 
-        await callback.message.answer(
-            "Календарь пуст"
+        await message.answer(
+            "Броней нет"
         )
 
         return
 
-    text = "📅 Занятые даты:\n\n"
+    text = "📅 Календарь броней:\n\n"
 
-    for row in rows:
+    for row in bookings:
 
         text += (
-            f"#{row[0]} | "
-            f"{row[2]} → {row[3]} | "
-            f"{row[5]}\n"
+            f"#{row['id']} | "
+            f"{row['check_in']} → "
+            f"{row['check_out']} | "
+            f"{row['status']}\n"
         )
 
-    await callback.message.answer(text)
-
-
-# =====================================================
-# PRICES
-# =====================================================
-
-@router.callback_query(lambda c: c.data == "admin_prices")
-async def admin_prices(callback: types.CallbackQuery):
-
-    await callback.message.answer(
-
-        "💰 Цены:\n\n"
-        "Будни: 120€\n"
-        "Выходные: 150€\n"
-        "Уборка: 30€"
-
-    )
+    await message.answer(text)
