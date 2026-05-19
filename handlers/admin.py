@@ -1,7 +1,7 @@
 import json
 import os
 
-from aiogram import Router, types, F
+from aiogram import Router, types
 from aiogram.types import (
     InlineKeyboardMarkup,
     InlineKeyboardButton,
@@ -27,7 +27,7 @@ router = Router()
 
 
 # =====================================================
-# PRICE STORAGE (файл рядом с проектом)
+# PRICE STORAGE
 # =====================================================
 
 PRICE_FILE = "data/prices.json"
@@ -54,12 +54,7 @@ def save_prices(prices):
 # FSM STATES
 # =====================================================
 
-class BlockDatesState(StatesGroup):
-    waiting_check_in  = State()
-    waiting_check_out = State()
-
 class PriceState(StatesGroup):
-    waiting_price_type  = State()
     waiting_price_value = State()
 
 
@@ -112,14 +107,6 @@ def admin_menu_markup():
     )
 
 
-def admin_menu_markup_reply():
-    """Reply-клавиатура для возврата в меню после блокировки."""
-    return ReplyKeyboardMarkup(
-        keyboard=[[KeyboardButton(text="🛠 Админка")]],
-        resize_keyboard=True
-    )
-
-
 # =====================================================
 # ADMIN PANEL ENTRY
 # =====================================================
@@ -164,7 +151,6 @@ def pagination_keyboard(page, total_pages):
     if row:
         buttons.append(row)
 
-    # Кнопка возврата в меню
     buttons.append([
         InlineKeyboardButton(
             text="🏠 Главное меню",
@@ -202,7 +188,7 @@ def build_bookings_text(bookings, page, total_pages):
 
 
 # =====================================================
-# BUILD CANCEL BUTTONS (с подтверждением)
+# BUILD CANCEL BUTTONS
 # =====================================================
 
 def build_cancel_buttons(bookings):
@@ -231,7 +217,6 @@ async def show_bookings_page(target, page: int):
 
     bookings = get_all_bookings()
 
-    # Только не удалённые
     active = [b for b in bookings if b["status"] != "cancelled"]
 
     if not active:
@@ -248,8 +233,8 @@ async def show_bookings_page(target, page: int):
     total_pages = (len(active) + BOOKINGS_PER_PAGE - 1) // BOOKINGS_PER_PAGE
     page = max(0, min(page, total_pages - 1))
 
-    start = page * BOOKINGS_PER_PAGE
-    end   = start + BOOKINGS_PER_PAGE
+    start   = page * BOOKINGS_PER_PAGE
+    end     = start + BOOKINGS_PER_PAGE
     current = active[start:end]
 
     text     = build_bookings_text(current, page, total_pages)
@@ -283,7 +268,7 @@ async def bookings_page_handler(callback: types.CallbackQuery):
 
 
 # =====================================================
-# CONFIRM CANCEL (подтверждение перед отменой)
+# CONFIRM CANCEL
 # =====================================================
 
 @router.callback_query(lambda c: c.data.startswith("confirm_cancel_"))
@@ -342,7 +327,6 @@ async def do_cancel(callback: types.CallbackQuery):
 
     await callback.answer("✅ Бронь отменена", show_alert=True)
 
-    # Возвращаемся к списку
     await show_bookings_page(callback.message, 0)
 
 
@@ -356,25 +340,24 @@ async def admin_stats(callback: types.CallbackQuery):
     if not is_admin(callback.from_user.id):
         return
 
-    bookings  = get_all_bookings()
-    prices    = load_prices()
+    bookings = get_all_bookings()
+    prices   = load_prices()
 
     confirmed = [b for b in bookings if b["status"] == "confirmed"]
     cancelled = [b for b in bookings if b["status"] == "cancelled"]
     blocked   = [b for b in bookings if b["status"] == "blocked"]
 
-    # Считаем доход
     total_revenue = 0
     total_nights  = 0
 
     for b in confirmed:
         from datetime import datetime
         try:
-            ci = datetime.strptime(b["check_in"],  "%Y-%m-%d")
-            co = datetime.strptime(b["check_out"], "%Y-%m-%d")
+            ci     = datetime.strptime(b["check_in"],  "%Y-%m-%d")
+            co     = datetime.strptime(b["check_out"], "%Y-%m-%d")
             nights = (co - ci).days
-            total_nights   += nights
-            total_revenue  += nights * prices["weekday"]
+            total_nights  += nights
+            total_revenue += nights * prices["weekday"]
         except Exception:
             pass
 
@@ -454,7 +437,7 @@ async def admin_prices(callback: types.CallbackQuery):
 
 
 # =====================================================
-# SET PRICE — выбор типа
+# SET PRICE
 # =====================================================
 
 @router.callback_query(lambda c: c.data.startswith("set_price_"))
@@ -485,10 +468,6 @@ async def set_price_start(
     await callback.answer()
 
 
-# =====================================================
-# SET PRICE — получаем значение
-# =====================================================
-
 @router.message(PriceState.waiting_price_value)
 async def set_price_value(
     message: types.Message,
@@ -501,9 +480,7 @@ async def set_price_value(
     try:
         value = int(message.text.strip())
     except ValueError:
-        await message.answer(
-            "❌ Введи число. Например: 130"
-        )
+        await message.answer("❌ Введи число. Например: 130")
         return
 
     data       = await state.get_data()
@@ -533,9 +510,7 @@ async def set_price_value(
 # =====================================================
 
 @router.callback_query(lambda c: c.data == "admin_block_open")
-async def block_open(
-    callback: types.CallbackQuery
-):
+async def block_open(callback: types.CallbackQuery):
 
     if not is_admin(callback.from_user.id):
         return
@@ -557,53 +532,6 @@ async def block_open(
     )
 
     await callback.answer()
-
-
-# =====================================================
-# BLOCK DATES — получаем данные из Mini App
-# =====================================================
-
-@router.message(lambda m: m.web_app_data and m.web_app_data.data)
-async def handle_webapp_data(message: types.Message):
-
-    try:
-        data = json.loads(message.web_app_data.data)
-    except Exception:
-        return
-
-    # Блокировка от админа
-    if data.get("action") == "block" and is_admin(message.from_user.id):
-
-        check_in  = data["check_in"]
-        check_out = data["check_out"]
-
-        try:
-
-            block_dates(check_in, check_out)
-
-            await message.answer(
-                f"⛔ Даты заблокированы\n\n"
-                f"📅 {check_in} → {check_out}"
-            )
-
-            await message.answer(
-                "🛠 Панель администратора",
-                reply_markup=admin_menu_markup()
-            )
-
-        except Exception as e:
-
-            error = str(e)
-
-            if error == "DATES_ALREADY_BOOKED":
-                await message.answer(
-                    "❌ Эти даты уже заняты бронью.\n"
-                    "Сначала отмените существующую бронь."
-                )
-            else:
-                await message.answer(
-                    "😔 Не удалось заблокировать даты. Попробуйте ещё раз."
-                )
 
 
 # =====================================================

@@ -9,12 +9,17 @@ from aiogram.types import (
     WebAppInfo,
     FSInputFile,
     InputMediaPhoto,
-    Message
+    Message,
+    InlineKeyboardMarkup,
+    InlineKeyboardButton
 )
 
-from config import WEBAPP_URL
+from config import WEBAPP_URL, ADMIN_IDS
 
-from services.booking_service import create_booking
+from services.booking_service import (
+    create_booking,
+    block_dates
+)
 
 
 router = Router()
@@ -128,6 +133,36 @@ def main_keyboard():
     )
 
 
+def admin_inline_menu():
+
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="📋 Все брони",
+                    callback_data="admin_bookings_0"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="📊 Статистика",
+                    callback_data="admin_stats"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="⛔ Заблокировать даты",
+                    callback_data="admin_block_open"
+                ),
+                InlineKeyboardButton(
+                    text="💰 Цены",
+                    callback_data="admin_prices"
+                )
+            ]
+        ]
+    )
+
+
 # =====================================================
 # START
 # =====================================================
@@ -180,22 +215,63 @@ async def description(message: types.Message):
 
 
 # =====================================================
-# WEBAPP BOOKING
+# WEBAPP DATA — единый обработчик для всех Mini App
 # =====================================================
 
 @router.message(lambda m: m.web_app_data)
-async def webapp_booking(message: Message):
+async def webapp_handler(message: Message):
 
     try:
+        data = json.loads(message.web_app_data.data)
+    except Exception:
+        return
 
-        data = json.loads(
-            message.web_app_data.data
-        )
+    action = data.get("action")
 
-        # Если это блокировка от админа — пропускаем,
-        # обработает handlers/admin.py
-        if data.get("action") == "block":
+    # ─── БЛОКИРОВКА ДАТ (только для админа) ───────
+    if action == "block":
+
+        if message.from_user.id not in ADMIN_IDS:
             return
+
+        check_in  = data["check_in"]
+        check_out = data["check_out"]
+
+        try:
+
+            block_dates(check_in, check_out)
+
+            await message.answer(
+                f"⛔ Даты заблокированы\n\n"
+                f"📅 {check_in} → {check_out}",
+                reply_markup=main_keyboard()
+            )
+
+            await message.answer(
+                "🛠 Панель администратора",
+                reply_markup=admin_inline_menu()
+            )
+
+        except Exception as e:
+
+            error = str(e)
+
+            if error == "DATES_ALREADY_BOOKED":
+                await message.answer(
+                    "❌ Эти даты уже заняты бронью.\n"
+                    "Сначала отмените существующую бронь.",
+                    reply_markup=main_keyboard()
+                )
+            else:
+                await message.answer(
+                    "😔 Не удалось заблокировать даты. Попробуйте ещё раз.",
+                    reply_markup=main_keyboard()
+                )
+
+        return
+
+    # ─── БРОНИРОВАНИЕ (для всех пользователей) ────
+    try:
 
         booking_id = create_booking(
 
@@ -211,14 +287,10 @@ async def webapp_booking(message: Message):
         )
 
         await message.answer(
-            f"""
-✅ Бронь #{booking_id}
-
-📅 {data['check_in']} → {data['check_out']}
-👥 {data.get('guests', 2)} гостей
-
-Спасибо за бронирование ✨
-""",
+            f"✅ Бронь #{booking_id}\n\n"
+            f"📅 {data['check_in']} → {data['check_out']}\n"
+            f"👥 {data.get('guests', 2)} гостей\n\n"
+            f"Спасибо за бронирование ✨",
             reply_markup=main_keyboard()
         )
 
