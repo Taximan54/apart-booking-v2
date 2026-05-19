@@ -218,6 +218,19 @@ async def webapp_booking(message: Message):
 
     except Exception as e:
 
-        await message.answer(
-            f"❌ Ошибка бронирования: {e}"
-        )
+        error = str(e)
+
+        if error == "DATES_NOT_AVAILABLE":
+
+            await message.answer(
+                "📅 Эти даты уже заняты\n\n"
+                "Пожалуйста, выберите другой период — "
+                "кто-то успел забронировать раньше."
+            )
+
+        else:
+
+            await message.answer(
+                "😔 Что-то пошло не так\n\n"
+                "Попробуйте ещё раз или напишите нам напрямую."
+            )
