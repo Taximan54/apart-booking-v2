@@ -905,13 +905,14 @@ const tg = window.Telegram.WebApp;
 
 tg.expand();
 
-let bookedDates = [];
+let bookedRanges = [];
 
 let selectedCheckIn = null;
 
 let selectedCheckOut = null;
 
 const PRICE_PER_NIGHT = 120;
+
 
 /* ===================================================== */
 /* LOAD BOOKINGS */
@@ -929,8 +930,7 @@ async function loadBookedDates() {
         const ranges =
             await response.json();
 
-        bookedDates =
-            expandBookedRanges(ranges);
+        bookedRanges = ranges;
 
         initCalendar();
 
@@ -938,46 +938,14 @@ async function loadBookedDates() {
 
         console.error(e);
 
+        alert(
+            "Ошибка загрузки календаря"
+        );
+
     }
 
 }
 
-/* ===================================================== */
-/* EXPAND RANGES */
-/* ===================================================== */
-
-function expandBookedRanges(ranges) {
-
-    const disabled = [];
-
-    ranges.forEach(range => {
-
-        const start =
-            new Date(range.check_in);
-
-        const end =
-            new Date(range.check_out);
-
-        const current =
-            new Date(start);
-
-        while (current < end) {
-
-            disabled.push(
-                formatDate(current)
-            );
-
-            current.setDate(
-                current.getDate() + 1
-            );
-
-        }
-
-    });
-
-    return disabled;
-
-}
 
 /* ===================================================== */
 /* FORMAT DATE */
@@ -999,6 +967,7 @@ function formatDate(date) {
 
 }
 
+
 /* ===================================================== */
 /* CALCULATE NIGHTS */
 /* ===================================================== */
@@ -1014,6 +983,7 @@ function calculateNights(start, end) {
     );
 
 }
+
 
 /* ===================================================== */
 /* UPDATE INFO */
@@ -1080,6 +1050,43 @@ function updateInfo() {
 
 }
 
+
+/* ===================================================== */
+/* CHECK RANGE INTERSECTION */
+/* ===================================================== */
+
+function isRangeBlocked(start, end) {
+
+    const startDate =
+        new Date(start);
+
+    const endDate =
+        new Date(end);
+
+    for (const range of bookedRanges) {
+
+        const bookedStart =
+            new Date(range.check_in);
+
+        const bookedEnd =
+            new Date(range.check_out);
+
+        if (
+            startDate < bookedEnd &&
+            endDate > bookedStart
+        ) {
+
+            return true;
+
+        }
+
+    }
+
+    return false;
+
+}
+
+
 /* ===================================================== */
 /* INIT CALENDAR */
 /* ===================================================== */
@@ -1106,7 +1113,12 @@ function initCalendar() {
 
             animate: true,
 
-            disable: bookedDates,
+            disable: bookedRanges.map(
+                range => ({
+                    from: range.check_in,
+                    to: range.check_out
+                })
+            ),
 
             onChange: function(
                 selectedDates
@@ -1116,15 +1128,45 @@ function initCalendar() {
                     selectedDates.length === 2
                 ) {
 
-                    selectedCheckIn =
+                    const checkIn =
                         formatDate(
                             selectedDates[0]
                         );
 
-                    selectedCheckOut =
+                    const checkOut =
                         formatDate(
                             selectedDates[1]
                         );
+
+                    const blocked =
+                        isRangeBlocked(
+                            checkIn,
+                            checkOut
+                        );
+
+                    if (blocked) {
+
+                        alert(
+                            "Выбранные даты недоступны"
+                        );
+
+                        calendar.clear();
+
+                        selectedCheckIn = null;
+
+                        selectedCheckOut = null;
+
+                        updateInfo();
+
+                        return;
+
+                    }
+
+                    selectedCheckIn =
+                        checkIn;
+
+                    selectedCheckOut =
+                        checkOut;
 
                 } else {
 
@@ -1141,7 +1183,10 @@ function initCalendar() {
         }
     );
 
-    // SWIPE MONTHS
+
+    /* ===================================================== */
+    /* SWIPE MONTHS */
+    /* ===================================================== */
 
     const calendarContainer =
         document.querySelector(
@@ -1197,6 +1242,7 @@ function initCalendar() {
 
 }
 
+
 /* ===================================================== */
 /* SEND BOOKING */
 /* ===================================================== */
@@ -1227,6 +1273,7 @@ function sendBooking() {
     }));
 
 }
+
 
 /* ===================================================== */
 /* START */
