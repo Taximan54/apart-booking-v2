@@ -1,7 +1,14 @@
 import sqlite3
 import os
+import threading
 
 DB_PATH = "data/bookings.db"
+
+# =====================================================
+# SQLITE LOCK
+# =====================================================
+
+db_lock = threading.Lock()
 
 
 # =====================================================
@@ -10,7 +17,10 @@ DB_PATH = "data/bookings.db"
 
 def get_connection():
 
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(
+        DB_PATH,
+        check_same_thread=False
+    )
 
     conn.row_factory = sqlite3.Row
 
@@ -71,6 +81,7 @@ def is_dates_available(check_in, check_out):
         cursor.execute("""
 
         SELECT id
+
         FROM bookings
 
         WHERE status IN ('confirmed', 'blocked')
@@ -109,56 +120,58 @@ def create_booking(
     guests
 ):
 
-    available = is_dates_available(
-        check_in,
-        check_out
-    )
+    with db_lock:
 
-    if not available:
-
-        raise Exception(
-            "DATES_NOT_AVAILABLE"
-        )
-
-    with get_connection() as conn:
-
-        cursor = conn.cursor()
-
-        cursor.execute("""
-
-        INSERT INTO bookings (
-
-            user_id,
-            username,
+        available = is_dates_available(
             check_in,
-            check_out,
-            guests,
-            status
-
+            check_out
         )
 
-        VALUES (?, ?, ?, ?, ?, ?)
+        if not available:
 
-        """, (
+            raise Exception(
+                "DATES_NOT_AVAILABLE"
+            )
 
-            user_id,
-            username,
-            check_in,
-            check_out,
-            guests,
-            "confirmed"
+        with get_connection() as conn:
 
-        ))
+            cursor = conn.cursor()
 
-        conn.commit()
+            cursor.execute("""
 
-        booking_id = cursor.lastrowid
+            INSERT INTO bookings (
 
-        print(
-            f"✅ BOOKING CREATED #{booking_id}"
-        )
+                user_id,
+                username,
+                check_in,
+                check_out,
+                guests,
+                status
 
-        return booking_id
+            )
+
+            VALUES (?, ?, ?, ?, ?, ?)
+
+            """, (
+
+                user_id,
+                username,
+                check_in,
+                check_out,
+                guests,
+                "confirmed"
+
+            ))
+
+            conn.commit()
+
+            booking_id = cursor.lastrowid
+
+            print(
+                f"✅ BOOKING CREATED #{booking_id}"
+            )
+
+            return booking_id
 
 
 # =====================================================
@@ -249,6 +262,7 @@ def get_booking_by_id(booking_id):
         cursor.execute("""
 
         SELECT *
+
         FROM bookings
 
         WHERE id = ?
@@ -299,52 +313,54 @@ def cancel_booking(booking_id):
 
 def block_dates(check_in, check_out):
 
-    available = is_dates_available(
-        check_in,
-        check_out
-    )
+    with db_lock:
 
-    if not available:
-
-        raise Exception(
-            "DATES_ALREADY_BOOKED"
-        )
-
-    with get_connection() as conn:
-
-        cursor = conn.cursor()
-
-        cursor.execute("""
-
-        INSERT INTO bookings (
-
-            user_id,
-            username,
+        available = is_dates_available(
             check_in,
-            check_out,
-            guests,
-            status
-
+            check_out
         )
 
-        VALUES (?, ?, ?, ?, ?, ?)
+        if not available:
 
-        """, (
+            raise Exception(
+                "DATES_ALREADY_BOOKED"
+            )
 
-            0,
-            "ADMIN_BLOCK",
-            check_in,
-            check_out,
-            0,
-            "blocked"
+        with get_connection() as conn:
 
-        ))
+            cursor = conn.cursor()
 
-        conn.commit()
+            cursor.execute("""
 
-        print(
-            f"🔒 DATES BLOCKED {check_in} → {check_out}"
-        )
+            INSERT INTO bookings (
+
+                user_id,
+                username,
+                check_in,
+                check_out,
+                guests,
+                status
+
+            )
+
+            VALUES (?, ?, ?, ?, ?, ?)
+
+            """, (
+
+                0,
+                "ADMIN_BLOCK",
+                check_in,
+                check_out,
+                0,
+                "blocked"
+
+            ))
+
+            conn.commit()
+
+            print(
+                f"🔒 DATES BLOCKED {check_in} → {check_out}"
+            )
 
 
 # =====================================================
