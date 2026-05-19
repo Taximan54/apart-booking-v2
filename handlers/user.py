@@ -192,6 +192,11 @@ async def webapp_booking(message: Message):
             message.web_app_data.data
         )
 
+        # Если это блокировка от админа — пропускаем,
+        # обработает handlers/admin.py
+        if data.get("action") == "block":
+            return
+
         booking_id = create_booking(
 
             user_id=message.from_user.id,
@@ -213,7 +218,8 @@ async def webapp_booking(message: Message):
 👥 {data.get('guests', 2)} гостей
 
 Спасибо за бронирование ✨
-"""
+""",
+            reply_markup=main_keyboard()
         )
 
     except Exception as e:
