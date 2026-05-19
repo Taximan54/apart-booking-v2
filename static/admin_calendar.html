@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+
+<meta charset="UTF-8" />
+
+<meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+/>
+
+<title>Блокировка дат</title>
+
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+<link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css"
+/>
+
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/ru.js"></script>
+
+<style>
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+:root {
+    --bg: #f7f7f7;
+    --card: #ffffff;
+    --text: #222222;
+    --muted: #717171;
+    --border: #ebebeb;
+    --primary: #111111;
+    --range: #fff0f0;
+    --shadow:
+        0 1px 2px rgba(0,0,0,0.04),
+        0 10px 32px rgba(0,0,0,0.06);
+    --radius: 28px;
+    --danger: #dc2626;
+}
+
+* {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+    margin: 0;
+    padding: 0;
+    background: linear-gradient(180deg, #fafafa 0%, #f5f5f5 100%);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+}
+
+.wrapper {
+    width: 100%;
+    max-width: 760px;
+    margin: auto;
+    padding:
+        calc(env(safe-area-inset-top) + 18px)
+        16px
+        160px;
+}
+
+/* HERO */
+
+.hero { margin-bottom: 20px; }
+
+.badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    background: #fff1f1;
+    border: 1px solid #fecaca;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 16px;
+    color: var(--danger);
+}
+
+.title {
+    font-size: 32px;
+    font-weight: 800;
+    letter-spacing: -1.6px;
+    line-height: 1.05;
+    margin-bottom: 10px;
+}
+
+.subtitle {
+    font-size: 15px;
+    color: var(--muted);
+    line-height: 1.6;
+}
+
+/* CARD */
+
+.card {
+    background: var(--card);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+}
+
+/* CALENDAR SECTION */
+
+.calendar-section { padding: 24px 18px 18px; }
+
+.calendar-header { margin-bottom: 20px; }
+
+.calendar-title {
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.6px;
+    margin-bottom: 6px;
+}
+
+.calendar-sub {
+    font-size: 14px;
+    color: var(--muted);
+}
+
+.input { display: none; }
+
+/* FLATPICKR */
+
+.flatpickr-calendar {
+    width: 100% !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+.flatpickr-months { margin-bottom: 18px; position: relative; }
+.flatpickr-month { height: 40px !important; }
+
+.flatpickr-current-month {
+    display: flex !important;
+    justify-content: center;
+    align-items: center;
+    padding-top: 0 !important;
+    font-size: 18px !important;
+    font-weight: 800 !important;
+    letter-spacing: -0.4px;
+    width: 100%;
+}
+
+.flatpickr-current-month .flatpickr-monthDropdown-months {
+    font-weight: 800 !important;
+}
+
+.flatpickr-weekdays { margin-bottom: 12px; }
+
+.flatpickr-weekdaycontainer {
+    display: grid !important;
+    grid-template-columns: repeat(7, 1fr);
+}
+
+.flatpickr-weekday {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 100% !important;
+    color: #8e8e93 !important;
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.flatpickr-rContainer { width: 100% !important; }
+.flatpickr-days { width: 100% !important; }
+
+.dayContainer {
+    width: 100% !important;
+    min-width: 100% !important;
+    max-width: 100% !important;
+}
+
+.flatpickr-day {
+    width: 44px !important;
+    max-width: 44px !important;
+    height: 44px !important;
+    line-height: 44px !important;
+    border-radius: 50% !important;
+    border: none !important;
+    margin: 2px auto;
+    font-size: 14px;
+    font-weight: 600;
+    color: #222;
+    transition: transform 0.14s ease, background 0.18s ease, color 0.18s ease;
+}
+
+.flatpickr-day:hover {
+    background: #f2f2f2 !important;
+    transform: scale(1.06);
+}
+
+.flatpickr-day.today {
+    border: 1.5px solid #111 !important;
+    background: white !important;
+}
+
+/* Выбранные даты — красные для админа */
+.flatpickr-day.selected,
+.flatpickr-day.startRange,
+.flatpickr-day.endRange {
+    background: var(--danger) !important;
+    color: white !important;
+    box-shadow: 0 6px 16px rgba(220,38,38,0.25);
+}
+
+.flatpickr-day.inRange {
+    background: var(--range) !important;
+    color: #dc2626 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+}
+
+.flatpickr-day.startRange {
+    border-top-left-radius: 999px !important;
+    border-bottom-left-radius: 999px !important;
+}
+
+.flatpickr-day.endRange {
+    border-top-right-radius: 999px !important;
+    border-bottom-right-radius: 999px !important;
+}
+
+/* Уже заблокированные */
+.flatpickr-day.flatpickr-disabled {
+    background: rgba(255, 90, 95, 0.16) !important;
+    color: #ff4d4f !important;
+    opacity: 1 !important;
+    font-weight: 700;
+    box-shadow: inset 0 0 0 1px rgba(255, 90, 95, 0.14);
+}
+
+.flatpickr-day.prevMonthDay,
+.flatpickr-day.nextMonthDay { opacity: 0.12; }
+
+.flatpickr-prev-month,
+.flatpickr-next-month {
+    top: 2px !important;
+    padding: 8px !important;
+    transition: background 0.18s ease, transform 0.12s ease;
+}
+
+.flatpickr-prev-month:hover,
+.flatpickr-next-month:hover {
+    background: #f3f3f3;
+    border-radius: 12px;
+}
+
+.flatpickr-prev-month svg,
+.flatpickr-next-month svg {
+    width: 16px !important;
+    height: 16px !important;
+}
+
+/* INFO GRID */
+
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    border-top: 1px solid var(--border);
+}
+
+.info-item { padding: 18px; }
+
+.info-item:not(:last-child) {
+    border-right: 1px solid var(--border);
+}
+
+.info-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+}
+
+.info-value {
+    font-size: 15px;
+    font-weight: 700;
+}
+
+/* FOOTER */
+
+.footer {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 999;
+    background: rgba(255,255,255,0.86);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border-top: 1px solid rgba(0,0,0,0.06);
+    box-shadow: 0 -10px 30px rgba(0,0,0,0.06);
+    padding:
+        14px
+        16px
+        calc(env(safe-area-inset-bottom) + 18px);
+}
+
+.footer-inner {
+    max-width: 760px;
+    margin: auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+}
+
+.nights-box {
+    display: flex;
+    flex-direction: column;
+}
+
+.nights-count {
+    font-size: 24px;
+    font-weight: 800;
+    letter-spacing: -1px;
+    color: var(--danger);
+}
+
+.nights-sub {
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: 2px;
+}
+
+.block-btn {
+    border: none;
+    background: linear-gradient(135deg, #dc2626, #b91c1c);
+    color: white;
+    height: 54px;
+    padding: 0 28px;
+    border-radius: 18px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.14s ease, opacity 0.14s ease;
+    box-shadow: 0 10px 25px rgba(220,38,38,0.25);
+}
+
+.block-btn:hover { transform: translateY(-1px); }
+.block-btn:active { transform: scale(0.98); }
+
+.block-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+/* TOAST */
+
+.toast-container {
+    position: fixed;
+    top: calc(env(safe-area-inset-top) + 16px);
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    pointer-events: none;
+    width: calc(100% - 32px);
+    max-width: 400px;
+}
+
+.toast {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 18px;
+    border-radius: 18px;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.4;
+    width: 100%;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06);
+    backdrop-filter: blur(20px);
+    pointer-events: auto;
+    animation: toastIn 0.36s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.toast.hiding {
+    animation: toastOut 0.28s cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+
+.toast-warning {
+    background: rgba(255,255,255,0.96);
+    border: 1px solid rgba(255,167,38,0.25);
+    color: #1a1a1a;
+}
+
+.toast-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 12px;
+    background: rgba(255,167,38,0.12);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+.toast-text { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+.toast-title { font-size: 14px; font-weight: 700; letter-spacing: -0.2px; }
+.toast-desc { font-size: 12px; color: var(--muted); font-weight: 500; }
+
+@keyframes toastIn {
+    from { opacity: 0; transform: translateY(-12px) scale(0.94); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes toastOut {
+    from { opacity: 1; transform: translateY(0) scale(1); }
+    to   { opacity: 0; transform: translateY(-8px) scale(0.96); }
+}
+
+/* MOBILE */
+
+@media (max-width: 640px) {
+    .wrapper {
+        padding: calc(env(safe-area-inset-top) + 14px) 12px 150px;
+    }
+    .title { font-size: 26px; }
+    .calendar-section { padding: 20px 14px 14px; }
+    .flatpickr-day {
+        width: 42px !important;
+        max-width: 42px !important;
+        height: 42px !important;
+        line-height: 42px !important;
+        font-size: 13px;
+    }
+    .info-grid { grid-template-columns: 1fr; }
+    .info-item:not(:last-child) {
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+    }
+    .block-btn { min-width: 150px; }
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="toast-container" id="toast-container"></div>
+
+<div class="wrapper">
+
+    <div class="hero">
+        <div class="badge">⛔ Режим администратора</div>
+        <div class="title">Блокировка дат</div>
+        <div class="subtitle">
+            Выберите период — клиенты не смогут забронировать эти даты
+        </div>
+    </div>
+
+    <div class="card">
+
+        <div class="calendar-section">
+            <div class="calendar-header">
+                <div class="calendar-title">Выбор периода</div>
+                <div class="calendar-sub">Красные даты уже заняты</div>
+            </div>
+            <input type="text" id="calendar" class="input" />
+        </div>
+
+        <div class="info-grid">
+            <div class="info-item">
+                <div class="info-label">Начало блока</div>
+                <div class="info-value" id="checkin-value">—</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Конец блока</div>
+                <div class="info-value" id="checkout-value">—</div>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+
+<!-- FOOTER -->
+<div class="footer">
+    <div class="footer-inner">
+
+        <div class="nights-box">
+            <div class="nights-count" id="nights-count">0</div>
+            <div class="nights-sub">дней блока</div>
+        </div>
+
+        <button
+            class="block-btn"
+            id="block-btn"
+            disabled
+            onclick="sendBlock()"
+        >
+            ⛔ Заблокировать
+        </button>
+
+    </div>
+</div>
+
+<script>
+
+const tg = window.Telegram.WebApp;
+tg.expand();
+
+let bookedRanges    = [];
+let selectedCheckIn  = null;
+let selectedCheckOut = null;
+
+
+/* TOAST */
+
+function showToast(type, title, desc, duration = 3500) {
+
+    const container = document.getElementById("toast-container");
+
+    const toast = document.createElement("div");
+    toast.className = `toast toast-${type}`;
+    toast.innerHTML = `
+        <div class="toast-icon">📅</div>
+        <div class="toast-text">
+            <div class="toast-title">${title}</div>
+            ${desc ? `<div class="toast-desc">${desc}</div>` : ""}
+        </div>
+    `;
+
+    container.appendChild(toast);
+    tg.HapticFeedback?.notificationOccurred("warning");
+
+    setTimeout(() => {
+        toast.classList.add("hiding");
+        setTimeout(() => {
+            if (toast.parentNode) toast.parentNode.removeChild(toast);
+        }, 300);
+    }, duration);
+}
+
+
+/* LOAD BOOKED DATES */
+
+async function loadBookedDates() {
+
+    try {
+        const response = await fetch("/api/booked-dates");
+        bookedRanges = await response.json();
+        initCalendar();
+    } catch (e) {
+        console.error(e);
+        showToast("warning", "Не удалось загрузить календарь", "Проверьте соединение");
+    }
+}
+
+
+/* FORMAT DATE */
+
+function formatDate(date) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, "0");
+    const d = String(date.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+}
+
+
+/* UPDATE INFO */
+
+function updateInfo() {
+
+    document.getElementById("checkin-value").innerText  = selectedCheckIn  || "—";
+    document.getElementById("checkout-value").innerText = selectedCheckOut || "—";
+
+    const btn = document.getElementById("block-btn");
+    const nightsEl = document.getElementById("nights-count");
+
+    if (selectedCheckIn && selectedCheckOut) {
+        const diff = Math.ceil(
+            (new Date(selectedCheckOut) - new Date(selectedCheckIn))
+            / (1000 * 60 * 60 * 24)
+        );
+        nightsEl.innerText = diff;
+        btn.disabled = false;
+    } else {
+        nightsEl.innerText = "0";
+        btn.disabled = true;
+    }
+}
+
+
+/* CHECK OVERLAP */
+
+function isRangeBlocked(start, end) {
+    const s = new Date(start);
+    const e = new Date(end);
+    for (const range of bookedRanges) {
+        if (s < new Date(range.check_out) && e > new Date(range.check_in)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+
+/* INIT CALENDAR */
+
+function initCalendar() {
+
+    const calendar = flatpickr("#calendar", {
+        mode: "range",
+        minDate: "today",
+        dateFormat: "Y-m-d",
+        locale: "ru",
+        inline: true,
+        showMonths: 1,
+        monthSelectorType: "static",
+        animate: true,
+        disable: bookedRanges.map(r => ({
+            from: r.check_in,
+            to:   r.check_out
+        })),
+        onChange: function(selectedDates) {
+
+            if (selectedDates.length === 2) {
+
+                const checkIn  = formatDate(selectedDates[0]);
+                const checkOut = formatDate(selectedDates[1]);
+
+                if (isRangeBlocked(checkIn, checkOut)) {
+                    showToast(
+                        "warning",
+                        "Период пересекается с существующей бронью",
+                        "Выберите другие даты"
+                    );
+                    calendar.clear();
+                    selectedCheckIn  = null;
+                    selectedCheckOut = null;
+                    updateInfo();
+                    return;
+                }
+
+                selectedCheckIn  = checkIn;
+                selectedCheckOut = checkOut;
+
+            } else {
+                selectedCheckIn  = null;
+                selectedCheckOut = null;
+            }
+
+            updateInfo();
+        }
+    });
+
+    /* SWIPE */
+
+    const cal = document.querySelector(".flatpickr-calendar");
+    let touchStartX = 0;
+
+    cal.addEventListener("touchstart", e => {
+        touchStartX = e.changedTouches[0].screenX;
+    }, false);
+
+    cal.addEventListener("touchend", e => {
+        const diff = touchStartX - e.changedTouches[0].screenX;
+        if (diff > 50)  calendar.changeMonth(1);
+        if (diff < -50) calendar.changeMonth(-1);
+    }, false);
+}
+
+
+/* SEND BLOCK */
+
+function sendBlock() {
+
+    if (!selectedCheckIn || !selectedCheckOut) {
+        showToast("warning", "Выберите даты", "");
+        return;
+    }
+
+    tg.sendData(JSON.stringify({
+        action:    "block",
+        check_in:  selectedCheckIn,
+        check_out: selectedCheckOut
+    }));
+}
+
+
+loadBookedDates();
+
+</script>
+
+</body>
+</html>

@@ -4,19 +4,24 @@ import os
 from aiogram import Router, types, F
 from aiogram.types import (
     InlineKeyboardMarkup,
-    InlineKeyboardButton
+    InlineKeyboardButton,
+    KeyboardButton,
+    ReplyKeyboardMarkup,
+    WebAppInfo
 )
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 
-from config import ADMIN_IDS
+from config import ADMIN_IDS, BASE_URL
 
 from services.booking_service import (
     get_all_bookings,
     cancel_booking,
     block_dates,
 )
+
+ADMIN_WEBAPP_URL = f"{BASE_URL}/static/admin_calendar.html"
 
 router = Router()
 
@@ -96,7 +101,7 @@ def admin_menu_markup():
             [
                 InlineKeyboardButton(
                     text="⛔ Заблокировать даты",
-                    callback_data="admin_block_start"
+                    callback_data="admin_block_open"
                 ),
                 InlineKeyboardButton(
                     text="💰 Цены",
@@ -104,6 +109,14 @@ def admin_menu_markup():
                 )
             ]
         ]
+    )
+
+
+def admin_menu_markup_reply():
+    """Reply-клавиатура для возврата в меню после блокировки."""
+    return ReplyKeyboardMarkup(
+        keyboard=[[KeyboardButton(text="🛠 Админка")]],
+        resize_keyboard=True
     )
 
 
@@ -516,123 +529,77 @@ async def set_price_value(
 
 
 # =====================================================
-# BLOCK DATES — старт
+# BLOCK DATES — открываем Mini App календарь
 # =====================================================
 
-@router.callback_query(lambda c: c.data == "admin_block_start")
-async def block_start(
-    callback: types.CallbackQuery,
-    state: FSMContext
+@router.callback_query(lambda c: c.data == "admin_block_open")
+async def block_open(
+    callback: types.CallbackQuery
 ):
 
     if not is_admin(callback.from_user.id):
         return
 
-    await state.set_state(BlockDatesState.waiting_check_in)
+    markup = ReplyKeyboardMarkup(
+        keyboard=[[
+            KeyboardButton(
+                text="📅 Выбрать даты для блокировки",
+                web_app=WebAppInfo(url=ADMIN_WEBAPP_URL)
+            )
+        ]],
+        resize_keyboard=True,
+        one_time_keyboard=True
+    )
 
-    await callback.message.edit_text(
-        "⛔ Блокировка дат\n\n"
-        "Введи дату заезда в формате:\n"
-        "ГГГГ-ММ-ДД\n\n"
-        "Например: 2026-07-01"
+    await callback.message.answer(
+        "⛔ Выберите даты для блокировки в календаре:",
+        reply_markup=markup
     )
 
     await callback.answer()
 
 
 # =====================================================
-# BLOCK DATES — получаем дату заезда
+# BLOCK DATES — получаем данные из Mini App
 # =====================================================
 
-@router.message(BlockDatesState.waiting_check_in)
-async def block_check_in(
-    message: types.Message,
-    state: FSMContext
-):
-
-    if not is_admin(message.from_user.id):
-        return
-
-    check_in = message.text.strip()
-
-    # Простая валидация формата
-    from datetime import datetime
-    try:
-        datetime.strptime(check_in, "%Y-%m-%d")
-    except ValueError:
-        await message.answer(
-            "❌ Неверный формат. Введи дату так:\n"
-            "ГГГГ-ММ-ДД\n\nНапример: 2026-07-01"
-        )
-        return
-
-    await state.update_data(check_in=check_in)
-    await state.set_state(BlockDatesState.waiting_check_out)
-
-    await message.answer(
-        f"📅 Заезд: {check_in}\n\n"
-        f"Теперь введи дату выезда:"
-    )
-
-
-# =====================================================
-# BLOCK DATES — получаем дату выезда
-# =====================================================
-
-@router.message(BlockDatesState.waiting_check_out)
-async def block_check_out(
-    message: types.Message,
-    state: FSMContext
-):
-
-    if not is_admin(message.from_user.id):
-        return
-
-    check_out = message.text.strip()
-
-    from datetime import datetime
-    try:
-        datetime.strptime(check_out, "%Y-%m-%d")
-    except ValueError:
-        await message.answer(
-            "❌ Неверный формат. Введи дату так:\n"
-            "ГГГГ-ММ-ДД\n\nНапример: 2026-07-10"
-        )
-        return
-
-    data     = await state.get_data()
-    check_in = data["check_in"]
-
-    await state.clear()
+@router.message(lambda m: m.web_app_data and m.web_app_data.data)
+async def handle_webapp_data(message: types.Message):
 
     try:
+        data = json.loads(message.web_app_data.data)
+    except Exception:
+        return
 
-        block_dates(check_in, check_out)
+    # Блокировка от админа
+    if data.get("action") == "block" and is_admin(message.from_user.id):
 
-        await message.answer(
-            f"⛔ Даты заблокированы\n\n"
-            f"📅 {check_in} → {check_out}",
-            reply_markup=admin_menu_markup()
-        )
+        check_in  = data["check_in"]
+        check_out = data["check_out"]
 
-    except Exception as e:
+        try:
 
-        error = str(e)
-
-        if error == "DATES_ALREADY_BOOKED":
+            block_dates(check_in, check_out)
 
             await message.answer(
-                "❌ Эти даты уже заняты бронью.\n"
-                "Сначала отмените существующую бронь.",
-                reply_markup=admin_menu_markup()
+                f"⛔ Даты заблокированы\n\n"
+                f"📅 {check_in} → {check_out}",
+                reply_markup=admin_menu_markup_reply()
             )
 
-        else:
+        except Exception as e:
 
-            await message.answer(
-                "😔 Не удалось заблокировать даты. Попробуйте ещё раз.",
-                reply_markup=admin_menu_markup()
-            )
+            error = str(e)
+
+            if error == "DATES_ALREADY_BOOKED":
+                await message.answer(
+                    "❌ Эти даты уже заняты бронью.\n"
+                    "Сначала отмените существующую бронь."
+                )
+            else:
+                await message.answer(
+                    "😔 Не удалось заблокировать даты. Попробуйте ещё раз."
+                )
 
 
 # =====================================================
