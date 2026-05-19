@@ -236,8 +236,6 @@ body {
 
 }
 
-/* MONTH HEADER */
-
 .flatpickr-months {
 
     margin-bottom: 18px;
@@ -278,8 +276,6 @@ body {
 
 }
 
-/* WEEK DAYS */
-
 .flatpickr-weekdays {
 
     margin-bottom: 12px;
@@ -316,8 +312,6 @@ body {
 
 }
 
-/* DAYS GRID */
-
 .flatpickr-rContainer {
 
     width: 100% !important;
@@ -339,8 +333,6 @@ body {
     max-width: 100% !important;
 
 }
-
-/* DAY */
 
 .flatpickr-day {
 
@@ -371,8 +363,6 @@ body {
 
 }
 
-/* HOVER */
-
 .flatpickr-day:hover {
 
     background: #f2f2f2 !important;
@@ -381,8 +371,6 @@ body {
 
 }
 
-/* TODAY */
-
 .flatpickr-day.today {
 
     border: 1.5px solid #111 !important;
@@ -390,8 +378,6 @@ body {
     background: white !important;
 
 }
-
-/* SELECTED */
 
 .flatpickr-day.selected,
 .flatpickr-day.startRange,
@@ -405,8 +391,6 @@ body {
         0 6px 16px rgba(0,0,0,0.14);
 
 }
-
-/* RANGE */
 
 .flatpickr-day.inRange {
 
@@ -436,8 +420,6 @@ body {
 
 }
 
-/* DISABLED */
-
 .flatpickr-day.flatpickr-disabled {
 
     background:
@@ -458,16 +440,12 @@ body {
 
 }
 
-/* OTHER MONTH */
-
 .flatpickr-day.prevMonthDay,
 .flatpickr-day.nextMonthDay {
 
     opacity: 0.12;
 
 }
-
-/* ARROWS */
 
 .flatpickr-prev-month,
 .flatpickr-next-month {
@@ -696,6 +674,254 @@ body {
 }
 
 /* ===================================================== */
+/* TOAST */
+/* ===================================================== */
+
+.toast-container {
+
+    position: fixed;
+
+    top: calc(env(safe-area-inset-top) + 16px);
+
+    left: 50%;
+
+    transform: translateX(-50%);
+
+    z-index: 9999;
+
+    display: flex;
+
+    flex-direction: column;
+
+    align-items: center;
+
+    gap: 10px;
+
+    pointer-events: none;
+
+    width: calc(100% - 32px);
+
+    max-width: 400px;
+
+}
+
+.toast {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 12px;
+
+    padding: 14px 18px;
+
+    border-radius: 18px;
+
+    font-size: 14px;
+
+    font-weight: 600;
+
+    line-height: 1.4;
+
+    width: 100%;
+
+    box-shadow:
+        0 8px 32px rgba(0,0,0,0.12),
+        0 2px 8px rgba(0,0,0,0.06);
+
+    backdrop-filter: blur(20px);
+
+    -webkit-backdrop-filter: blur(20px);
+
+    pointer-events: auto;
+
+    /* Анимация появления */
+
+    animation: toastIn 0.36s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+
+}
+
+.toast.hiding {
+
+    animation: toastOut 0.28s cubic-bezier(0.4, 0, 1, 1) forwards;
+
+}
+
+/* Тип: ошибка */
+
+.toast-error {
+
+    background: rgba(255, 255, 255, 0.96);
+
+    border: 1px solid rgba(255, 77, 79, 0.2);
+
+    color: #1a1a1a;
+
+}
+
+.toast-error .toast-icon {
+
+    width: 36px;
+
+    height: 36px;
+
+    border-radius: 12px;
+
+    background: rgba(255, 77, 79, 0.1);
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    font-size: 18px;
+
+    flex-shrink: 0;
+
+}
+
+/* Тип: предупреждение */
+
+.toast-warning {
+
+    background: rgba(255, 255, 255, 0.96);
+
+    border: 1px solid rgba(255, 167, 38, 0.25);
+
+    color: #1a1a1a;
+
+}
+
+.toast-warning .toast-icon {
+
+    width: 36px;
+
+    height: 36px;
+
+    border-radius: 12px;
+
+    background: rgba(255, 167, 38, 0.12);
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    font-size: 18px;
+
+    flex-shrink: 0;
+
+}
+
+/* Тип: успех */
+
+.toast-success {
+
+    background: rgba(255, 255, 255, 0.96);
+
+    border: 1px solid rgba(52, 199, 89, 0.25);
+
+    color: #1a1a1a;
+
+}
+
+.toast-success .toast-icon {
+
+    width: 36px;
+
+    height: 36px;
+
+    border-radius: 12px;
+
+    background: rgba(52, 199, 89, 0.12);
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    font-size: 18px;
+
+    flex-shrink: 0;
+
+}
+
+.toast-text {
+
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 2px;
+
+    flex: 1;
+
+}
+
+.toast-title {
+
+    font-size: 14px;
+
+    font-weight: 700;
+
+    letter-spacing: -0.2px;
+
+}
+
+.toast-desc {
+
+    font-size: 12px;
+
+    color: var(--muted);
+
+    font-weight: 500;
+
+}
+
+@keyframes toastIn {
+
+    from {
+
+        opacity: 0;
+
+        transform: translateY(-12px) scale(0.94);
+
+    }
+
+    to {
+
+        opacity: 1;
+
+        transform: translateY(0) scale(1);
+
+    }
+
+}
+
+@keyframes toastOut {
+
+    from {
+
+        opacity: 1;
+
+        transform: translateY(0) scale(1);
+
+    }
+
+    to {
+
+        opacity: 0;
+
+        transform: translateY(-8px) scale(0.96);
+
+    }
+
+}
+
+/* ===================================================== */
 /* MOBILE */
 /* ===================================================== */
 
@@ -769,6 +995,9 @@ body {
 </head>
 
 <body>
+
+<!-- TOAST CONTAINER -->
+<div class="toast-container" id="toast-container"></div>
 
 <div class="wrapper">
 
@@ -915,6 +1144,60 @@ const PRICE_PER_NIGHT = 120;
 
 
 /* ===================================================== */
+/* TOAST SYSTEM */
+/* ===================================================== */
+
+function showToast(type, title, desc, duration = 3500) {
+
+    const container =
+        document.getElementById(
+            "toast-container"
+        );
+
+    const icons = {
+        error: "🚫",
+        warning: "📅",
+        success: "✅"
+    };
+
+    const toast = document.createElement("div");
+
+    toast.className = `toast toast-${type}`;
+
+    toast.innerHTML = `
+        <div class="toast-icon">${icons[type] || "ℹ️"}</div>
+        <div class="toast-text">
+            <div class="toast-title">${title}</div>
+            ${desc ? `<div class="toast-desc">${desc}</div>` : ""}
+        </div>
+    `;
+
+    container.appendChild(toast);
+
+    // Вибрация на мобильных
+    if (type === "error" || type === "warning") {
+        tg.HapticFeedback?.notificationOccurred("error");
+    }
+
+    // Убираем через duration мс
+    setTimeout(() => {
+
+        toast.classList.add("hiding");
+
+        setTimeout(() => {
+
+            if (toast.parentNode) {
+                toast.parentNode.removeChild(toast);
+            }
+
+        }, 300);
+
+    }, duration);
+
+}
+
+
+/* ===================================================== */
 /* LOAD BOOKINGS */
 /* ===================================================== */
 
@@ -938,8 +1221,11 @@ async function loadBookedDates() {
 
         console.error(e);
 
-        alert(
-            "Ошибка загрузки календаря"
+        // Вместо alert — красивый toast
+        showToast(
+            "error",
+            "Не удалось загрузить календарь",
+            "Проверьте соединение и попробуйте снова"
         );
 
     }
@@ -1146,8 +1432,11 @@ function initCalendar() {
 
                     if (blocked) {
 
-                        alert(
-                            "Выбранные даты недоступны"
+                        // Вместо alert — красивый toast
+                        showToast(
+                            "warning",
+                            "Даты недоступны",
+                            "В выбранном периоде есть занятые дни — выберите другие даты"
                         );
 
                         calendar.clear();
@@ -1254,8 +1543,10 @@ function sendBooking() {
         !selectedCheckOut
     ) {
 
-        alert(
-            "Выберите даты"
+        showToast(
+            "warning",
+            "Выберите даты",
+            "Нажмите на даты заезда и выезда в календаре"
         );
 
         return;
