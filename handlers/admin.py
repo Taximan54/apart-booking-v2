@@ -583,8 +583,12 @@ async def handle_webapp_data(message: types.Message):
 
             await message.answer(
                 f"⛔ Даты заблокированы\n\n"
-                f"📅 {check_in} → {check_out}",
-                reply_markup=admin_menu_markup_reply()
+                f"📅 {check_in} → {check_out}"
+            )
+
+            await message.answer(
+                "🛠 Панель администратора",
+                reply_markup=admin_menu_markup()
             )
 
         except Exception as e:
