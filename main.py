@@ -1,4 +1,5 @@
 import asyncio
+import os
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
@@ -39,7 +40,7 @@ app.mount(
 # =====================================================
 
 bot = Bot(token=BOT_TOKEN)
-dp = Dispatcher(storage=MemoryStorage())  # ← FSM storage добавлен
+dp = Dispatcher(storage=MemoryStorage())
 dp.include_router(user_router)
 dp.include_router(admin_router)
 
@@ -119,6 +120,17 @@ async def health():
         "database": "sqlite",
         "app": "premium-apart"
     }
+
+# =====================================================
+# ⚠️ ВРЕМЕННЫЙ ЭНДПОИНТ — УДАЛИТЬ ПОСЛЕ ИСПОЛЬЗОВАНИЯ
+# =====================================================
+
+@app.get("/reset-db")
+async def reset_db():
+    if os.path.exists("/data/bookings.db"):
+        os.remove("/data/bookings.db")
+    init_db()
+    return {"status": "ok", "message": "Database reset, old schema deleted"}
 
 # =====================================================
 # START BOT
