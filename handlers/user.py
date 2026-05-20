@@ -1,7 +1,9 @@
 import json
 
-from aiogram import Router, types
+from aiogram import Router, types, Bot
 from aiogram.filters import CommandStart
+from aiogram.fsm.context import FSMContext
+from aiogram.fsm.state import State, StatesGroup
 
 from aiogram.types import (
     ReplyKeyboardMarkup,
@@ -11,7 +13,8 @@ from aiogram.types import (
     InputMediaPhoto,
     Message,
     InlineKeyboardMarkup,
-    InlineKeyboardButton
+    InlineKeyboardButton,
+    ReplyKeyboardRemove
 )
 
 from config import WEBAPP_URL, ADMIN_IDS
@@ -23,6 +26,14 @@ from services.booking_service import (
 
 
 router = Router()
+
+
+# =====================================================
+# FSM — РЕЖИМ СВЯЗИ
+# =====================================================
+
+class ContactState(StatesGroup):
+    waiting_message = State()
 
 
 # =====================================================
@@ -120,6 +131,10 @@ def main_keyboard():
             ],
 
             [
+                KeyboardButton(
+                    text="💬 Связь"
+                ),
+
                 KeyboardButton(
                     text="🛠 Админка"
                 )
@@ -247,6 +262,91 @@ async def description(message: types.Message):
 
 ⛔️ Запрещено курить и проводить вечеринки.
 При нарушении депозит не возвращается."""
+    )
+
+
+# =====================================================
+# СВЯЗЬ — вход в режим
+# =====================================================
+
+@router.message(lambda m: m.text == "💬 Связь")
+async def contact_start(
+    message: types.Message,
+    state: FSMContext
+):
+
+    # Админам кнопка не нужна
+    if message.from_user.id in ADMIN_IDS:
+        await message.answer(
+            "Вы администратор — пишите напрямую гостям."
+        )
+        return
+
+    await state.set_state(ContactState.waiting_message)
+
+    await message.answer(
+        "💬 Напишите ваш вопрос или сообщение — "
+        "мы ответим в ближайшее время.\n\n"
+        "Для отмены нажмите /cancel",
+        reply_markup=ReplyKeyboardRemove()
+    )
+
+
+# =====================================================
+# СВЯЗЬ — получаем сообщение и пересылаем админам
+# =====================================================
+
+@router.message(ContactState.waiting_message)
+async def contact_message(
+    message: types.Message,
+    state: FSMContext,
+    bot: Bot
+):
+
+    await state.clear()
+
+    user = message.from_user
+    username = f"@{user.username}" if user.username else "без username"
+    full_name = user.full_name or "Гость"
+
+    # Пересылаем всем админам
+    for admin_id in ADMIN_IDS:
+
+        try:
+
+            await bot.send_message(
+                admin_id,
+                f"💬 Новое сообщение от гостя\n\n"
+                f"👤 {full_name} ({username})\n"
+                f"🆔 ID: {user.id}\n\n"
+                f"📝 {message.text}"
+            )
+
+        except Exception:
+            pass
+
+    await message.answer(
+        "✅ Сообщение отправлено!\n\n"
+        "Мы свяжемся с вами в ближайшее время. 🤗",
+        reply_markup=main_keyboard()
+    )
+
+
+# =====================================================
+# ОТМЕНА
+# =====================================================
+
+@router.message(lambda m: m.text == "/cancel")
+async def cancel(
+    message: types.Message,
+    state: FSMContext
+):
+
+    await state.clear()
+
+    await message.answer(
+        "Отменено.",
+        reply_markup=main_keyboard()
     )
 
 
