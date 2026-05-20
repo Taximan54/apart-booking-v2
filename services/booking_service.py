@@ -2,7 +2,8 @@ import sqlite3
 import os
 import threading
 
-DB_PATH = "data/bookings.db"
+# ⚠️ ВАЖНО: абсолютный путь совпадает с Railway Volume /data
+DB_PATH = "/data/bookings.db"
 
 # =====================================================
 # SQLITE LOCK
@@ -33,7 +34,7 @@ def get_connection():
 
 def init_db():
 
-    os.makedirs("data", exist_ok=True)
+    os.makedirs("/data", exist_ok=True)
 
     with get_connection() as conn:
 
@@ -66,6 +67,7 @@ def init_db():
         conn.commit()
 
     print("✅ SQLITE DATABASE INITIALIZED")
+    print(f"📁 DATABASE PATH: {DB_PATH}")
 
 
 # =====================================================
