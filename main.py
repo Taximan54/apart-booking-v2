@@ -121,16 +121,6 @@ async def health():
         "app": "premium-apart"
     }
 
-# =====================================================
-# ⚠️ ВРЕМЕННЫЙ ЭНДПОИНТ — УДАЛИТЬ ПОСЛЕ ИСПОЛЬЗОВАНИЯ
-# =====================================================
-
-@app.get("/reset-db")
-async def reset_db():
-    if os.path.exists("/data/bookings.db"):
-        os.remove("/data/bookings.db")
-    init_db()
-    return {"status": "ok", "message": "Database reset, old schema deleted"}
 
 # =====================================================
 # START BOT
