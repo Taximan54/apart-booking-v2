@@ -99,10 +99,6 @@ body {
 
 }
 
-/* ===================================================== */
-/* HERO */
-/* ===================================================== */
-
 .hero {
 
     margin-bottom: 20px;
@@ -160,10 +156,6 @@ body {
 
 }
 
-/* ===================================================== */
-/* CARD */
-/* ===================================================== */
-
 .card {
 
     background: var(--card);
@@ -177,10 +169,6 @@ body {
     overflow: hidden;
 
 }
-
-/* ===================================================== */
-/* CALENDAR SECTION */
-/* ===================================================== */
 
 .calendar-section {
 
@@ -219,10 +207,6 @@ body {
     display: none;
 
 }
-
-/* ===================================================== */
-/* FLATPICKR */
-/* ===================================================== */
 
 .flatpickr-calendar {
 
@@ -485,10 +469,6 @@ body {
 
 }
 
-/* ===================================================== */
-/* INFO GRID */
-/* ===================================================== */
-
 .info-grid {
 
     display: grid;
@@ -534,10 +514,6 @@ body {
     font-weight: 700;
 
 }
-
-/* ===================================================== */
-/* FOOTER */
-/* ===================================================== */
 
 .footer {
 
@@ -673,10 +649,6 @@ body {
 
 }
 
-/* ===================================================== */
-/* TOAST */
-/* ===================================================== */
-
 .toast-container {
 
     position: fixed;
@@ -735,8 +707,6 @@ body {
 
     pointer-events: auto;
 
-    /* Анимация появления */
-
     animation: toastIn 0.36s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 
 }
@@ -746,8 +716,6 @@ body {
     animation: toastOut 0.28s cubic-bezier(0.4, 0, 1, 1) forwards;
 
 }
-
-/* Тип: ошибка */
 
 .toast-error {
 
@@ -781,8 +749,6 @@ body {
 
 }
 
-/* Тип: предупреждение */
-
 .toast-warning {
 
     background: rgba(255, 255, 255, 0.96);
@@ -814,8 +780,6 @@ body {
     flex-shrink: 0;
 
 }
-
-/* Тип: успех */
 
 .toast-success {
 
@@ -921,10 +885,6 @@ body {
 
 }
 
-/* ===================================================== */
-/* MOBILE */
-/* ===================================================== */
-
 @media (max-width: 640px) {
 
     .wrapper {
@@ -996,7 +956,6 @@ body {
 
 <body>
 
-<!-- TOAST CONTAINER -->
 <div class="toast-container" id="toast-container"></div>
 
 <div class="wrapper">
@@ -1094,8 +1053,6 @@ Premium Apart
 
 </div>
 
-<!-- FOOTER -->
-
 <div class="footer">
 
 <div class="footer-inner">
@@ -1150,9 +1107,7 @@ const PRICE_PER_NIGHT = 120;
 function showToast(type, title, desc, duration = 3500) {
 
     const container =
-        document.getElementById(
-            "toast-container"
-        );
+        document.getElementById("toast-container");
 
     const icons = {
         error: "🚫",
@@ -1174,12 +1129,10 @@ function showToast(type, title, desc, duration = 3500) {
 
     container.appendChild(toast);
 
-    // Вибрация на мобильных
     if (type === "error" || type === "warning") {
         tg.HapticFeedback?.notificationOccurred("error");
     }
 
-    // Убираем через duration мс
     setTimeout(() => {
 
         toast.classList.add("hiding");
@@ -1205,13 +1158,9 @@ async function loadBookedDates() {
 
     try {
 
-        const response =
-            await fetch(
-                "/api/booked-dates"
-            );
+        const response = await fetch("/api/booked-dates");
 
-        const ranges =
-            await response.json();
+        const ranges = await response.json();
 
         bookedRanges = ranges;
 
@@ -1221,7 +1170,6 @@ async function loadBookedDates() {
 
         console.error(e);
 
-        // Вместо alert — красивый toast
         showToast(
             "error",
             "Не удалось загрузить календарь",
@@ -1241,13 +1189,9 @@ function formatDate(date) {
 
     const y = date.getFullYear();
 
-    const m = String(
-        date.getMonth() + 1
-    ).padStart(2, "0");
+    const m = String(date.getMonth() + 1).padStart(2, "0");
 
-    const d = String(
-        date.getDate()
-    ).padStart(2, "0");
+    const d = String(date.getDate()).padStart(2, "0");
 
     return `${y}-${m}-${d}`;
 
@@ -1264,9 +1208,7 @@ function calculateNights(start, end) {
 
     const e = new Date(end);
 
-    return Math.ceil(
-        (e - s) / (1000 * 60 * 60 * 24)
-    );
+    return Math.ceil((e - s) / (1000 * 60 * 60 * 24));
 
 }
 
@@ -1277,50 +1219,28 @@ function calculateNights(start, end) {
 
 function updateInfo() {
 
-    document.getElementById(
-        "checkin-value"
-    ).innerText =
+    document.getElementById("checkin-value").innerText =
         selectedCheckIn || "—";
 
-    document.getElementById(
-        "checkout-value"
-    ).innerText =
+    document.getElementById("checkout-value").innerText =
         selectedCheckOut || "—";
 
-    const nightsElement =
-        document.getElementById(
-            "nights-value"
+    const nightsElement = document.getElementById("nights-value");
+
+    const totalElement = document.getElementById("total-price");
+
+    const button = document.getElementById("book-btn");
+
+    if (selectedCheckIn && selectedCheckOut) {
+
+        const nights = calculateNights(
+            selectedCheckIn,
+            selectedCheckOut
         );
 
-    const totalElement =
-        document.getElementById(
-            "total-price"
-        );
+        nightsElement.innerText = nights;
 
-    const button =
-        document.getElementById(
-            "book-btn"
-        );
-
-    if (
-        selectedCheckIn &&
-        selectedCheckOut
-    ) {
-
-        const nights =
-            calculateNights(
-                selectedCheckIn,
-                selectedCheckOut
-            );
-
-        nightsElement.innerText =
-            nights;
-
-        const total =
-            nights * PRICE_PER_NIGHT;
-
-        totalElement.innerText =
-            `€${total}`;
+        totalElement.innerText = `€${nights * PRICE_PER_NIGHT}`;
 
         button.disabled = false;
 
@@ -1338,29 +1258,39 @@ function updateInfo() {
 
 
 /* ===================================================== */
-/* CHECK RANGE INTERSECTION */
+/* CHECK RANGE INTERSECTION
+   Заезд в 15:00, выезд в 12:00 —
+   день выезда свободен для следующего гостя.
+   Поэтому check_out одной брони НЕ блокирует
+   check_in следующей.
 /* ===================================================== */
 
 function isRangeBlocked(start, end) {
 
-    const startDate =
-        new Date(start);
+    const startDate = new Date(start);
 
-    const endDate =
-        new Date(end);
+    const endDate = new Date(end);
 
     for (const range of bookedRanges) {
 
-        const bookedStart =
-            new Date(range.check_in);
+        const bookedStart = new Date(range.check_in);
 
-        const bookedEnd =
-            new Date(range.check_out);
+        const bookedEnd   = new Date(range.check_out);
 
-        if (
-            startDate < bookedEnd &&
-            endDate > bookedStart
-        ) {
+        // Конфликт только если периоды реально перекрываются
+        // (не считая случай когда новый заезд = день выезда)
+        if (startDate < bookedEnd && endDate > bookedStart &&
+            !(endDate <= bookedStart || startDate >= bookedEnd)) {
+
+            // Разрешаем: новый check_in совпадает с check_out брони
+            if (startDate.getTime() === bookedEnd.getTime()) {
+                continue;
+            }
+
+            // Разрешаем: новый check_out совпадает с check_in брони
+            if (endDate.getTime() === bookedStart.getTime()) {
+                continue;
+            }
 
             return true;
 
@@ -1378,6 +1308,29 @@ function isRangeBlocked(start, end) {
 /* ===================================================== */
 
 function initCalendar() {
+
+    // ⚠️ День выезда (check_out) НЕ блокируем —
+    // он свободен для следующего заезда.
+    // Блокируем только дни check_in..check_out-1
+
+    const disabledDates = [];
+
+    for (const range of bookedRanges) {
+
+        const start = new Date(range.check_in);
+
+        const end   = new Date(range.check_out);
+
+        // Последний заблокированный день = check_out - 1 день
+        const lastBlocked = new Date(end);
+        lastBlocked.setDate(lastBlocked.getDate() - 1);
+
+        disabledDates.push({
+            from: formatDate(start),
+            to:   formatDate(lastBlocked)
+        });
+
+    }
 
     const calendar = flatpickr(
         "#calendar",
@@ -1399,40 +1352,18 @@ function initCalendar() {
 
             animate: true,
 
-            disable: bookedRanges.map(
-                range => ({
-                    from: range.check_in,
-                    to: range.check_out
-                })
-            ),
+            disable: disabledDates,
 
-            onChange: function(
-                selectedDates
-            ) {
+            onChange: function(selectedDates) {
 
-                if (
-                    selectedDates.length === 2
-                ) {
+                if (selectedDates.length === 2) {
 
-                    const checkIn =
-                        formatDate(
-                            selectedDates[0]
-                        );
+                    const checkIn  = formatDate(selectedDates[0]);
 
-                    const checkOut =
-                        formatDate(
-                            selectedDates[1]
-                        );
+                    const checkOut = formatDate(selectedDates[1]);
 
-                    const blocked =
-                        isRangeBlocked(
-                            checkIn,
-                            checkOut
-                        );
+                    if (isRangeBlocked(checkIn, checkOut)) {
 
-                    if (blocked) {
-
-                        // Вместо alert — красивый toast
                         showToast(
                             "warning",
                             "Даты недоступны",
@@ -1441,7 +1372,7 @@ function initCalendar() {
 
                         calendar.clear();
 
-                        selectedCheckIn = null;
+                        selectedCheckIn  = null;
 
                         selectedCheckOut = null;
 
@@ -1451,15 +1382,13 @@ function initCalendar() {
 
                     }
 
-                    selectedCheckIn =
-                        checkIn;
+                    selectedCheckIn  = checkIn;
 
-                    selectedCheckOut =
-                        checkOut;
+                    selectedCheckOut = checkOut;
 
                 } else {
 
-                    selectedCheckIn = null;
+                    selectedCheckIn  = null;
 
                     selectedCheckOut = null;
 
@@ -1473,61 +1402,26 @@ function initCalendar() {
     );
 
 
-    /* ===================================================== */
     /* SWIPE MONTHS */
-    /* ===================================================== */
 
     const calendarContainer =
-        document.querySelector(
-            ".flatpickr-calendar"
-        );
+        document.querySelector(".flatpickr-calendar");
 
     let touchStartX = 0;
 
-    let touchEndX = 0;
+    calendarContainer.addEventListener("touchstart", e => {
+        touchStartX = e.changedTouches[0].screenX;
+    }, false);
 
-    calendarContainer.addEventListener(
-        "touchstart",
-        e => {
+    calendarContainer.addEventListener("touchend", e => {
 
-            touchStartX =
-                e.changedTouches[0].screenX;
+        const diff = touchStartX - e.changedTouches[0].screenX;
 
-        },
-        false
-    );
+        if (diff > 50)  calendar.changeMonth(1);
 
-    calendarContainer.addEventListener(
-        "touchend",
-        e => {
+        if (diff < -50) calendar.changeMonth(-1);
 
-            touchEndX =
-                e.changedTouches[0].screenX;
-
-            handleSwipe();
-
-        },
-        false
-    );
-
-    function handleSwipe() {
-
-        const diff =
-            touchStartX - touchEndX;
-
-        if (diff > 50) {
-
-            calendar.changeMonth(1);
-
-        }
-
-        if (diff < -50) {
-
-            calendar.changeMonth(-1);
-
-        }
-
-    }
+    }, false);
 
 }
 
@@ -1538,10 +1432,7 @@ function initCalendar() {
 
 function sendBooking() {
 
-    if (
-        !selectedCheckIn ||
-        !selectedCheckOut
-    ) {
+    if (!selectedCheckIn || !selectedCheckOut) {
 
         showToast(
             "warning",
@@ -1555,7 +1446,7 @@ function sendBooking() {
 
     tg.sendData(JSON.stringify({
 
-        check_in: selectedCheckIn,
+        check_in:  selectedCheckIn,
 
         check_out: selectedCheckOut,
 

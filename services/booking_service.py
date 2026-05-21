@@ -80,6 +80,11 @@ def is_dates_available(check_in, check_out):
 
         cursor = conn.cursor()
 
+        # Заезд в 15:00, выезд в 12:00 —
+        # день выезда свободен для следующего заезда.
+        # Поэтому check_out одной брони НЕ конфликтует
+        # с check_in следующей: условие строгое (< и >)
+
         cursor.execute("""
 
         SELECT id
@@ -90,9 +95,9 @@ def is_dates_available(check_in, check_out):
 
         AND (
 
-            (? < check_out)
+            ? < check_out
             AND
-            (? > check_in)
+            ? > check_in
 
         )
 
