@@ -1,7 +1,7 @@
 import json
 import os
 
-from aiogram import Router, types
+from aiogram import Router, types, Bot
 from aiogram.types import (
     InlineKeyboardMarkup,
     InlineKeyboardButton,
@@ -30,7 +30,7 @@ router = Router()
 # PRICE STORAGE
 # =====================================================
 
-PRICE_FILE = "data/prices.json"
+PRICE_FILE = "/data/prices.json"
 
 DEFAULT_PRICES = {
     "weekday": 120,
@@ -45,7 +45,7 @@ def load_prices():
     return DEFAULT_PRICES.copy()
 
 def save_prices(prices):
-    os.makedirs("data", exist_ok=True)
+    os.makedirs("/data", exist_ok=True)
     with open(PRICE_FILE, "w") as f:
         json.dump(prices, f)
 
@@ -222,7 +222,10 @@ async def show_bookings_page(target, page: int):
     if not active:
         text = "📋 Активных броней нет"
         markup = InlineKeyboardMarkup(inline_keyboard=[[
-            InlineKeyboardButton(text="🏠 Главное меню", callback_data="admin_menu")
+            InlineKeyboardButton(
+                text="🏠 Главное меню",
+                callback_data="admin_menu"
+            )
         ]])
         if hasattr(target, "edit_text"):
             await target.edit_text(text, reply_markup=markup)
@@ -277,10 +280,15 @@ async def confirm_cancel(callback: types.CallbackQuery):
     if not is_admin(callback.from_user.id):
         return
 
-    booking_id = int(callback.data.split("_")[-1])
+    # ✅ ИСПРАВЛЕНИЕ: берём ID из последней части
+    parts      = callback.data.split("_")
+    booking_id = int(parts[-1])
 
     bookings = get_all_bookings()
-    booking  = next((b for b in bookings if b["id"] == booking_id), None)
+    booking  = next(
+        (b for b in bookings if b["id"] == booking_id),
+        None
+    )
 
     if not booking:
         await callback.answer("Бронь не найдена", show_alert=True)
@@ -527,7 +535,8 @@ async def block_open(callback: types.CallbackQuery):
     )
 
     await callback.message.answer(
-        "⛔ Выберите даты для блокировки в календаре:",
+        "⛔ Выберите даты для блокировки в календаре:\n\n"
+        "Если хотите вернуться без блокировки — нажмите 🛠 Админка",
         reply_markup=markup
     )
 

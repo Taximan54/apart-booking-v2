@@ -275,7 +275,6 @@ async def contact_start(
     state: FSMContext
 ):
 
-    # Админам кнопка не нужна
     if message.from_user.id in ADMIN_IDS:
         await message.answer(
             "Вы администратор — пишите напрямую гостям."
@@ -305,9 +304,17 @@ async def contact_message(
 
     await state.clear()
 
-    user = message.from_user
-    username = f"@{user.username}" if user.username else "без username"
+    user      = message.from_user
+    username  = f"@{user.username}" if user.username else "без username"
     full_name = user.full_name or "Гость"
+
+    # Кнопка "Ответить" — открывает чат с клиентом напрямую
+    reply_markup = InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(
+            text="↩️ Ответить",
+            url=f"tg://user?id={user.id}"
+        )
+    ]])
 
     # Пересылаем всем админам
     for admin_id in ADMIN_IDS:
@@ -319,7 +326,8 @@ async def contact_message(
                 f"💬 Новое сообщение от гостя\n\n"
                 f"👤 {full_name} ({username})\n"
                 f"🆔 ID: {user.id}\n\n"
-                f"📝 {message.text}"
+                f"📝 {message.text}",
+                reply_markup=reply_markup
             )
 
         except Exception:
