@@ -19,6 +19,7 @@ from services.booking_service import (
     get_all_bookings,
     cancel_booking,
     block_dates,
+    delete_booking,
 )
 
 ADMIN_WEBAPP_URL = f"{BASE_URL}/static/admin_calendar.html"
@@ -188,10 +189,11 @@ def build_bookings_text(bookings, page, total_pages):
 
 
 # =====================================================
-# BUILD CANCEL BUTTONS
+# BUILD ACTION BUTTONS
+# — отмена для confirmed, разблокировка для blocked
 # =====================================================
 
-def build_cancel_buttons(bookings):
+def build_action_buttons(bookings):
 
     keyboard = []
 
@@ -203,6 +205,15 @@ def build_cancel_buttons(bookings):
                 InlineKeyboardButton(
                     text=f"❌ Отменить #{row['id']} ({row['check_in']} → {row['check_out']})",
                     callback_data=f"confirm_cancel_{row['id']}"
+                )
+            ])
+
+        elif row["status"] == "blocked":
+
+            keyboard.append([
+                InlineKeyboardButton(
+                    text=f"🔓 Разблокировать #{row['id']} ({row['check_in']} → {row['check_out']})",
+                    callback_data=f"confirm_unblock_{row['id']}"
                 )
             ])
 
@@ -241,7 +252,7 @@ async def show_bookings_page(target, page: int):
     current = active[start:end]
 
     text     = build_bookings_text(current, page, total_pages)
-    keyboard = build_cancel_buttons(current)
+    keyboard = build_action_buttons(current)
     nav      = pagination_keyboard(page, total_pages)
 
     keyboard.extend(nav.inline_keyboard)
@@ -280,9 +291,7 @@ async def confirm_cancel(callback: types.CallbackQuery):
     if not is_admin(callback.from_user.id):
         return
 
-    # ✅ ИСПРАВЛЕНИЕ: берём ID из последней части
-    parts      = callback.data.split("_")
-    booking_id = int(parts[-1])
+    booking_id = int(callback.data.split("_")[-1])
 
     bookings = get_all_bookings()
     booking  = next(
@@ -334,6 +343,70 @@ async def do_cancel(callback: types.CallbackQuery):
     cancel_booking(booking_id)
 
     await callback.answer("✅ Бронь отменена", show_alert=True)
+
+    await show_bookings_page(callback.message, 0)
+
+
+# =====================================================
+# CONFIRM UNBLOCK
+# =====================================================
+
+@router.callback_query(lambda c: c.data.startswith("confirm_unblock_"))
+async def confirm_unblock(callback: types.CallbackQuery):
+
+    if not is_admin(callback.from_user.id):
+        return
+
+    booking_id = int(callback.data.split("_")[-1])
+
+    bookings = get_all_bookings()
+    booking  = next(
+        (b for b in bookings if b["id"] == booking_id),
+        None
+    )
+
+    if not booking:
+        await callback.answer("Блокировка не найдена", show_alert=True)
+        return
+
+    markup = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(
+                text="✅ Да, разблокировать",
+                callback_data=f"do_unblock_{booking_id}"
+            ),
+            InlineKeyboardButton(
+                text="🔙 Нет, назад",
+                callback_data="admin_bookings_0"
+            )
+        ]
+    ])
+
+    await callback.message.edit_text(
+        f"🔓 Разблокировать даты #{booking_id}?\n\n"
+        f"📅 {booking['check_in']} → {booking['check_out']}\n\n"
+        f"Даты станут доступны для бронирования.",
+        reply_markup=markup
+    )
+
+    await callback.answer()
+
+
+# =====================================================
+# DO UNBLOCK
+# =====================================================
+
+@router.callback_query(lambda c: c.data.startswith("do_unblock_"))
+async def do_unblock(callback: types.CallbackQuery):
+
+    if not is_admin(callback.from_user.id):
+        return
+
+    booking_id = int(callback.data.split("_")[-1])
+
+    delete_booking(booking_id)
+
+    await callback.answer("🔓 Даты разблокированы", show_alert=True)
 
     await show_bookings_page(callback.message, 0)
 
@@ -536,7 +609,7 @@ async def block_open(callback: types.CallbackQuery):
 
     await callback.message.answer(
         "⛔ Выберите даты для блокировки в календаре:\n\n"
-        "Если хотите вернуться без блокировки — нажмите 🛠 Админка",
+        "Для возврата без блокировки нажмите 🛠 Админка",
         reply_markup=markup
     )
 

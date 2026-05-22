@@ -1,5 +1,6 @@
 import asyncio
 import os
+import json
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
@@ -75,26 +76,15 @@ async def home():
                     box-shadow:
                         0 8px 24px rgba(0,0,0,0.06);
                 }
-                h1 {
-                    margin-top: 0;
-                }
-                .status {
-                    color: #16a34a;
-                    font-weight: 600;
-                }
+                h1 { margin-top: 0; }
+                .status { color: #16a34a; font-weight: 600; }
             </style>
         </head>
         <body>
             <div class="card">
-                <h1>
-                    🏠 Premium Apart
-                </h1>
-                <p class="status">
-                    System Online 🚀
-                </p>
-                <p>
-                    SQLite Database Connected
-                </p>
+                <h1>🏠 Premium Apart</h1>
+                <p class="status">System Online 🚀</p>
+                <p>SQLite Database Connected</p>
             </div>
         </body>
     </html>
@@ -110,6 +100,25 @@ async def booked_dates():
     return bookings
 
 # =====================================================
+# API PRICES
+# =====================================================
+
+PRICE_FILE = "/data/prices.json"
+
+DEFAULT_PRICES = {
+    "weekday": 120,
+    "weekend": 150,
+    "cleaning": 30
+}
+
+@app.get("/api/prices")
+async def get_prices():
+    if os.path.exists(PRICE_FILE):
+        with open(PRICE_FILE, "r") as f:
+            return json.load(f)
+    return DEFAULT_PRICES
+
+# =====================================================
 # HEALTH CHECK
 # =====================================================
 
@@ -120,7 +129,6 @@ async def health():
         "database": "sqlite",
         "app": "premium-apart"
     }
-
 
 # =====================================================
 # START BOT

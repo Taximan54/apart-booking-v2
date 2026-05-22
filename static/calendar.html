@@ -26,932 +26,421 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
 :root {
-
     --bg: #f7f7f7;
-
     --card: #ffffff;
-
     --text: #222222;
-
     --muted: #717171;
-
     --border: #ebebeb;
-
     --primary: #111111;
-
     --range: #f3f4f6;
-
     --shadow:
         0 1px 2px rgba(0,0,0,0.04),
         0 10px 32px rgba(0,0,0,0.06);
-
     --radius: 28px;
-
 }
 
 * {
-
     box-sizing: border-box;
-
     -webkit-tap-highlight-color: transparent;
-
 }
 
-html {
-
-    scroll-behavior: smooth;
-
-}
+html { scroll-behavior: smooth; }
 
 body {
-
     margin: 0;
-
     padding: 0;
-
-    background:
-        linear-gradient(
-            180deg,
-            #fafafa 0%,
-            #f5f5f5 100%
-        );
-
+    background: linear-gradient(180deg, #fafafa 0%, #f5f5f5 100%);
     color: var(--text);
-
     font-family: 'Inter', sans-serif;
-
     min-height: 100vh;
-
 }
 
 .wrapper {
-
     width: 100%;
-
     max-width: 760px;
-
     margin: auto;
-
     padding:
         calc(env(safe-area-inset-top) + 18px)
         16px
         160px;
-
 }
 
-.hero {
-
-    margin-bottom: 20px;
-
-}
+.hero { margin-bottom: 20px; }
 
 .badge {
-
     display: inline-flex;
-
     align-items: center;
-
     gap: 6px;
-
     padding: 8px 14px;
-
     background: white;
-
     border: 1px solid var(--border);
-
     border-radius: 999px;
-
     font-size: 13px;
-
     font-weight: 600;
-
     margin-bottom: 16px;
-
-    box-shadow:
-        0 2px 8px rgba(0,0,0,0.04);
-
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
 }
 
 .title {
-
     font-size: 36px;
-
     font-weight: 800;
-
     letter-spacing: -1.8px;
-
     line-height: 1.05;
-
     margin-bottom: 10px;
-
 }
 
 .subtitle {
-
     font-size: 15px;
-
     color: var(--muted);
-
     line-height: 1.6;
-
 }
 
 .card {
-
     background: var(--card);
-
     border-radius: var(--radius);
-
     border: 1px solid var(--border);
-
     box-shadow: var(--shadow);
-
     overflow: hidden;
-
 }
 
-.calendar-section {
-
-    padding: 24px 18px 18px;
-
-}
-
-.calendar-header {
-
-    margin-bottom: 20px;
-
-}
+.calendar-section { padding: 24px 18px 18px; }
+.calendar-header { margin-bottom: 20px; }
 
 .calendar-title {
-
     font-size: 24px;
-
     font-weight: 800;
-
     letter-spacing: -0.8px;
-
     margin-bottom: 6px;
-
 }
 
-.calendar-sub {
-
-    font-size: 14px;
-
-    color: var(--muted);
-
-}
-
-.input {
-
-    display: none;
-
-}
+.calendar-sub { font-size: 14px; color: var(--muted); }
+.input { display: none; }
 
 .flatpickr-calendar {
-
     width: 100% !important;
-
     background: transparent !important;
-
     border: none !important;
-
     box-shadow: none !important;
-
 }
 
-.flatpickr-months {
-
-    margin-bottom: 18px;
-
-    position: relative;
-
-}
-
-.flatpickr-month {
-
-    height: 40px !important;
-
-}
+.flatpickr-months { margin-bottom: 18px; position: relative; }
+.flatpickr-month { height: 40px !important; }
 
 .flatpickr-current-month {
-
     display: flex !important;
-
     justify-content: center;
-
     align-items: center;
-
     padding-top: 0 !important;
-
     font-size: 18px !important;
-
     font-weight: 800 !important;
-
     letter-spacing: -0.4px;
-
     width: 100%;
-
 }
 
-.flatpickr-current-month .flatpickr-monthDropdown-months {
-
-    font-weight: 800 !important;
-
-}
-
-.flatpickr-weekdays {
-
-    margin-bottom: 12px;
-
-}
+.flatpickr-current-month .flatpickr-monthDropdown-months { font-weight: 800 !important; }
+.flatpickr-weekdays { margin-bottom: 12px; }
 
 .flatpickr-weekdaycontainer {
-
     display: grid !important;
-
     grid-template-columns: repeat(7, 1fr);
-
 }
 
 .flatpickr-weekday {
-
     display: flex !important;
-
     align-items: center;
-
     justify-content: center;
-
     width: 100% !important;
-
     color: #8e8e93 !important;
-
     font-size: 11px !important;
-
     font-weight: 700 !important;
-
     text-transform: uppercase;
-
     letter-spacing: 0.3px;
-
 }
 
-.flatpickr-rContainer {
-
-    width: 100% !important;
-
-}
-
-.flatpickr-days {
-
-    width: 100% !important;
-
-}
+.flatpickr-rContainer { width: 100% !important; }
+.flatpickr-days { width: 100% !important; }
 
 .dayContainer {
-
     width: 100% !important;
-
     min-width: 100% !important;
-
     max-width: 100% !important;
-
 }
 
 .flatpickr-day {
-
     width: 44px !important;
-
     max-width: 44px !important;
-
     height: 44px !important;
-
     line-height: 44px !important;
-
     border-radius: 50% !important;
-
     border: none !important;
-
     margin: 2px auto;
-
     font-size: 14px;
-
     font-weight: 600;
-
     color: #222;
-
-    transition:
-        transform 0.14s ease,
-        background 0.18s ease,
-        color 0.18s ease;
-
+    transition: transform 0.14s ease, background 0.18s ease, color 0.18s ease;
 }
 
 .flatpickr-day:hover {
-
     background: #f2f2f2 !important;
-
     transform: scale(1.06);
-
 }
 
 .flatpickr-day.today {
-
     border: 1.5px solid #111 !important;
-
     background: white !important;
-
 }
 
 .flatpickr-day.selected,
 .flatpickr-day.startRange,
 .flatpickr-day.endRange {
-
     background: #111 !important;
-
     color: white !important;
-
-    box-shadow:
-        0 6px 16px rgba(0,0,0,0.14);
-
+    box-shadow: 0 6px 16px rgba(0,0,0,0.14);
 }
 
 .flatpickr-day.inRange {
-
     background: var(--range) !important;
-
     color: #111 !important;
-
     border-radius: 0 !important;
-
     box-shadow: none !important;
-
 }
 
 .flatpickr-day.startRange {
-
     border-top-left-radius: 999px !important;
-
     border-bottom-left-radius: 999px !important;
-
 }
 
 .flatpickr-day.endRange {
-
     border-top-right-radius: 999px !important;
-
     border-bottom-right-radius: 999px !important;
-
 }
 
 .flatpickr-day.flatpickr-disabled {
-
-    background:
-        rgba(255, 90, 95, 0.16) !important;
-
-    color:
-        #ff4d4f !important;
-
+    background: rgba(255, 90, 95, 0.16) !important;
+    color: #ff4d4f !important;
     opacity: 1 !important;
-
     font-weight: 700;
-
-    text-decoration: none;
-
-    box-shadow:
-        inset 0 0 0 1px
-        rgba(255, 90, 95, 0.14);
-
+    box-shadow: inset 0 0 0 1px rgba(255, 90, 95, 0.14);
 }
 
 .flatpickr-day.prevMonthDay,
-.flatpickr-day.nextMonthDay {
-
-    opacity: 0.12;
-
-}
+.flatpickr-day.nextMonthDay { opacity: 0.12; }
 
 .flatpickr-prev-month,
 .flatpickr-next-month {
-
     top: 2px !important;
-
     padding: 8px !important;
-
-    transition:
-        background 0.18s ease,
-        transform 0.12s ease;
-
+    transition: background 0.18s ease, transform 0.12s ease;
 }
 
 .flatpickr-prev-month:hover,
 .flatpickr-next-month:hover {
-
     background: #f3f3f3;
-
     border-radius: 12px;
-
 }
 
 .flatpickr-prev-month:active,
-.flatpickr-next-month:active {
-
-    transform: scale(0.94);
-
-}
+.flatpickr-next-month:active { transform: scale(0.94); }
 
 .flatpickr-prev-month svg,
 .flatpickr-next-month svg {
-
     width: 16px !important;
-
     height: 16px !important;
-
 }
 
 .info-grid {
-
     display: grid;
-
     grid-template-columns: repeat(3, 1fr);
-
     border-top: 1px solid var(--border);
-
 }
 
-.info-item {
+.info-item { padding: 18px; }
 
-    padding: 18px;
-
-}
-
-.info-item:not(:last-child) {
-
-    border-right: 1px solid var(--border);
-
-}
+.info-item:not(:last-child) { border-right: 1px solid var(--border); }
 
 .info-label {
-
     font-size: 11px;
-
     text-transform: uppercase;
-
     color: var(--muted);
-
     font-weight: 700;
-
     letter-spacing: 0.5px;
-
     margin-bottom: 8px;
-
 }
 
-.info-value {
-
-    font-size: 15px;
-
-    font-weight: 700;
-
-}
+.info-value { font-size: 15px; font-weight: 700; }
 
 .footer {
-
     position: fixed;
-
     left: 0;
-
     right: 0;
-
     bottom: 0;
-
     z-index: 999;
-
-    background:
-        rgba(255,255,255,0.86);
-
+    background: rgba(255,255,255,0.86);
     backdrop-filter: blur(18px);
-
     -webkit-backdrop-filter: blur(18px);
-
-    border-top:
-        1px solid rgba(0,0,0,0.06);
-
-    box-shadow:
-        0 -10px 30px rgba(0,0,0,0.06);
-
-    padding:
-        14px
-        16px
-        calc(env(safe-area-inset-bottom) + 18px);
-
+    border-top: 1px solid rgba(0,0,0,0.06);
+    box-shadow: 0 -10px 30px rgba(0,0,0,0.06);
+    padding: 14px 16px calc(env(safe-area-inset-bottom) + 18px);
 }
 
 .footer-inner {
-
     max-width: 760px;
-
     margin: auto;
-
     display: flex;
-
     align-items: center;
-
     justify-content: space-between;
-
     gap: 14px;
-
 }
 
-.price-box {
-
-    display: flex;
-
-    flex-direction: column;
-
-}
+.price-box { display: flex; flex-direction: column; }
 
 .price {
-
     font-size: 24px;
-
     font-weight: 800;
-
     letter-spacing: -1px;
-
 }
 
 .price-sub {
-
     font-size: 13px;
-
     color: var(--muted);
-
     margin-top: 2px;
-
 }
 
 .book-btn {
-
     border: none;
-
-    background:
-        linear-gradient(
-            135deg,
-            #111111,
-            #1f1f1f
-        );
-
+    background: linear-gradient(135deg, #111111, #1f1f1f);
     color: white;
-
     height: 54px;
-
     padding: 0 28px;
-
     border-radius: 18px;
-
     font-size: 15px;
-
     font-weight: 700;
-
     cursor: pointer;
-
-    transition:
-        transform 0.14s ease,
-        opacity 0.14s ease;
-
-    box-shadow:
-        0 10px 25px rgba(0,0,0,0.12);
-
+    transition: transform 0.14s ease, opacity 0.14s ease;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.12);
 }
 
-.book-btn:hover {
-
-    transform: translateY(-1px);
-
-}
-
-.book-btn:active {
-
-    transform: scale(0.98);
-
-}
+.book-btn:hover { transform: translateY(-1px); }
+.book-btn:active { transform: scale(0.98); }
 
 .book-btn:disabled {
-
     opacity: 0.45;
-
     cursor: not-allowed;
-
     transform: none;
-
     box-shadow: none;
-
 }
 
 .toast-container {
-
     position: fixed;
-
     top: calc(env(safe-area-inset-top) + 16px);
-
     left: 50%;
-
     transform: translateX(-50%);
-
     z-index: 9999;
-
     display: flex;
-
     flex-direction: column;
-
     align-items: center;
-
     gap: 10px;
-
     pointer-events: none;
-
     width: calc(100% - 32px);
-
     max-width: 400px;
-
 }
 
 .toast {
-
     display: flex;
-
     align-items: center;
-
     gap: 12px;
-
     padding: 14px 18px;
-
     border-radius: 18px;
-
     font-size: 14px;
-
     font-weight: 600;
-
     line-height: 1.4;
-
     width: 100%;
-
-    box-shadow:
-        0 8px 32px rgba(0,0,0,0.12),
-        0 2px 8px rgba(0,0,0,0.06);
-
+    box-shadow: 0 8px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06);
     backdrop-filter: blur(20px);
-
-    -webkit-backdrop-filter: blur(20px);
-
     pointer-events: auto;
-
     animation: toastIn 0.36s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-
 }
 
 .toast.hiding {
-
     animation: toastOut 0.28s cubic-bezier(0.4, 0, 1, 1) forwards;
-
 }
 
 .toast-error {
-
-    background: rgba(255, 255, 255, 0.96);
-
-    border: 1px solid rgba(255, 77, 79, 0.2);
-
+    background: rgba(255,255,255,0.96);
+    border: 1px solid rgba(255,77,79,0.2);
     color: #1a1a1a;
-
 }
 
 .toast-error .toast-icon {
-
-    width: 36px;
-
-    height: 36px;
-
-    border-radius: 12px;
-
-    background: rgba(255, 77, 79, 0.1);
-
-    display: flex;
-
-    align-items: center;
-
-    justify-content: center;
-
-    font-size: 18px;
-
-    flex-shrink: 0;
-
+    width: 36px; height: 36px; border-radius: 12px;
+    background: rgba(255,77,79,0.1);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; flex-shrink: 0;
 }
 
 .toast-warning {
-
-    background: rgba(255, 255, 255, 0.96);
-
-    border: 1px solid rgba(255, 167, 38, 0.25);
-
+    background: rgba(255,255,255,0.96);
+    border: 1px solid rgba(255,167,38,0.25);
     color: #1a1a1a;
-
 }
 
 .toast-warning .toast-icon {
-
-    width: 36px;
-
-    height: 36px;
-
-    border-radius: 12px;
-
-    background: rgba(255, 167, 38, 0.12);
-
-    display: flex;
-
-    align-items: center;
-
-    justify-content: center;
-
-    font-size: 18px;
-
-    flex-shrink: 0;
-
+    width: 36px; height: 36px; border-radius: 12px;
+    background: rgba(255,167,38,0.12);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; flex-shrink: 0;
 }
 
 .toast-success {
-
-    background: rgba(255, 255, 255, 0.96);
-
-    border: 1px solid rgba(52, 199, 89, 0.25);
-
+    background: rgba(255,255,255,0.96);
+    border: 1px solid rgba(52,199,89,0.25);
     color: #1a1a1a;
-
 }
 
 .toast-success .toast-icon {
-
-    width: 36px;
-
-    height: 36px;
-
-    border-radius: 12px;
-
-    background: rgba(52, 199, 89, 0.12);
-
-    display: flex;
-
-    align-items: center;
-
-    justify-content: center;
-
-    font-size: 18px;
-
-    flex-shrink: 0;
-
+    width: 36px; height: 36px; border-radius: 12px;
+    background: rgba(52,199,89,0.12);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; flex-shrink: 0;
 }
 
-.toast-text {
-
-    display: flex;
-
-    flex-direction: column;
-
-    gap: 2px;
-
-    flex: 1;
-
-}
-
-.toast-title {
-
-    font-size: 14px;
-
-    font-weight: 700;
-
-    letter-spacing: -0.2px;
-
-}
-
-.toast-desc {
-
-    font-size: 12px;
-
-    color: var(--muted);
-
-    font-weight: 500;
-
-}
+.toast-text { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+.toast-title { font-size: 14px; font-weight: 700; letter-spacing: -0.2px; }
+.toast-desc { font-size: 12px; color: var(--muted); font-weight: 500; }
 
 @keyframes toastIn {
-
-    from {
-
-        opacity: 0;
-
-        transform: translateY(-12px) scale(0.94);
-
-    }
-
-    to {
-
-        opacity: 1;
-
-        transform: translateY(0) scale(1);
-
-    }
-
+    from { opacity: 0; transform: translateY(-12px) scale(0.94); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 @keyframes toastOut {
-
-    from {
-
-        opacity: 1;
-
-        transform: translateY(0) scale(1);
-
-    }
-
-    to {
-
-        opacity: 0;
-
-        transform: translateY(-8px) scale(0.96);
-
-    }
-
+    from { opacity: 1; transform: translateY(0) scale(1); }
+    to   { opacity: 0; transform: translateY(-8px) scale(0.96); }
 }
 
 @media (max-width: 640px) {
-
     .wrapper {
-
-        padding:
-            calc(env(safe-area-inset-top) + 14px)
-            12px
-            150px;
-
+        padding: calc(env(safe-area-inset-top) + 14px) 12px 150px;
     }
-
-    .title {
-
-        font-size: 30px;
-
-    }
-
-    .calendar-section {
-
-        padding: 20px 14px 14px;
-
-    }
-
+    .title { font-size: 30px; }
+    .calendar-section { padding: 20px 14px 14px; }
     .flatpickr-day {
-
         width: 42px !important;
-
         max-width: 42px !important;
-
         height: 42px !important;
-
         line-height: 42px !important;
-
         font-size: 13px;
-
     }
-
-    .info-grid {
-
-        grid-template-columns: 1fr;
-
-    }
-
+    .info-grid { grid-template-columns: 1fr; }
     .info-item:not(:last-child) {
-
         border-right: none;
-
         border-bottom: 1px solid var(--border);
-
     }
-
-    .footer-inner {
-
-        align-items: stretch;
-
-    }
-
-    .book-btn {
-
-        min-width: 150px;
-
-    }
-
+    .footer-inner { align-items: stretch; }
+    .book-btn { min-width: 150px; }
 }
 
 </style>
-
 </head>
 
 <body>
@@ -960,165 +449,78 @@ body {
 
 <div class="wrapper">
 
-<div class="hero">
+    <div class="hero">
+        <div class="badge">⭐ Городская Пауза</div>
+        <div class="title">Premium Apart</div>
+        <div class="subtitle">Выберите даты проживания и подтвердите бронирование</div>
+    </div>
 
-<div class="badge">
-⭐ Городская Пауза
-</div>
+    <div class="card">
 
-<div class="title">
-Premium Apart
-</div>
+        <div class="calendar-section">
+            <div class="calendar-header">
+                <div class="calendar-title">Выбор дат</div>
+                <div class="calendar-sub">Красные даты недоступны</div>
+            </div>
+            <input type="text" id="calendar" class="input" />
+        </div>
 
-<div class="subtitle">
-Выберите даты проживания и подтвердите бронирование
-</div>
+        <div class="info-grid">
+            <div class="info-item">
+                <div class="info-label">Заезд</div>
+                <div class="info-value" id="checkin-value">—</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Выезд</div>
+                <div class="info-value" id="checkout-value">—</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Ночей</div>
+                <div class="info-value" id="nights-value">0</div>
+            </div>
+        </div>
 
-</div>
-
-<div class="card">
-
-<div class="calendar-section">
-
-<div class="calendar-header">
-
-<div class="calendar-title">
-Выбор дат
-</div>
-
-<div class="calendar-sub">
-Красные даты недоступны
-</div>
-
-</div>
-
-<input
-    type="text"
-    id="calendar"
-    class="input"
-/>
-
-</div>
-
-<div class="info-grid">
-
-<div class="info-item">
-
-<div class="info-label">
-Заезд
-</div>
-
-<div
-    class="info-value"
-    id="checkin-value"
->
-—
-</div>
-
-</div>
-
-<div class="info-item">
-
-<div class="info-label">
-Выезд
-</div>
-
-<div
-    class="info-value"
-    id="checkout-value"
->
-—
-</div>
-
-</div>
-
-<div class="info-item">
-
-<div class="info-label">
-Ночей
-</div>
-
-<div
-    class="info-value"
-    id="nights-value"
->
-0
-</div>
-
-</div>
-
-</div>
-
-</div>
+    </div>
 
 </div>
 
 <div class="footer">
-
-<div class="footer-inner">
-
-<div class="price-box">
-
-<div
-    class="price"
-    id="total-price"
->
-€0
-</div>
-
-<div class="price-sub">
-Общая стоимость
-</div>
-
-</div>
-
-<button
-    class="book-btn"
-    id="book-btn"
-    disabled
-    onclick="sendBooking()"
->
-Забронировать
-</button>
-
-</div>
-
+    <div class="footer-inner">
+        <div class="price-box">
+            <div class="price" id="total-price">€0</div>
+            <div class="price-sub">Общая стоимость</div>
+        </div>
+        <button class="book-btn" id="book-btn" disabled onclick="sendBooking()">
+            Забронировать
+        </button>
+    </div>
 </div>
 
 <script>
 
 const tg = window.Telegram.WebApp;
-
 tg.expand();
 
-let bookedRanges = [];
-
-let selectedCheckIn = null;
-
+let bookedRanges    = [];
+let selectedCheckIn  = null;
 let selectedCheckOut = null;
 
-const PRICE_PER_NIGHT = 120;
+// Цены загружаются с API, дефолт пока не загрузились
+let prices = { weekday: 120, weekend: 150, cleaning: 30 };
 
 
 /* ===================================================== */
-/* TOAST SYSTEM */
+/* TOAST */
 /* ===================================================== */
 
 function showToast(type, title, desc, duration = 3500) {
 
-    const container =
-        document.getElementById("toast-container");
+    const container = document.getElementById("toast-container");
 
-    const icons = {
-        error: "🚫",
-        warning: "📅",
-        success: "✅"
-    };
+    const icons = { error: "🚫", warning: "📅", success: "✅" };
 
     const toast = document.createElement("div");
-
     toast.className = `toast toast-${type}`;
-
     toast.innerHTML = `
         <div class="toast-icon">${icons[type] || "ℹ️"}</div>
         <div class="toast-text">
@@ -1134,50 +536,45 @@ function showToast(type, title, desc, duration = 3500) {
     }
 
     setTimeout(() => {
-
         toast.classList.add("hiding");
-
         setTimeout(() => {
-
-            if (toast.parentNode) {
-                toast.parentNode.removeChild(toast);
-            }
-
+            if (toast.parentNode) toast.parentNode.removeChild(toast);
         }, 300);
-
     }, duration);
-
 }
 
 
 /* ===================================================== */
-/* LOAD BOOKINGS */
+/* LOAD PRICES FROM API */
+/* ===================================================== */
+
+async function loadPrices() {
+    try {
+        const response = await fetch("/api/prices");
+        prices = await response.json();
+    } catch (e) {
+        console.error("Не удалось загрузить цены, используем дефолт", e);
+    }
+}
+
+
+/* ===================================================== */
+/* LOAD BOOKED DATES */
 /* ===================================================== */
 
 async function loadBookedDates() {
-
     try {
-
         const response = await fetch("/api/booked-dates");
-
-        const ranges = await response.json();
-
-        bookedRanges = ranges;
-
+        bookedRanges = await response.json();
         initCalendar();
-
     } catch (e) {
-
         console.error(e);
-
         showToast(
             "error",
             "Не удалось загрузить календарь",
             "Проверьте соединение и попробуйте снова"
         );
-
     }
-
 }
 
 
@@ -1186,15 +583,10 @@ async function loadBookedDates() {
 /* ===================================================== */
 
 function formatDate(date) {
-
     const y = date.getFullYear();
-
     const m = String(date.getMonth() + 1).padStart(2, "0");
-
     const d = String(date.getDate()).padStart(2, "0");
-
     return `${y}-${m}-${d}`;
-
 }
 
 
@@ -1203,13 +595,39 @@ function formatDate(date) {
 /* ===================================================== */
 
 function calculateNights(start, end) {
+    return Math.ceil(
+        (new Date(end) - new Date(start)) / (1000 * 60 * 60 * 24)
+    );
+}
 
-    const s = new Date(start);
 
-    const e = new Date(end);
+/* ===================================================== */
+/* GET PRICE FOR DATE RANGE
+   Будни пн-чт, выходные пт-вс
+/* ===================================================== */
 
-    return Math.ceil((e - s) / (1000 * 60 * 60 * 24));
+function getPriceForRange(checkIn, checkOut) {
 
+    const start = new Date(checkIn);
+    const end   = new Date(checkOut);
+    let total   = 0;
+
+    const current = new Date(start);
+
+    while (current < end) {
+
+        const day = current.getDay(); // 0=вс, 5=пт, 6=сб
+
+        if (day === 0 || day === 5 || day === 6) {
+            total += prices.weekend;
+        } else {
+            total += prices.weekday;
+        }
+
+        current.setDate(current.getDate() + 1);
+    }
+
+    return total;
 }
 
 
@@ -1219,87 +637,56 @@ function calculateNights(start, end) {
 
 function updateInfo() {
 
-    document.getElementById("checkin-value").innerText =
-        selectedCheckIn || "—";
+    document.getElementById("checkin-value").innerText  = selectedCheckIn  || "—";
+    document.getElementById("checkout-value").innerText = selectedCheckOut || "—";
 
-    document.getElementById("checkout-value").innerText =
-        selectedCheckOut || "—";
-
-    const nightsElement = document.getElementById("nights-value");
-
-    const totalElement = document.getElementById("total-price");
-
-    const button = document.getElementById("book-btn");
+    const nightsEl = document.getElementById("nights-value");
+    const totalEl  = document.getElementById("total-price");
+    const btn      = document.getElementById("book-btn");
 
     if (selectedCheckIn && selectedCheckOut) {
 
-        const nights = calculateNights(
-            selectedCheckIn,
-            selectedCheckOut
-        );
+        const nights = calculateNights(selectedCheckIn, selectedCheckOut);
+        const total  = getPriceForRange(selectedCheckIn, selectedCheckOut);
 
-        nightsElement.innerText = nights;
-
-        totalElement.innerText = `€${nights * PRICE_PER_NIGHT}`;
-
-        button.disabled = false;
+        nightsEl.innerText = nights;
+        totalEl.innerText  = `€${total}`;
+        btn.disabled       = false;
 
     } else {
 
-        nightsElement.innerText = "0";
-
-        totalElement.innerText = "€0";
-
-        button.disabled = true;
+        nightsEl.innerText = "0";
+        totalEl.innerText  = "€0";
+        btn.disabled       = true;
 
     }
-
 }
 
 
 /* ===================================================== */
-/* CHECK RANGE INTERSECTION
-   Заезд в 15:00, выезд в 12:00 —
-   день выезда свободен для следующего гостя.
-   Поэтому check_out одной брони НЕ блокирует
-   check_in следующей.
+/* CHECK RANGE INTERSECTION */
 /* ===================================================== */
 
 function isRangeBlocked(start, end) {
 
     const startDate = new Date(start);
-
-    const endDate = new Date(end);
+    const endDate   = new Date(end);
 
     for (const range of bookedRanges) {
 
         const bookedStart = new Date(range.check_in);
-
         const bookedEnd   = new Date(range.check_out);
 
-        // Конфликт только если периоды реально перекрываются
-        // (не считая случай когда новый заезд = день выезда)
-        if (startDate < bookedEnd && endDate > bookedStart &&
-            !(endDate <= bookedStart || startDate >= bookedEnd)) {
+        if (startDate < bookedEnd && endDate > bookedStart) {
 
-            // Разрешаем: новый check_in совпадает с check_out брони
-            if (startDate.getTime() === bookedEnd.getTime()) {
-                continue;
-            }
-
-            // Разрешаем: новый check_out совпадает с check_in брони
-            if (endDate.getTime() === bookedStart.getTime()) {
-                continue;
-            }
+            if (startDate.getTime() === bookedEnd.getTime()) continue;
+            if (endDate.getTime()   === bookedStart.getTime()) continue;
 
             return true;
-
         }
-
     }
 
     return false;
-
 }
 
 
@@ -1309,120 +696,74 @@ function isRangeBlocked(start, end) {
 
 function initCalendar() {
 
-    // ⚠️ День выезда (check_out) НЕ блокируем —
-    // он свободен для следующего заезда.
-    // Блокируем только дни check_in..check_out-1
+    // День выезда не блокируем — он свободен для следующего заезда
+    const disabledDates = bookedRanges.map(range => {
+        const end = new Date(range.check_out);
+        end.setDate(end.getDate() - 1);
+        return {
+            from: range.check_in,
+            to:   formatDate(end)
+        };
+    });
 
-    const disabledDates = [];
+    const calendar = flatpickr("#calendar", {
+        mode: "range",
+        minDate: "today",
+        dateFormat: "Y-m-d",
+        locale: "ru",
+        inline: true,
+        showMonths: 1,
+        monthSelectorType: "static",
+        animate: true,
+        disable: disabledDates,
 
-    for (const range of bookedRanges) {
+        onChange: function(selectedDates) {
 
-        const start = new Date(range.check_in);
+            if (selectedDates.length === 2) {
 
-        const end   = new Date(range.check_out);
+                const checkIn  = formatDate(selectedDates[0]);
+                const checkOut = formatDate(selectedDates[1]);
 
-        // Последний заблокированный день = check_out - 1 день
-        const lastBlocked = new Date(end);
-        lastBlocked.setDate(lastBlocked.getDate() - 1);
+                if (isRangeBlocked(checkIn, checkOut)) {
 
-        disabledDates.push({
-            from: formatDate(start),
-            to:   formatDate(lastBlocked)
-        });
+                    showToast(
+                        "warning",
+                        "Даты недоступны",
+                        "В выбранном периоде есть занятые дни — выберите другие даты"
+                    );
 
-    }
-
-    const calendar = flatpickr(
-        "#calendar",
-        {
-
-            mode: "range",
-
-            minDate: "today",
-
-            dateFormat: "Y-m-d",
-
-            locale: "ru",
-
-            inline: true,
-
-            showMonths: 1,
-
-            monthSelectorType: "static",
-
-            animate: true,
-
-            disable: disabledDates,
-
-            onChange: function(selectedDates) {
-
-                if (selectedDates.length === 2) {
-
-                    const checkIn  = formatDate(selectedDates[0]);
-
-                    const checkOut = formatDate(selectedDates[1]);
-
-                    if (isRangeBlocked(checkIn, checkOut)) {
-
-                        showToast(
-                            "warning",
-                            "Даты недоступны",
-                            "В выбранном периоде есть занятые дни — выберите другие даты"
-                        );
-
-                        calendar.clear();
-
-                        selectedCheckIn  = null;
-
-                        selectedCheckOut = null;
-
-                        updateInfo();
-
-                        return;
-
-                    }
-
-                    selectedCheckIn  = checkIn;
-
-                    selectedCheckOut = checkOut;
-
-                } else {
-
+                    calendar.clear();
                     selectedCheckIn  = null;
-
                     selectedCheckOut = null;
-
+                    updateInfo();
+                    return;
                 }
 
-                updateInfo();
+                selectedCheckIn  = checkIn;
+                selectedCheckOut = checkOut;
 
+            } else {
+                selectedCheckIn  = null;
+                selectedCheckOut = null;
             }
 
+            updateInfo();
         }
-    );
+    });
 
-
-    /* SWIPE MONTHS */
-
-    const calendarContainer =
-        document.querySelector(".flatpickr-calendar");
-
+    /* SWIPE */
+    const cal = document.querySelector(".flatpickr-calendar");
     let touchStartX = 0;
 
-    calendarContainer.addEventListener("touchstart", e => {
+    cal.addEventListener("touchstart", e => {
         touchStartX = e.changedTouches[0].screenX;
     }, false);
 
-    calendarContainer.addEventListener("touchend", e => {
-
+    cal.addEventListener("touchend", e => {
         const diff = touchStartX - e.changedTouches[0].screenX;
-
         if (diff > 50)  calendar.changeMonth(1);
-
         if (diff < -50) calendar.changeMonth(-1);
-
     }, false);
-
 }
 
 
@@ -1433,35 +774,23 @@ function initCalendar() {
 function sendBooking() {
 
     if (!selectedCheckIn || !selectedCheckOut) {
-
-        showToast(
-            "warning",
-            "Выберите даты",
-            "Нажмите на даты заезда и выезда в календаре"
-        );
-
+        showToast("warning", "Выберите даты", "Нажмите на даты заезда и выезда в календаре");
         return;
-
     }
 
     tg.sendData(JSON.stringify({
-
         check_in:  selectedCheckIn,
-
         check_out: selectedCheckOut,
-
         guests: 2
-
     }));
-
 }
 
 
 /* ===================================================== */
-/* START */
+/* START — загружаем цены и даты параллельно */
 /* ===================================================== */
 
-loadBookedDates();
+Promise.all([loadPrices(), loadBookedDates()]);
 
 </script>
 
