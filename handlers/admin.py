@@ -190,7 +190,6 @@ def build_bookings_text(bookings, page, total_pages):
 
 # =====================================================
 # BUILD ACTION BUTTONS
-# — отмена для confirmed, разблокировка для blocked
 # =====================================================
 
 def build_action_buttons(bookings):
@@ -588,6 +587,7 @@ async def set_price_value(
 
 # =====================================================
 # BLOCK DATES — открываем Mini App календарь
+# ✅ ИСПРАВЛЕНО: добавлена кнопка "🛠 Админка" для возврата
 # =====================================================
 
 @router.callback_query(lambda c: c.data == "admin_block_open")
@@ -597,18 +597,23 @@ async def block_open(callback: types.CallbackQuery):
         return
 
     markup = ReplyKeyboardMarkup(
-        keyboard=[[
-            KeyboardButton(
-                text="📅 Выбрать даты для блокировки",
-                web_app=WebAppInfo(url=ADMIN_WEBAPP_URL)
-            )
-        ]],
+        keyboard=[
+            [
+                KeyboardButton(
+                    text="📅 Выбрать даты для блокировки",
+                    web_app=WebAppInfo(url=ADMIN_WEBAPP_URL)
+                )
+            ],
+            [
+                KeyboardButton(text="🛠 Админка")  # ← кнопка возврата
+            ]
+        ],
         resize_keyboard=True,
         one_time_keyboard=True
     )
 
     await callback.message.answer(
-        "⛔ Выберите даты для блокировки в календаре:\n\n"
+        "⛔ Выберите даты для блокировки в календаре\n\n"
         "Для возврата без блокировки нажмите 🛠 Админка",
         reply_markup=markup
     )
