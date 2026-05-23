@@ -21,3 +21,4 @@ BASE_URL = "https://apart-booking-v2-production.up.railway.app"
 # WEBAPP (КАЛЕНДАРЬ)
 # =====================================================
 WEBAPP_URL = f"{BASE_URL}/static/calendar.html"
+SBP_PHONE = os.getenv("SBP_PHONE")

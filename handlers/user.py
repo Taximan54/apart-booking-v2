@@ -1,4 +1,6 @@
 import json
+import math
+from datetime import datetime
 
 from aiogram import Router, types, Bot
 from aiogram.filters import CommandStart
@@ -17,10 +19,11 @@ from aiogram.types import (
     ReplyKeyboardRemove
 )
 
-from config import WEBAPP_URL, ADMIN_IDS
+from config import WEBAPP_URL, ADMIN_IDS, SBP_PHONE
 
 from services.booking_service import (
     create_booking,
+    cancel_booking,
     block_dates
 )
 
@@ -29,7 +32,37 @@ router = Router()
 
 
 # =====================================================
-# FSM — РЕЖИМ СВЯЗИ
+# ТЕКСТ ПРАВИЛ ЗАСЕЛЕНИЯ
+# =====================================================
+
+CHECKIN_INSTRUCTIONS = """
+🏠 Инструкция по заселению — «Городская Пауза»
+
+📍 Адрес:
+Улица Дачная, дом 5, квартира 286
+
+🚪 Домофон:
+Открою через приложение при заселении
+
+🔑 Ключи:
+В почтовом ящике. Код от электронного замка вышлем за сутки до заселения
+
+🛗 Лифт:
+22 этаж
+
+📱 Перед заездом:
+Пришлите фото паспорта для регистрации
+
+💰 Оплата:
+Полная оплата + депозит 6 000 ₽ при заселении
+
+📞 Если возникли вопросы:
+Пишите сюда — на связи 🤗
+"""
+
+
+# =====================================================
+# FSM STATES
 # =====================================================
 
 class ContactState(StatesGroup):
@@ -102,7 +135,7 @@ async def send_photos(message):
 
 
 # =====================================================
-# MAIN KEYBOARD
+# KEYBOARDS
 # =====================================================
 
 def main_keyboard():
@@ -114,30 +147,18 @@ def main_keyboard():
             [
                 KeyboardButton(
                     text="📅 Забронировать",
-                    web_app=WebAppInfo(
-                        url=WEBAPP_URL
-                    )
+                    web_app=WebAppInfo(url=WEBAPP_URL)
                 )
             ],
 
             [
-                KeyboardButton(
-                    text="📸 Фото квартиры"
-                ),
-
-                KeyboardButton(
-                    text="📋 Описание"
-                )
+                KeyboardButton(text="📸 Фото квартиры"),
+                KeyboardButton(text="📋 Описание")
             ],
 
             [
-                KeyboardButton(
-                    text="💬 Связь"
-                ),
-
-                KeyboardButton(
-                    text="🛠 Админка"
-                )
+                KeyboardButton(text="💬 Связь"),
+                KeyboardButton(text="🛠 Админка")
             ]
 
         ],
@@ -177,6 +198,50 @@ def admin_inline_menu():
 
 
 # =====================================================
+# HELPERS
+# =====================================================
+
+def calculate_nights(check_in: str, check_out: str) -> int:
+    ci = datetime.strptime(check_in, "%Y-%m-%d")
+    co = datetime.strptime(check_out, "%Y-%m-%d")
+    return (co - ci).days
+
+
+def get_price_for_range(check_in: str, check_out: str, prices: dict) -> int:
+    """Считаем стоимость с учётом будней и выходных."""
+    ci = datetime.strptime(check_in, "%Y-%m-%d")
+    co = datetime.strptime(check_out, "%Y-%m-%d")
+    total = 0
+    current = ci
+    while current < co:
+        day = current.weekday()  # 0=пн, 4=пт, 5=сб, 6=вс
+        if day >= 4:  # пт, сб, вс
+            total += prices.get("weekend", 150)
+        else:
+            total += prices.get("weekday", 120)
+        current = current.replace(day=current.day + 1)
+    return total
+
+
+def load_prices() -> dict:
+    import os, json
+    price_file = "/data/prices.json"
+    if os.path.exists(price_file):
+        with open(price_file, "r") as f:
+            return json.load(f)
+    return {"weekday": 120, "weekend": 150, "cleaning": 30}
+
+
+def generate_sbp_link(amount: int) -> str:
+    """Генерируем СБП ссылку с суммой в копейках."""
+    amount_kopecks = amount * 100
+    return (
+        f"https://qr.nspk.ru/AS100004{SBP_PHONE}"
+        f"?sum={amount_kopecks}&currency=RUB"
+    )
+
+
+# =====================================================
 # START
 # =====================================================
 
@@ -197,7 +262,6 @@ async def start(message: types.Message):
 
 @router.message(lambda m: m.text == "📸 Фото квартиры")
 async def photos(message: types.Message):
-
     await send_photos(message)
 
 
@@ -264,7 +328,7 @@ async def description(message: types.Message):
 
 
 # =====================================================
-# АДМИНКА — восстанавливаем основную клавиатуру
+# АДМИНКА
 # =====================================================
 
 @router.message(lambda m: m.text == "🛠 Админка")
@@ -273,14 +337,11 @@ async def admin_entry(message: types.Message):
     if message.from_user.id not in ADMIN_IDS:
         return
 
-    # ✅ Сначала восстанавливаем основную клавиатуру
-    # (она могла быть заменена клавиатурой блокировки)
     await message.answer(
         "🛠 Панель администратора",
         reply_markup=main_keyboard()
     )
 
-    # Затем отправляем инлайн-меню админки
     await message.answer(
         "Выберите действие:",
         reply_markup=admin_inline_menu()
@@ -298,9 +359,7 @@ async def contact_start(
 ):
 
     if message.from_user.id in ADMIN_IDS:
-        await message.answer(
-            "Вы администратор — пишите напрямую гостям."
-        )
+        await message.answer("Вы администратор — пишите напрямую гостям.")
         return
 
     await state.set_state(ContactState.waiting_message)
@@ -314,7 +373,7 @@ async def contact_start(
 
 
 # =====================================================
-# СВЯЗЬ — получаем сообщение и пересылаем админам
+# СВЯЗЬ — пересылаем админам
 # =====================================================
 
 @router.message(ContactState.waiting_message)
@@ -338,9 +397,7 @@ async def contact_message(
     ]])
 
     for admin_id in ADMIN_IDS:
-
         try:
-
             await bot.send_message(
                 admin_id,
                 f"💬 Новое сообщение от гостя\n\n"
@@ -349,7 +406,6 @@ async def contact_message(
                 f"📝 {message.text}",
                 reply_markup=reply_markup
             )
-
         except Exception:
             pass
 
@@ -369,21 +425,89 @@ async def cancel(
     message: types.Message,
     state: FSMContext
 ):
-
     await state.clear()
-
-    await message.answer(
-        "Отменено.",
-        reply_markup=main_keyboard()
-    )
+    await message.answer("Отменено.", reply_markup=main_keyboard())
 
 
 # =====================================================
-# WEBAPP DATA — единый обработчик для всех Mini App
+# ПОДТВЕРЖДЕНИЕ ОПЛАТЫ — callback от админа
+# =====================================================
+
+@router.callback_query(lambda c: c.data.startswith("payment_confirm_"))
+async def payment_confirm(
+    callback: types.CallbackQuery,
+    bot: Bot
+):
+
+    if callback.from_user.id not in ADMIN_IDS:
+        return
+
+    parts      = callback.data.split("_")
+    booking_id = int(parts[2])
+    user_id    = int(parts[3])
+
+    # Отправляем клиенту инструкцию по заселению
+    try:
+        await bot.send_message(
+            user_id,
+            f"✅ Оплата подтверждена!\n\n"
+            f"Бронь #{booking_id} подтверждена.\n\n"
+            f"{CHECKIN_INSTRUCTIONS}"
+        )
+    except Exception:
+        pass
+
+    await callback.message.edit_text(
+        callback.message.text + "\n\n✅ Оплата подтверждена, инструкция отправлена гостю."
+    )
+
+    await callback.answer("✅ Подтверждено!")
+
+
+# =====================================================
+# ОТКЛОНЕНИЕ ОПЛАТЫ — callback от админа
+# =====================================================
+
+@router.callback_query(lambda c: c.data.startswith("payment_reject_"))
+async def payment_reject(
+    callback: types.CallbackQuery,
+    bot: Bot
+):
+
+    if callback.from_user.id not in ADMIN_IDS:
+        return
+
+    parts      = callback.data.split("_")
+    booking_id = int(parts[2])
+    user_id    = int(parts[3])
+
+    # Отменяем бронь
+    cancel_booking(booking_id)
+
+    # Уведомляем клиента
+    try:
+        await bot.send_message(
+            user_id,
+            f"❌ Оплата не подтверждена\n\n"
+            f"Бронь #{booking_id} отменена.\n\n"
+            f"Если это ошибка — напишите нам через кнопку «💬 Связь»."
+        )
+    except Exception:
+        pass
+
+    await callback.message.edit_text(
+        callback.message.text + "\n\n❌ Оплата отклонена, бронь отменена."
+    )
+
+    await callback.answer("❌ Отклонено, бронь отменена.")
+
+
+# =====================================================
+# WEBAPP DATA — единый обработчик
 # =====================================================
 
 @router.message(lambda m: m.web_app_data)
-async def webapp_handler(message: Message):
+async def webapp_handler(message: Message, bot: Bot):
 
     try:
         data = json.loads(message.web_app_data.data)
@@ -434,45 +558,140 @@ async def webapp_handler(message: Message):
 
         return
 
-    # ─── БРОНИРОВАНИЕ (для всех пользователей) ────
+    # ─── БРОНИРОВАНИЕ ────────────────────────────
     try:
 
+        check_in  = data["check_in"]
+        check_out = data["check_out"]
+        guests    = data.get("guests", 2)
+
         booking_id = create_booking(
-
             user_id=message.from_user.id,
-
             username=message.from_user.username or "unknown",
-
-            check_in=data["check_in"],
-
-            check_out=data["check_out"],
-
-            guests=data.get("guests", 2)
+            check_in=check_in,
+            check_out=check_out,
+            guests=guests
         )
 
+        # Считаем стоимость
+        prices      = load_prices()
+        nights      = calculate_nights(check_in, check_out)
+        total       = get_price_for_range(check_in, check_out, prices)
+        prepayment  = math.ceil(total * 0.2)  # 20% предоплата
+        sbp_link    = generate_sbp_link(prepayment)
+
+        user      = message.from_user
+        username  = f"@{user.username}" if user.username else "без username"
+        full_name = user.full_name or "Гость"
+
+        # Сообщение клиенту с кнопкой оплаты
         await message.answer(
-            f"✅ Бронь #{booking_id}\n\n"
-            f"📅 {data['check_in']} → {data['check_out']}\n"
-            f"👥 {data.get('guests', 2)} гостей\n\n"
-            f"Спасибо за бронирование ✨",
-            reply_markup=main_keyboard()
+            f"✅ Бронь #{booking_id} создана!\n\n"
+            f"📅 {check_in} → {check_out}\n"
+            f"🌙 Ночей: {nights}\n"
+            f"👥 Гостей: {guests}\n\n"
+            f"━━━━━━━━━━━━━━━\n"
+            f"💰 Стоимость: {total:,} ₽\n"
+            f"💳 Предоплата (20%): {prepayment:,} ₽\n\n"
+            f"Для подтверждения брони оплатите предоплату по кнопке ниже.\n"
+            f"После проверки оплаты мы пришлём инструкцию по заселению.",
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=[[
+                InlineKeyboardButton(
+                    text=f"💳 Оплатить {prepayment:,} ₽",
+                    url=sbp_link
+                )
+            ], [
+                InlineKeyboardButton(
+                    text="✅ Я оплатил",
+                    callback_data=f"paid_{booking_id}"
+                )
+            ]])
         )
+
+        # Уведомление всем админам
+        for admin_id in ADMIN_IDS:
+            try:
+                await bot.send_message(
+                    admin_id,
+                    f"🆕 Новая бронь #{booking_id}\n\n"
+                    f"👤 {full_name} ({username})\n"
+                    f"🆔 ID: {user.id}\n"
+                    f"📅 {check_in} → {check_out}\n"
+                    f"🌙 Ночей: {nights}\n"
+                    f"👥 Гостей: {guests}\n\n"
+                    f"💰 Сумма: {total:,} ₽\n"
+                    f"💳 Ожидаем предоплату: {prepayment:,} ₽",
+                )
+            except Exception:
+                pass
 
     except Exception as e:
 
         error = str(e)
 
         if error == "DATES_NOT_AVAILABLE":
-
             await message.answer(
                 "📅 Эти даты уже заняты\n\n"
                 "Пожалуйста, выберите другой период — "
                 "кто-то успел забронировать раньше."
             )
-
         else:
-
             await message.answer(
                 "😔 Что-то пошло не так\n\n"
                 "Попробуйте ещё раз или напишите нам напрямую."
             )
+
+
+# =====================================================
+# КЛИЕНТ НАЖАЛ "Я ОПЛАТИЛ"
+# =====================================================
+
+@router.callback_query(lambda c: c.data.startswith("paid_"))
+async def client_paid(
+    callback: types.CallbackQuery,
+    bot: Bot
+):
+
+    booking_id = int(callback.data.split("_")[1])
+    user       = callback.from_user
+    username   = f"@{user.username}" if user.username else "без username"
+    full_name  = user.full_name or "Гость"
+
+    # Уведомляем всех админов с кнопками подтверждения
+    for admin_id in ADMIN_IDS:
+        try:
+            await bot.send_message(
+                admin_id,
+                f"💳 Гость сообщил об оплате\n\n"
+                f"👤 {full_name} ({username})\n"
+                f"🆔 ID: {user.id}\n"
+                f"📋 Бронь #{booking_id}\n\n"
+                f"Проверьте поступление предоплаты и подтвердите:",
+                reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                    [
+                        InlineKeyboardButton(
+                            text="✅ Подтвердить оплату",
+                            callback_data=f"payment_confirm_{booking_id}_{user.id}"
+                        )
+                    ],
+                    [
+                        InlineKeyboardButton(
+                            text="❌ Не оплачено",
+                            callback_data=f"payment_reject_{booking_id}_{user.id}"
+                        )
+                    ]
+                ])
+            )
+        except Exception:
+            pass
+
+    await callback.message.edit_reply_markup(reply_markup=None)
+
+    await callback.answer("✅ Уведомили администратора! Ожидайте подтверждения.")
+
+    await bot.send_message(
+        user.id,
+        "⏳ Администратор проверяет оплату.\n\n"
+        "Обычно это занимает несколько минут. "
+        "После подтверждения вы получите инструкцию по заселению. 🤗"
+    )
