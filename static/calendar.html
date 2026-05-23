@@ -255,7 +255,6 @@ body {
 }
 
 .info-item { padding: 18px; }
-
 .info-item:not(:last-child) { border-right: 1px solid var(--border); }
 
 .info-label {
@@ -487,7 +486,7 @@ body {
 <div class="footer">
     <div class="footer-inner">
         <div class="price-box">
-            <div class="price" id="total-price">€0</div>
+            <div class="price" id="total-price">0 ₽</div>
             <div class="price-sub">Общая стоимость</div>
         </div>
         <button class="book-btn" id="book-btn" disabled onclick="sendBooking()">
@@ -505,8 +504,7 @@ let bookedRanges    = [];
 let selectedCheckIn  = null;
 let selectedCheckOut = null;
 
-// Цены загружаются с API, дефолт пока не загрузились
-let prices = { weekday: 120, weekend: 150, cleaning: 30 };
+let prices = { weekday: 3500, weekend: 4500, cleaning: 1500 };
 
 
 /* ===================================================== */
@@ -516,7 +514,6 @@ let prices = { weekday: 120, weekend: 150, cleaning: 30 };
 function showToast(type, title, desc, duration = 3500) {
 
     const container = document.getElementById("toast-container");
-
     const icons = { error: "🚫", warning: "📅", success: "✅" };
 
     const toast = document.createElement("div");
@@ -615,19 +612,25 @@ function getPriceForRange(checkIn, checkOut) {
     const current = new Date(start);
 
     while (current < end) {
-
         const day = current.getDay(); // 0=вс, 5=пт, 6=сб
-
         if (day === 0 || day === 5 || day === 6) {
             total += prices.weekend;
         } else {
             total += prices.weekday;
         }
-
         current.setDate(current.getDate() + 1);
     }
 
     return total;
+}
+
+
+/* ===================================================== */
+/* FORMAT PRICE — разделитель тысяч */
+/* ===================================================== */
+
+function formatPrice(amount) {
+    return amount.toLocaleString("ru-RU") + " ₽";
 }
 
 
@@ -650,13 +653,13 @@ function updateInfo() {
         const total  = getPriceForRange(selectedCheckIn, selectedCheckOut);
 
         nightsEl.innerText = nights;
-        totalEl.innerText  = `€${total}`;
+        totalEl.innerText  = formatPrice(total);  // ← теперь ₽
         btn.disabled       = false;
 
     } else {
 
         nightsEl.innerText = "0";
-        totalEl.innerText  = "€0";
+        totalEl.innerText  = "0 ₽";               // ← теперь ₽
         btn.disabled       = true;
 
     }
@@ -678,10 +681,8 @@ function isRangeBlocked(start, end) {
         const bookedEnd   = new Date(range.check_out);
 
         if (startDate < bookedEnd && endDate > bookedStart) {
-
             if (startDate.getTime() === bookedEnd.getTime()) continue;
             if (endDate.getTime()   === bookedStart.getTime()) continue;
-
             return true;
         }
     }
@@ -696,7 +697,6 @@ function isRangeBlocked(start, end) {
 
 function initCalendar() {
 
-    // День выезда не блокируем — он свободен для следующего заезда
     const disabledDates = bookedRanges.map(range => {
         const end = new Date(range.check_out);
         end.setDate(end.getDate() - 1);
@@ -725,13 +725,11 @@ function initCalendar() {
                 const checkOut = formatDate(selectedDates[1]);
 
                 if (isRangeBlocked(checkIn, checkOut)) {
-
                     showToast(
                         "warning",
                         "Даты недоступны",
                         "В выбранном периоде есть занятые дни — выберите другие даты"
                     );
-
                     calendar.clear();
                     selectedCheckIn  = null;
                     selectedCheckOut = null;
@@ -787,7 +785,7 @@ function sendBooking() {
 
 
 /* ===================================================== */
-/* START — загружаем цены и даты параллельно */
+/* START */
 /* ===================================================== */
 
 Promise.all([loadPrices(), loadBookedDates()]);
