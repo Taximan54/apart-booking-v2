@@ -184,11 +184,9 @@ def admin_inline_menu():
 async def start(message: types.Message):
 
     await message.answer(
-
         "Добро пожаловать в «Городская Пауза» ✨\n\n"
         "Квартира комфорт-класса в Новосибирске на площади Калинина.\n"
         "Выберите действие 👇",
-
         reply_markup=main_keyboard()
     )
 
@@ -266,6 +264,30 @@ async def description(message: types.Message):
 
 
 # =====================================================
+# АДМИНКА — восстанавливаем основную клавиатуру
+# =====================================================
+
+@router.message(lambda m: m.text == "🛠 Админка")
+async def admin_entry(message: types.Message):
+
+    if message.from_user.id not in ADMIN_IDS:
+        return
+
+    # ✅ Сначала восстанавливаем основную клавиатуру
+    # (она могла быть заменена клавиатурой блокировки)
+    await message.answer(
+        "🛠 Панель администратора",
+        reply_markup=main_keyboard()
+    )
+
+    # Затем отправляем инлайн-меню админки
+    await message.answer(
+        "Выберите действие:",
+        reply_markup=admin_inline_menu()
+    )
+
+
+# =====================================================
 # СВЯЗЬ — вход в режим
 # =====================================================
 
@@ -308,7 +330,6 @@ async def contact_message(
     username  = f"@{user.username}" if user.username else "без username"
     full_name = user.full_name or "Гость"
 
-    # Кнопка "Ответить" — открывает чат с клиентом напрямую
     reply_markup = InlineKeyboardMarkup(inline_keyboard=[[
         InlineKeyboardButton(
             text="↩️ Ответить",
@@ -316,7 +337,6 @@ async def contact_message(
         )
     ]])
 
-    # Пересылаем всем админам
     for admin_id in ADMIN_IDS:
 
         try:
@@ -392,7 +412,7 @@ async def webapp_handler(message: Message):
             )
 
             await message.answer(
-                "🛠 Панель администратора",
+                "Выберите действие:",
                 reply_markup=admin_inline_menu()
             )
 

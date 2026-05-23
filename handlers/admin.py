@@ -109,22 +109,6 @@ def admin_menu_markup():
 
 
 # =====================================================
-# ADMIN PANEL ENTRY
-# =====================================================
-
-@router.message(lambda m: m.text == "🛠 Админка")
-async def admin_panel(message: types.Message):
-
-    if not is_admin(message.from_user.id):
-        return
-
-    await message.answer(
-        "🛠 Панель администратора",
-        reply_markup=admin_menu_markup()
-    )
-
-
-# =====================================================
 # PAGINATION KEYBOARD
 # =====================================================
 
@@ -587,7 +571,6 @@ async def set_price_value(
 
 # =====================================================
 # BLOCK DATES — открываем Mini App календарь
-# ✅ ИСПРАВЛЕНО: добавлена кнопка "🛠 Админка" для возврата
 # =====================================================
 
 @router.callback_query(lambda c: c.data == "admin_block_open")
@@ -605,7 +588,7 @@ async def block_open(callback: types.CallbackQuery):
                 )
             ],
             [
-                KeyboardButton(text="🛠 Админка")  # ← кнопка возврата
+                KeyboardButton(text="🛠 Админка")
             ]
         ],
         resize_keyboard=True,
@@ -614,7 +597,7 @@ async def block_open(callback: types.CallbackQuery):
 
     await callback.message.answer(
         "⛔ Выберите даты для блокировки в календаре\n\n"
-        "Для возврата без блокировки нажмите 🛠 Админка",
+        "Для возврата нажмите 🛠 Админка",
         reply_markup=markup
     )
 
