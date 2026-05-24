@@ -115,7 +115,11 @@ async def get_prices():
 @app.get("/health")
 async def health():
     return {"status": "ok", "database": "sqlite", "app": "premium-apart"}
-
+@app.get("/db-check")
+async def db_check():
+    from services.booking_service import get_all_bookings
+    bookings = get_all_bookings()
+    return bookings[-5:] if bookings else []
 # =====================================================
 # SCHEDULER — автоматические уведомления
 # =====================================================
