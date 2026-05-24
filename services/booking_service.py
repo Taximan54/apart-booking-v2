@@ -1,6 +1,7 @@
 import sqlite3
 import os
 import threading
+from datetime import date, timedelta
 
 # ⚠️ ВАЖНО: абсолютный путь совпадает с Railway Volume /data
 DB_PATH = "/data/bookings.db"
@@ -80,11 +81,6 @@ def is_dates_available(check_in, check_out):
 
         cursor = conn.cursor()
 
-        # Заезд в 15:00, выезд в 12:00 —
-        # день выезда свободен для следующего заезда.
-        # Поэтому check_out одной брони НЕ конфликтует
-        # с check_in следующей: условие строгое (< и >)
-
         cursor.execute("""
 
         SELECT id
@@ -103,12 +99,7 @@ def is_dates_available(check_in, check_out):
 
         LIMIT 1
 
-        """, (
-
-            check_in,
-            check_out
-
-        ))
+        """, (check_in, check_out))
 
         conflict = cursor.fetchone()
 
@@ -119,26 +110,14 @@ def is_dates_available(check_in, check_out):
 # CREATE BOOKING
 # =====================================================
 
-def create_booking(
-    user_id,
-    username,
-    check_in,
-    check_out,
-    guests
-):
+def create_booking(user_id, username, check_in, check_out, guests):
 
     with db_lock:
 
-        available = is_dates_available(
-            check_in,
-            check_out
-        )
+        available = is_dates_available(check_in, check_out)
 
         if not available:
-
-            raise Exception(
-                "DATES_NOT_AVAILABLE"
-            )
+            raise Exception("DATES_NOT_AVAILABLE")
 
         with get_connection() as conn:
 
@@ -147,36 +126,17 @@ def create_booking(
             cursor.execute("""
 
             INSERT INTO bookings (
-
-                user_id,
-                username,
-                check_in,
-                check_out,
-                guests,
-                status
-
+                user_id, username, check_in, check_out, guests, status
             )
-
             VALUES (?, ?, ?, ?, ?, ?)
 
-            """, (
-
-                user_id,
-                username,
-                check_in,
-                check_out,
-                guests,
-                "confirmed"
-
-            ))
+            """, (user_id, username, check_in, check_out, guests, "confirmed"))
 
             conn.commit()
 
             booking_id = cursor.lastrowid
 
-            print(
-                f"✅ BOOKING CREATED #{booking_id}"
-            )
+            print(f"✅ BOOKING CREATED #{booking_id}")
 
             return booking_id
 
@@ -194,15 +154,8 @@ def get_all_bookings():
         cursor.execute("""
 
         SELECT
-
-            id,
-            user_id,
-            username,
-            check_in,
-            check_out,
-            guests,
-            status,
-            created_at
+            id, user_id, username, check_in, check_out,
+            guests, status, created_at
 
         FROM bookings
 
@@ -227,31 +180,18 @@ def get_booked_ranges():
 
         cursor.execute("""
 
-        SELECT
-
-            check_in,
-            check_out
+        SELECT check_in, check_out
 
         FROM bookings
 
-        WHERE status IN (
-
-            'confirmed',
-            'blocked'
-
-        )
+        WHERE status IN ('confirmed', 'blocked')
 
         """)
 
         rows = cursor.fetchall()
 
     return [
-
-        {
-            "check_in": row["check_in"],
-            "check_out": row["check_out"]
-        }
-
+        {"check_in": row["check_in"], "check_out": row["check_out"]}
         for row in rows
     ]
 
@@ -268,23 +208,13 @@ def get_booking_by_id(booking_id):
 
         cursor.execute("""
 
-        SELECT *
-
-        FROM bookings
-
-        WHERE id = ?
-
-        LIMIT 1
+        SELECT * FROM bookings WHERE id = ? LIMIT 1
 
         """, (booking_id,))
 
         row = cursor.fetchone()
 
-        if row:
-
-            return dict(row)
-
-        return None
+        return dict(row) if row else None
 
 
 # =====================================================
@@ -299,19 +229,13 @@ def cancel_booking(booking_id):
 
         cursor.execute("""
 
-        UPDATE bookings
-
-        SET status = 'cancelled'
-
-        WHERE id = ?
+        UPDATE bookings SET status = 'cancelled' WHERE id = ?
 
         """, (booking_id,))
 
         conn.commit()
 
-        print(
-            f"🛑 BOOKING CANCELLED #{booking_id}"
-        )
+        print(f"🛑 BOOKING CANCELLED #{booking_id}")
 
 
 # =====================================================
@@ -322,16 +246,10 @@ def block_dates(check_in, check_out):
 
     with db_lock:
 
-        available = is_dates_available(
-            check_in,
-            check_out
-        )
+        available = is_dates_available(check_in, check_out)
 
         if not available:
-
-            raise Exception(
-                "DATES_ALREADY_BOOKED"
-            )
+            raise Exception("DATES_ALREADY_BOOKED")
 
         with get_connection() as conn:
 
@@ -340,34 +258,15 @@ def block_dates(check_in, check_out):
             cursor.execute("""
 
             INSERT INTO bookings (
-
-                user_id,
-                username,
-                check_in,
-                check_out,
-                guests,
-                status
-
+                user_id, username, check_in, check_out, guests, status
             )
-
             VALUES (?, ?, ?, ?, ?, ?)
 
-            """, (
-
-                0,
-                "ADMIN_BLOCK",
-                check_in,
-                check_out,
-                0,
-                "blocked"
-
-            ))
+            """, (0, "ADMIN_BLOCK", check_in, check_out, 0, "blocked"))
 
             conn.commit()
 
-            print(
-                f"🔒 DATES BLOCKED {check_in} → {check_out}"
-            )
+            print(f"🔒 DATES BLOCKED {check_in} → {check_out}")
 
 
 # =====================================================
@@ -382,17 +281,69 @@ def delete_booking(booking_id):
 
         cursor.execute("""
 
-        DELETE FROM bookings
-
-        WHERE id = ?
+        DELETE FROM bookings WHERE id = ?
 
         """, (booking_id,))
 
         conn.commit()
 
-        print(
-            f"❌ BOOKING DELETED #{booking_id}"
-        )
+        print(f"❌ BOOKING DELETED #{booking_id}")
+
+
+# =====================================================
+# GET BOOKINGS FOR NOTIFICATIONS (для планировщика)
+# =====================================================
+
+def get_bookings_checkin_tomorrow():
+    """Брони с заездом завтра — для отправки инструкции."""
+    tomorrow = (date.today() + timedelta(days=1)).strftime("%Y-%m-%d")
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+        SELECT * FROM bookings
+        WHERE status = 'confirmed'
+        AND check_in = ?
+        """, (tomorrow,))
+        return [dict(row) for row in cursor.fetchall()]
+
+
+def get_bookings_checkin_today():
+    """Брони с заездом сегодня — приветствие в 15:00."""
+    today = date.today().strftime("%Y-%m-%d")
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+        SELECT * FROM bookings
+        WHERE status = 'confirmed'
+        AND check_in = ?
+        """, (today,))
+        return [dict(row) for row in cursor.fetchall()]
+
+
+def get_bookings_checkout_today():
+    """Брони с выездом сегодня — чек-лист в 09:00."""
+    today = date.today().strftime("%Y-%m-%d")
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+        SELECT * FROM bookings
+        WHERE status = 'confirmed'
+        AND check_out = ?
+        """, (today,))
+        return [dict(row) for row in cursor.fetchall()]
+
+
+def get_bookings_checkout_yesterday():
+    """Брони с выездом вчера — просьба об отзыве."""
+    yesterday = (date.today() - timedelta(days=1)).strftime("%Y-%m-%d")
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+        SELECT * FROM bookings
+        WHERE status = 'confirmed'
+        AND check_out = ?
+        """, (yesterday,))
+        return [dict(row) for row in cursor.fetchall()]
 
 
 # =====================================================

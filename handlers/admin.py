@@ -31,12 +31,13 @@ router = Router()
 # PRICE STORAGE
 # =====================================================
 
-PRICE_FILE = "/data/prices.json"
+PRICE_FILE    = "/data/prices.json"
+DOOR_CODE_FILE = "/data/door_code.json"
 
 DEFAULT_PRICES = {
-    "weekday": 120,
-    "weekend": 150,
-    "cleaning": 30
+    "weekday": 3500,
+    "weekend": 4500,
+    "cleaning": 1500
 }
 
 def load_prices():
@@ -52,11 +53,31 @@ def save_prices(prices):
 
 
 # =====================================================
+# DOOR CODE STORAGE
+# =====================================================
+
+def load_door_code() -> str:
+    if os.path.exists(DOOR_CODE_FILE):
+        with open(DOOR_CODE_FILE, "r") as f:
+            data = json.load(f)
+            return data.get("code", "не задан")
+    return "не задан"
+
+def save_door_code(code: str):
+    os.makedirs("/data", exist_ok=True)
+    with open(DOOR_CODE_FILE, "w") as f:
+        json.dump({"code": code}, f)
+
+
+# =====================================================
 # FSM STATES
 # =====================================================
 
 class PriceState(StatesGroup):
     waiting_price_value = State()
+
+class DoorCodeState(StatesGroup):
+    waiting_code = State()
 
 
 # =====================================================
@@ -72,6 +93,14 @@ BOOKINGS_PER_PAGE = 5
 
 def is_admin(user_id: int) -> bool:
     return user_id in ADMIN_IDS
+
+
+# =====================================================
+# FORMAT PRICE
+# =====================================================
+
+def fmt(amount) -> str:
+    return f"{int(amount):,}".replace(",", " ") + " ₽"
 
 
 # =====================================================
@@ -103,10 +132,20 @@ def admin_menu_markup():
                     text="💰 Цены",
                     callback_data="admin_prices"
                 )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="🔐 Код замка",
+                    callback_data="admin_door_code"
+                )
             ]
         ]
     )
 
+
+# =====================================================
+# ADMIN PANEL — только через user.py
+# =====================================================
 
 # =====================================================
 # PAGINATION KEYBOARD
@@ -277,27 +316,22 @@ async def confirm_cancel(callback: types.CallbackQuery):
     booking_id = int(callback.data.split("_")[-1])
 
     bookings = get_all_bookings()
-    booking  = next(
-        (b for b in bookings if b["id"] == booking_id),
-        None
-    )
+    booking  = next((b for b in bookings if b["id"] == booking_id), None)
 
     if not booking:
         await callback.answer("Бронь не найдена", show_alert=True)
         return
 
-    markup = InlineKeyboardMarkup(inline_keyboard=[
-        [
-            InlineKeyboardButton(
-                text="✅ Да, отменить",
-                callback_data=f"do_cancel_{booking_id}"
-            ),
-            InlineKeyboardButton(
-                text="🔙 Нет, назад",
-                callback_data="admin_bookings_0"
-            )
-        ]
-    ])
+    markup = InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(
+            text="✅ Да, отменить",
+            callback_data=f"do_cancel_{booking_id}"
+        ),
+        InlineKeyboardButton(
+            text="🔙 Нет, назад",
+            callback_data="admin_bookings_0"
+        )
+    ]])
 
     await callback.message.edit_text(
         f"⚠️ Отменить бронь #{booking_id}?\n\n"
@@ -343,27 +377,22 @@ async def confirm_unblock(callback: types.CallbackQuery):
     booking_id = int(callback.data.split("_")[-1])
 
     bookings = get_all_bookings()
-    booking  = next(
-        (b for b in bookings if b["id"] == booking_id),
-        None
-    )
+    booking  = next((b for b in bookings if b["id"] == booking_id), None)
 
     if not booking:
         await callback.answer("Блокировка не найдена", show_alert=True)
         return
 
-    markup = InlineKeyboardMarkup(inline_keyboard=[
-        [
-            InlineKeyboardButton(
-                text="✅ Да, разблокировать",
-                callback_data=f"do_unblock_{booking_id}"
-            ),
-            InlineKeyboardButton(
-                text="🔙 Нет, назад",
-                callback_data="admin_bookings_0"
-            )
-        ]
-    ])
+    markup = InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(
+            text="✅ Да, разблокировать",
+            callback_data=f"do_unblock_{booking_id}"
+        ),
+        InlineKeyboardButton(
+            text="🔙 Нет, назад",
+            callback_data="admin_bookings_0"
+        )
+    ]])
 
     await callback.message.edit_text(
         f"🔓 Разблокировать даты #{booking_id}?\n\n"
@@ -425,6 +454,8 @@ async def admin_stats(callback: types.CallbackQuery):
         except Exception:
             pass
 
+    door_code = load_door_code()
+
     markup = InlineKeyboardMarkup(inline_keyboard=[[
         InlineKeyboardButton(
             text="🏠 Главное меню",
@@ -438,11 +469,12 @@ async def admin_stats(callback: types.CallbackQuery):
         f"❌ Отменённых: {len(cancelled)}\n"
         f"⛔ Заблокировано: {len(blocked)}\n\n"
         f"🌙 Всего ночей: {total_nights}\n"
-        f"💰 Ожидаемый доход: €{total_revenue}\n\n"
+        f"💰 Ожидаемый доход: {fmt(total_revenue)}\n\n"
         f"💵 Текущие цены:\n"
-        f"  Будни: €{prices['weekday']}/ночь\n"
-        f"  Выходные: €{prices['weekend']}/ночь\n"
-        f"  Уборка: €{prices['cleaning']}",
+        f"  Будни: {fmt(prices['weekday'])}/ночь\n"
+        f"  Выходные: {fmt(prices['weekend'])}/ночь\n"
+        f"  Уборка: {fmt(prices['cleaning'])}\n\n"
+        f"🔐 Код замка: {door_code}",
         reply_markup=markup
     )
 
@@ -464,19 +496,19 @@ async def admin_prices(callback: types.CallbackQuery):
     markup = InlineKeyboardMarkup(inline_keyboard=[
         [
             InlineKeyboardButton(
-                text=f"📅 Будни: €{prices['weekday']}",
+                text=f"📅 Будни: {fmt(prices['weekday'])}",
                 callback_data="set_price_weekday"
             )
         ],
         [
             InlineKeyboardButton(
-                text=f"🎉 Выходные: €{prices['weekend']}",
+                text=f"🎉 Выходные: {fmt(prices['weekend'])}",
                 callback_data="set_price_weekend"
             )
         ],
         [
             InlineKeyboardButton(
-                text=f"🧹 Уборка: €{prices['cleaning']}",
+                text=f"🧹 Уборка: {fmt(prices['cleaning'])}",
                 callback_data="set_price_cleaning"
             )
         ],
@@ -491,9 +523,9 @@ async def admin_prices(callback: types.CallbackQuery):
     await callback.message.edit_text(
         f"💰 Управление ценами\n\n"
         f"Нажми на строку чтобы изменить цену.\n\n"
-        f"Будни: €{prices['weekday']}/ночь\n"
-        f"Выходные: €{prices['weekend']}/ночь\n"
-        f"Уборка: €{prices['cleaning']}",
+        f"Будни: {fmt(prices['weekday'])}/ночь\n"
+        f"Выходные: {fmt(prices['weekend'])}/ночь\n"
+        f"Уборка: {fmt(prices['cleaning'])}",
         reply_markup=markup
     )
 
@@ -525,8 +557,8 @@ async def set_price_start(
     await state.update_data(price_type=price_type)
 
     await callback.message.edit_text(
-        f"💰 Введи новую цену для «{labels.get(price_type, price_type)}» (только число, €):\n\n"
-        f"Например: 130"
+        f"💰 Введи новую цену для «{labels.get(price_type, price_type)}» (только число, ₽):\n\n"
+        f"Например: 3500"
     )
 
     await callback.answer()
@@ -544,7 +576,7 @@ async def set_price_value(
     try:
         value = int(message.text.strip())
     except ValueError:
-        await message.answer("❌ Введи число. Например: 130")
+        await message.answer("❌ Введи число. Например: 3500")
         return
 
     data       = await state.get_data()
@@ -564,7 +596,60 @@ async def set_price_value(
 
     await message.answer(
         f"✅ Цена обновлена!\n\n"
-        f"{labels.get(price_type, price_type)}: €{value}",
+        f"{labels.get(price_type, price_type)}: {fmt(value)}",
+        reply_markup=admin_menu_markup()
+    )
+
+
+# =====================================================
+# DOOR CODE — показать меню
+# =====================================================
+
+@router.callback_query(lambda c: c.data == "admin_door_code")
+async def door_code_menu(
+    callback: types.CallbackQuery,
+    state: FSMContext
+):
+
+    if not is_admin(callback.from_user.id):
+        return
+
+    current_code = load_door_code()
+
+    await state.set_state(DoorCodeState.waiting_code)
+
+    await callback.message.edit_text(
+        f"🔐 Код замка\n\n"
+        f"Текущий код: {current_code}\n\n"
+        f"Введи новый код замка:"
+    )
+
+    await callback.answer()
+
+
+# =====================================================
+# DOOR CODE — получаем новый код
+# =====================================================
+
+@router.message(DoorCodeState.waiting_code)
+async def door_code_set(
+    message: types.Message,
+    state: FSMContext
+):
+
+    if not is_admin(message.from_user.id):
+        return
+
+    code = message.text.strip()
+
+    save_door_code(code)
+
+    await state.clear()
+
+    await message.answer(
+        f"✅ Код замка обновлён!\n\n"
+        f"🔐 Новый код: {code}\n\n"
+        f"Он будет автоматически отправлен гостям за сутки до заезда.",
         reply_markup=admin_menu_markup()
     )
 
