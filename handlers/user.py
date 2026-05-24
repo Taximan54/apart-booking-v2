@@ -19,7 +19,7 @@ from aiogram.types import (
     ReplyKeyboardRemove
 )
 
-from config import WEBAPP_URL, ADMIN_IDS, SBP_PHONE
+from config import WEBAPP_URL, ADMIN_IDS
 
 from services.booking_service import (
     create_booking,
@@ -29,6 +29,13 @@ from services.booking_service import (
 
 
 router = Router()
+
+
+# =====================================================
+# ССЫЛКА НА ОПЛАТУ Т-БАНК
+# =====================================================
+
+TBANK_PAYMENT_URL = "https://www.tbank.ru/cf/8TqKOl5vEpK"
 
 
 # =====================================================
@@ -208,17 +215,16 @@ def calculate_nights(check_in: str, check_out: str) -> int:
 
 
 def get_price_for_range(check_in: str, check_out: str, prices: dict) -> int:
-    """Считаем стоимость с учётом будней и выходных."""
     ci = datetime.strptime(check_in, "%Y-%m-%d")
     co = datetime.strptime(check_out, "%Y-%m-%d")
     total = 0
     current = ci
     while current < co:
         day = current.weekday()  # 0=пн, 4=пт, 5=сб, 6=вс
-        if day >= 4:  # пт, сб, вс
-            total += prices.get("weekend", 150)
+        if day >= 4:             # пт, сб, вс
+            total += prices.get("weekend", 4500)
         else:
-            total += prices.get("weekday", 120)
+            total += prices.get("weekday", 3500)
         current = current.replace(day=current.day + 1)
     return total
 
@@ -229,16 +235,11 @@ def load_prices() -> dict:
     if os.path.exists(price_file):
         with open(price_file, "r") as f:
             return json.load(f)
-    return {"weekday": 120, "weekend": 150, "cleaning": 30}
+    return {"weekday": 3500, "weekend": 4500, "cleaning": 1500}
 
 
-def generate_sbp_link(amount: int) -> str:
-    """Генерируем СБП ссылку с суммой в копейках."""
-    amount_kopecks = amount * 100
-    return (
-        f"https://qr.nspk.ru/AS100004{SBP_PHONE}"
-        f"?sum={amount_kopecks}&currency=RUB"
-    )
+def format_price(amount: int) -> str:
+    return f"{amount:,}".replace(",", " ") + " ₽"
 
 
 # =====================================================
@@ -446,12 +447,11 @@ async def payment_confirm(
     booking_id = int(parts[2])
     user_id    = int(parts[3])
 
-    # Отправляем клиенту инструкцию по заселению
     try:
         await bot.send_message(
             user_id,
             f"✅ Оплата подтверждена!\n\n"
-            f"Бронь #{booking_id} подтверждена.\n\n"
+            f"Бронь #{booking_id} подтверждена.\n"
             f"{CHECKIN_INSTRUCTIONS}"
         )
     except Exception:
@@ -481,10 +481,8 @@ async def payment_reject(
     booking_id = int(parts[2])
     user_id    = int(parts[3])
 
-    # Отменяем бронь
     cancel_booking(booking_id)
 
-    # Уведомляем клиента
     try:
         await bot.send_message(
             user_id,
@@ -573,39 +571,41 @@ async def webapp_handler(message: Message, bot: Bot):
             guests=guests
         )
 
-        # Считаем стоимость
-        prices      = load_prices()
-        nights      = calculate_nights(check_in, check_out)
-        total       = get_price_for_range(check_in, check_out, prices)
-        prepayment  = math.ceil(total * 0.2)  # 20% предоплата
-        sbp_link    = generate_sbp_link(prepayment)
+        prices     = load_prices()
+        nights     = calculate_nights(check_in, check_out)
+        total      = get_price_for_range(check_in, check_out, prices)
+        prepayment = math.ceil(total * 0.2)
 
         user      = message.from_user
         username  = f"@{user.username}" if user.username else "без username"
         full_name = user.full_name or "Гость"
 
-        # Сообщение клиенту с кнопкой оплаты
+        # Сообщение клиенту
         await message.answer(
             f"✅ Бронь #{booking_id} создана!\n\n"
             f"📅 {check_in} → {check_out}\n"
             f"🌙 Ночей: {nights}\n"
             f"👥 Гостей: {guests}\n\n"
             f"━━━━━━━━━━━━━━━\n"
-            f"💰 Стоимость: {total:,} ₽\n"
-            f"💳 Предоплата (20%): {prepayment:,} ₽\n\n"
-            f"Для подтверждения брони оплатите предоплату по кнопке ниже.\n"
-            f"После проверки оплаты мы пришлём инструкцию по заселению.",
-            reply_markup=InlineKeyboardMarkup(inline_keyboard=[[
-                InlineKeyboardButton(
-                    text=f"💳 Оплатить {prepayment:,} ₽",
-                    url=sbp_link
-                )
-            ], [
-                InlineKeyboardButton(
-                    text="✅ Я оплатил",
-                    callback_data=f"paid_{booking_id}"
-                )
-            ]])
+            f"💰 Стоимость: {format_price(total)}\n"
+            f"💳 Предоплата 20%: {format_price(prepayment)}\n\n"
+            f"Переведите предоплату по кнопке ниже.\n"
+            f"В комментарии к переводу укажите: Бронь #{booking_id}\n\n"
+            f"После проверки оплаты вы получите инструкцию по заселению.",
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                [
+                    InlineKeyboardButton(
+                        text=f"💳 Оплатить {format_price(prepayment)}",
+                        url=TBANK_PAYMENT_URL
+                    )
+                ],
+                [
+                    InlineKeyboardButton(
+                        text="✅ Я оплатил",
+                        callback_data=f"paid_{booking_id}"
+                    )
+                ]
+            ])
         )
 
         # Уведомление всем админам
@@ -619,8 +619,8 @@ async def webapp_handler(message: Message, bot: Bot):
                     f"📅 {check_in} → {check_out}\n"
                     f"🌙 Ночей: {nights}\n"
                     f"👥 Гостей: {guests}\n\n"
-                    f"💰 Сумма: {total:,} ₽\n"
-                    f"💳 Ожидаем предоплату: {prepayment:,} ₽",
+                    f"💰 Сумма: {format_price(total)}\n"
+                    f"💳 Ожидаем предоплату: {format_price(prepayment)}"
                 )
             except Exception:
                 pass
@@ -657,7 +657,6 @@ async def client_paid(
     username   = f"@{user.username}" if user.username else "без username"
     full_name  = user.full_name or "Гость"
 
-    # Уведомляем всех админов с кнопками подтверждения
     for admin_id in ADMIN_IDS:
         try:
             await bot.send_message(
@@ -687,11 +686,11 @@ async def client_paid(
 
     await callback.message.edit_reply_markup(reply_markup=None)
 
-    await callback.answer("✅ Уведомили администратора! Ожидайте подтверждения.")
+    await callback.answer("✅ Уведомили администратора!")
 
     await bot.send_message(
         user.id,
         "⏳ Администратор проверяет оплату.\n\n"
-        "Обычно это занимает несколько минут. "
+        "Обычно это занимает несколько минут.\n"
         "После подтверждения вы получите инструкцию по заселению. 🤗"
     )
