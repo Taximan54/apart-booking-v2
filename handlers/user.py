@@ -199,6 +199,12 @@ def admin_inline_menu():
                     text="💰 Цены",
                     callback_data="admin_prices"
                 )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="🔐 Код замка",
+                    callback_data="admin_door_code"
+                )
             ]
         ]
     )
@@ -220,8 +226,8 @@ def get_price_for_range(check_in: str, check_out: str, prices: dict) -> int:
     total = 0
     current = ci
     while current < co:
-        day = current.weekday()  # 0=пн, 4=пт, 5=сб, 6=вс
-        if day >= 4:             # пт, сб, вс
+        day = current.weekday()
+        if day >= 4:
             total += prices.get("weekend", 4500)
         else:
             total += prices.get("weekday", 3500)
@@ -580,7 +586,6 @@ async def webapp_handler(message: Message, bot: Bot):
         username  = f"@{user.username}" if user.username else "без username"
         full_name = user.full_name or "Гость"
 
-        # Сообщение клиенту
         await message.answer(
             f"✅ Бронь #{booking_id} создана!\n\n"
             f"📅 {check_in} → {check_out}\n"
@@ -608,7 +613,6 @@ async def webapp_handler(message: Message, bot: Bot):
             ])
         )
 
-        # Уведомление всем админам
         for admin_id in ADMIN_IDS:
             try:
                 await bot.send_message(
