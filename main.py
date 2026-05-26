@@ -1,7 +1,7 @@
 import asyncio
 import os
 import json
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
@@ -52,6 +52,15 @@ bot = Bot(token=BOT_TOKEN)
 dp  = Dispatcher(storage=MemoryStorage())
 dp.include_router(user_router)
 dp.include_router(admin_router)
+
+# =====================================================
+# TIMEZONE — Новосибирск UTC+7
+# =====================================================
+
+NSK = timezone(timedelta(hours=7))
+
+def now_nsk():
+    return datetime.now(NSK)
 
 # =====================================================
 # HOME PAGE
@@ -115,13 +124,9 @@ async def get_prices():
 @app.get("/health")
 async def health():
     return {"status": "ok", "database": "sqlite", "app": "premium-apart"}
-@app.get("/db-check")
-async def db_check():
-    from services.booking_service import get_all_bookings
-    bookings = get_all_bookings()
-    return bookings[-5:] if bookings else []
+
 # =====================================================
-# SCHEDULER — автоматические уведомления
+# SCHEDULER — автоматические уведомления (время NSK)
 # =====================================================
 
 async def send_notifications():
@@ -129,13 +134,13 @@ async def send_notifications():
 
     while True:
 
-        now  = datetime.now()
-        hour = now.hour
+        now    = now_nsk()
+        hour   = now.hour
         minute = now.minute
 
         try:
 
-            # ─── 10:00 — чек-лист перед выездом ───────────
+            # ─── 10:00 NSK — чек-лист перед выездом ───────
             if hour == 10 and minute < 30:
 
                 bookings = get_bookings_checkout_today()
@@ -163,23 +168,18 @@ async def send_notifications():
                         except Exception:
                             pass
 
-            # ─── 10:00 — уведомление администратору о выездах ─
-            if hour == 10 and minute < 30:
-
-                bookings = get_bookings_checkout_today()
-
+                # Уведомление администратору о выездах
                 if bookings:
                     text = "🚪 Сегодня выезды:\n\n"
                     for b in bookings:
                         text += f"#{b['id']} @{b['username']} · {b['check_out']}\n"
-
                     for admin_id in ADMIN_IDS:
                         try:
                             await bot.send_message(admin_id, text)
                         except Exception:
                             pass
 
-            # ─── 12:00 — инструкция по заселению (за сутки до заезда) ─
+            # ─── 12:00 NSK — инструкция (за сутки до заезда) ─
             if hour == 12 and minute < 30:
 
                 bookings  = get_bookings_checkin_tomorrow()
@@ -207,7 +207,7 @@ async def send_notifications():
                         except Exception:
                             pass
 
-            # ─── 15:00 — приветствие в день заезда ────────
+            # ─── 15:00 NSK — приветствие в день заезда ────
             if hour == 15 and minute < 30:
 
                 bookings = get_bookings_checkin_today()
@@ -225,7 +225,7 @@ async def send_notifications():
                         except Exception:
                             pass
 
-            # ─── 14:00 — просьба об отзыве (день после выезда) ─
+            # ─── 14:00 NSK — просьба об отзыве (день после выезда) ─
             if hour == 14 and minute < 30:
 
                 bookings = get_bookings_checkout_yesterday()
@@ -259,7 +259,7 @@ async def startup():
     print("🚀 APPLICATION STARTED")
     asyncio.create_task(dp.start_polling(bot))
     asyncio.create_task(send_notifications())
-    print("⏰ SCHEDULER STARTED")
+    print("⏰ SCHEDULER STARTED (NSK UTC+7)")
 
 # =====================================================
 # SHUTDOWN
