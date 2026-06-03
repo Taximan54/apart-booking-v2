@@ -1,0 +1,1009 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Панель управления — Городская Пауза</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --gold:#C9A84C;--gold-light:#E8C97A;--gold-muted:#6B5420;
+  --black:#0A0A0A;--black-card:#141414;--black-border:#1E1E1E;--black-hover:#1A1A1A;
+  --text-primary:#F0E6C8;--text-secondary:#A89060;--text-muted:#5A4A30;--white:#FAF6EE;
+  --red:#C0392B;--green:#1A6B42;--sidebar:260px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--text-primary);display:flex;min-height:100vh}
+
+/* SIDEBAR */
+.sidebar{width:var(--sidebar);background:var(--black-card);border-right:1px solid var(--black-border);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:100;transition:transform .3s}
+.sb-logo{padding:32px 28px 24px;border-bottom:1px solid var(--black-border)}
+.sb-logo-text{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:300;color:var(--gold);letter-spacing:.3em;text-transform:uppercase}
+.sb-logo-sub{font-size:9px;letter-spacing:.25em;color:var(--text-muted);text-transform:uppercase;margin-top:4px}
+.sb-nav{flex:1;padding:20px 0;overflow-y:auto}
+.sb-section{padding:0 16px;margin-bottom:4px}
+.sb-section-label{font-size:9px;letter-spacing:.3em;text-transform:uppercase;color:var(--text-muted);padding:12px 12px 8px}
+.sb-item{display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:0;cursor:pointer;transition:all .2s;color:var(--text-secondary);font-size:12px;letter-spacing:.05em;border-left:2px solid transparent;text-decoration:none}
+.sb-item:hover{background:rgba(201,168,76,.05);color:var(--text-primary)}
+.sb-item.active{background:rgba(201,168,76,.08);color:var(--gold);border-left-color:var(--gold)}
+.sb-icon{font-size:16px;width:20px;text-align:center}
+.sb-badge{margin-left:auto;background:var(--gold);color:var(--black);font-size:9px;font-weight:600;padding:2px 7px;border-radius:0}
+.sb-footer{padding:20px 28px;border-top:1px solid var(--black-border)}
+.sb-footer a{font-size:11px;color:var(--text-muted);text-decoration:none;display:flex;align-items:center;gap:8px;transition:color .3s}
+.sb-footer a:hover{color:var(--gold)}
+
+/* MAIN */
+.main{margin-left:var(--sidebar);flex:1;min-height:100vh;display:flex;flex-direction:column}
+.topbar{background:var(--black-card);border-bottom:1px solid var(--black-border);padding:16px 40px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
+.topbar-title{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:300;color:var(--white)}
+.topbar-right{display:flex;align-items:center;gap:16px}
+.topbar-date{font-size:11px;color:var(--text-muted);letter-spacing:.1em}
+.topbar-status{display:flex;align-items:center;gap:6px;font-size:11px}
+.status-dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green)}
+.status-dot.offline{background:var(--red);box-shadow:0 0 6px var(--red)}
+.content{flex:1;padding:40px}
+
+/* PANELS */
+.panel{display:none}
+.panel.active{display:block}
+
+/* STATS ROW */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--black-border);margin-bottom:32px}
+.stat-card{background:var(--black-card);padding:28px 24px;display:flex;flex-direction:column;gap:8px;position:relative;overflow:hidden}
+.stat-card::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--gold);transform:scaleX(0);transition:transform .3s;transform-origin:left}
+.stat-card:hover::after{transform:scaleX(1)}
+.stat-card-label{font-size:10px;letter-spacing:.25em;text-transform:uppercase;color:var(--text-muted)}
+.stat-card-val{font-family:'Cormorant Garamond',serif;font-size:42px;font-weight:300;color:var(--gold);line-height:1}
+.stat-card-sub{font-size:11px;color:var(--text-muted);font-weight:300}
+.stat-card-icon{position:absolute;right:20px;top:20px;font-size:28px;opacity:.15}
+
+/* CARDS */
+.card{background:var(--black-card);border:1px solid var(--black-border);margin-bottom:24px}
+.card-header{padding:20px 24px;border-bottom:1px solid var(--black-border);display:flex;align-items:center;justify-content:space-between}
+.card-title{font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--text-secondary)}
+.card-body{padding:24px}
+
+/* TABLE */
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{text-align:left;font-size:9px;letter-spacing:.3em;text-transform:uppercase;color:var(--text-muted);padding:10px 16px;border-bottom:1px solid var(--black-border);font-weight:400}
+.tbl td{padding:14px 16px;font-size:12px;color:var(--text-secondary);border-bottom:1px solid rgba(30,30,30,.6);font-weight:300}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr:hover td{background:rgba(201,168,76,.02);color:var(--text-primary)}
+.badge{display:inline-block;padding:3px 10px;font-size:9px;letter-spacing:.15em;text-transform:uppercase;font-weight:500}
+.badge-green{background:rgba(26,107,66,.2);color:#4ade80;border:1px solid rgba(26,107,66,.4)}
+.badge-gold{background:rgba(201,168,76,.15);color:var(--gold);border:1px solid rgba(201,168,76,.3)}
+.badge-red{background:rgba(192,57,43,.2);color:#f87171;border:1px solid rgba(192,57,43,.4)}
+.badge-blue{background:rgba(30,58,138,.2);color:#93c5fd;border:1px solid rgba(30,58,138,.4)}
+
+/* BUTTONS */
+.btn{padding:9px 20px;font-family:'Montserrat',sans-serif;font-size:10px;letter-spacing:.2em;text-transform:uppercase;font-weight:500;cursor:pointer;transition:all .3s;border:none;display:inline-flex;align-items:center;gap:6px}
+.btn-primary{background:var(--gold);color:var(--black)}
+.btn-primary:hover{background:var(--gold-light)}
+.btn-ghost{background:transparent;color:var(--text-muted);border:1px solid var(--black-border)}
+.btn-ghost:hover{border-color:var(--gold);color:var(--gold)}
+.btn-danger{background:transparent;color:#f87171;border:1px solid rgba(192,57,43,.3)}
+.btn-danger:hover{background:rgba(192,57,43,.1)}
+.btn-sm{padding:6px 14px;font-size:9px}
+.btn-icon{width:32px;height:32px;padding:0;justify-content:center;font-size:14px}
+
+/* ADMIN CALENDAR */
+.admin-cal-wrap{display:grid;grid-template-columns:1fr 380px;gap:24px}
+.admin-cal-box{background:var(--black-card);border:1px solid var(--black-border);padding:32px}
+.admin-cal-info{background:var(--black-card);border:1px solid var(--black-border);padding:28px;display:flex;flex-direction:column;gap:20px}
+.cal-header-admin{display:flex;align-items:center;justify-content:space-between;margin-bottom:28px}
+.cal-month-admin{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:300;color:var(--white)}
+.cal-nav-btn{width:34px;height:34px;background:transparent;border:1px solid var(--black-border);color:var(--text-secondary);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .3s;font-size:16px}
+.cal-nav-btn:hover{border-color:var(--gold);color:var(--gold)}
+.admin-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.admin-cal-dow{display:grid;grid-template-columns:repeat(7,1fr);margin-bottom:8px}
+.admin-cal-dow span{text-align:center;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--text-muted);padding:6px 0}
+.aday{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:12px;cursor:pointer;border:1px solid transparent;transition:all .2s;position:relative;font-weight:400}
+.aday:hover:not(.past):not(.empty){background:rgba(201,168,76,.12);border-color:rgba(201,168,76,.3);color:var(--gold)}
+.aday.past{color:rgba(90,74,48,.3);cursor:not-allowed}
+.aday.empty{pointer-events:none}
+.aday.booked-client{background:rgba(192,57,43,.12);color:#f87171;border-color:rgba(192,57,43,.2)}
+.aday.blocked-admin{background:rgba(90,74,48,.2);color:var(--text-muted);border-color:rgba(90,74,48,.3)}
+.aday.today{color:var(--gold);font-weight:600}
+.aday.today::after{content:'';position:absolute;bottom:3px;left:50%;transform:translateX(-50%);width:4px;height:4px;border-radius:50%;background:var(--gold)}
+.aday.selected-admin{background:rgba(201,168,76,.2);border-color:var(--gold);color:var(--gold)}
+.cal-legend-admin{display:flex;flex-wrap:wrap;gap:16px;margin-top:20px;padding-top:16px;border-top:1px solid var(--black-border)}
+.cal-legend-admin .li{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--text-muted);letter-spacing:.08em}
+.cal-legend-admin .dot{width:10px;height:10px;border:1px solid}
+.dot-client{background:rgba(192,57,43,.2);border-color:rgba(192,57,43,.4)}
+.dot-blocked{background:rgba(90,74,48,.3);border-color:rgba(90,74,48,.4)}
+.dot-free{background:rgba(201,168,76,.1);border-color:rgba(201,168,76,.2)}
+
+/* INFO SECTION */
+.info-section-title{font-size:10px;letter-spacing:.25em;text-transform:uppercase;color:var(--gold);margin-bottom:14px}
+.info-field{margin-bottom:12px}
+.info-label{font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--text-muted);margin-bottom:5px}
+.info-input{background:var(--black);border:1px solid var(--black-border);color:var(--text-primary);padding:10px 14px;font-family:'Montserrat',sans-serif;font-size:12px;font-weight:300;outline:none;width:100%;transition:border-color .3s}
+.info-input:focus{border-color:var(--gold)}
+.info-input::placeholder{color:var(--text-muted)}
+
+/* DOOR CODE DISPLAY */
+.door-code-display{background:var(--black);border:1px solid rgba(201,168,76,.2);padding:16px 20px;display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.door-code-val{font-family:'Cormorant Garamond',serif;font-size:36px;font-weight:300;color:var(--gold);letter-spacing:.4em}
+.door-code-masked{filter:blur(6px);transition:filter .3s}
+.door-code-masked.revealed{filter:none}
+
+/* PRICE GRID */
+.price-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:var(--black-border)}
+.price-input-box{background:var(--black-card);padding:20px}
+.pib-label{font-size:9px;letter-spacing:.25em;text-transform:uppercase;color:var(--text-muted);margin-bottom:10px}
+.pib-input{background:var(--black);border:1px solid var(--black-border);color:var(--gold);padding:10px 14px;font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:300;outline:none;width:100%;transition:border-color .3s}
+.pib-input:focus{border-color:var(--gold)}
+
+/* MODAL */
+.modal-ov{position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:9000;display:none;align-items:center;justify-content:center;padding:20px}
+.modal-ov.open{display:flex}
+.modal-box{background:var(--black-card);border:1px solid var(--black-border);max-width:520px;width:100%;padding:40px;position:relative}
+.modal-close{position:absolute;top:16px;right:16px;background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:18px;transition:color .3s}
+.modal-close:hover{color:var(--gold)}
+.modal-title{font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:300;color:var(--white);margin-bottom:24px}
+.modal-booking-detail{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--black-border);margin-bottom:24px}
+.mbd-box{background:var(--black);padding:14px 16px}
+.mbd-label{font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--text-muted);margin-bottom:4px}
+.mbd-val{font-size:13px;color:var(--text-primary);font-weight:300}
+
+/* TOAST */
+.toast{position:fixed;bottom:32px;right:32px;background:var(--black-card);border:1px solid rgba(201,168,76,.3);padding:14px 22px;font-size:12px;color:var(--text-secondary);z-index:9999;transform:translateY(60px);opacity:0;transition:all .4s;max-width:320px}
+.toast.show{transform:translateY(0);opacity:1}
+.toast.gold{border-color:var(--gold);color:var(--gold-light)}
+.toast.err{border-color:rgba(192,57,43,.5);color:#f87171}
+
+/* LOGIN SCREEN */
+.login-screen{position:fixed;inset:0;background:var(--black);z-index:9999;display:flex;align-items:center;justify-content:center}
+.login-box{background:var(--black-card);border:1px solid var(--black-border);padding:56px 48px;width:100%;max-width:420px;text-align:center}
+.login-logo{font-family:'Cormorant Garamond',serif;font-size:32px;font-weight:300;color:var(--gold);letter-spacing:.3em;margin-bottom:8px}
+.login-sub{font-size:10px;letter-spacing:.4em;color:var(--text-muted);text-transform:uppercase;margin-bottom:40px}
+.login-error{font-size:11px;color:#f87171;margin-top:12px;display:none}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:var(--black)}::-webkit-scrollbar-thumb{background:var(--gold-muted)}
+
+/* RESPONSIVE */
+@media(max-width:1200px){
+  .stats-row{grid-template-columns:1fr 1fr}
+  .admin-cal-wrap{grid-template-columns:1fr}
+}
+@media(max-width:768px){
+  .sidebar{transform:translateX(-100%)}
+  .sidebar.open{transform:translateX(0)}
+  .main{margin-left:0}
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div class="login-screen" id="loginScreen">
+  <div class="login-box">
+    <div class="login-logo" style="font-size:28px;letter-spacing:.15em">Городская Пауза</div>
+    <div class="login-sub">Панель управления</div>
+    <div class="info-field">
+      <div class="info-label">Пароль</div>
+      <input type="password" class="info-input" id="loginPwd" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button class="btn btn-primary" style="width:100%;margin-top:8px;justify-content:center" onclick="doLogin()">Войти</button>
+    <div class="login-error" id="loginErr">Неверный пароль</div>
+  </div>
+</div>
+
+<!-- SIDEBAR -->
+<aside class="sidebar" id="sidebar">
+  <div class="sb-logo">
+    <div class="sb-logo-text" style="font-size:17px;letter-spacing:.15em">Городская Пауза</div>
+    <div class="sb-logo-sub">Панель управления</div>
+  </div>
+  <nav class="sb-nav">
+    <div class="sb-section">
+      <div class="sb-section-label">Главное</div>
+      <a class="sb-item active" onclick="showPanel('dashboard',this)">
+        <span class="sb-icon">◈</span>Дашборд
+        <span class="sb-badge" id="newBookBadge" style="display:none">0</span>
+      </a>
+      <a class="sb-item" onclick="showPanel('bookings',this)">
+        <span class="sb-icon">◻</span>Все брони
+      </a>
+    </div>
+    <div class="sb-section">
+      <div class="sb-section-label">Управление</div>
+      <a class="sb-item" onclick="showPanel('calendar',this)"><span class="sb-icon">⊞</span>Календарь</a>
+      <a class="sb-item" onclick="showPanel('prices',this)"><span class="sb-icon">◎</span>Цены</a>
+      <a class="sb-item" onclick="showPanel('settings',this)"><span class="sb-icon">⊛</span>Настройки</a>
+    </div>
+  </nav>
+  <div class="sb-footer">
+    <a href="index.html" target="_blank">← На сайт</a>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+  <div class="topbar">
+    <div class="topbar-title" id="topbarTitle">Дашборд</div>
+    <div class="topbar-right">
+      <div class="topbar-date" id="topbarDate"></div>
+      <div class="topbar-status">
+        <div class="status-dot" id="apiDot"></div>
+        <span style="font-size:10px;color:var(--text-muted);letter-spacing:.1em" id="apiStatus">API</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- DASHBOARD -->
+    <div class="panel active" id="panel-dashboard">
+      <div class="stats-row" id="statsRow">
+        <div class="stat-card"><div class="stat-card-icon">◻</div><div class="stat-card-label">Всего броней</div><div class="stat-card-val" id="sTotal">—</div><div class="stat-card-sub">за всё время</div></div>
+        <div class="stat-card"><div class="stat-card-icon">◈</div><div class="stat-card-label">Этот месяц</div><div class="stat-card-val" id="sMonth">—</div><div class="stat-card-sub">бронирований</div></div>
+        <div class="stat-card"><div class="stat-card-icon">₽</div><div class="stat-card-label">Доход (месяц)</div><div class="stat-card-val" id="sRevenue">—</div><div class="stat-card-sub">рублей</div></div>
+        <div class="stat-card"><div class="stat-card-icon">⊛</div><div class="stat-card-label">Занятость</div><div class="stat-card-val" id="sOccupancy">—</div><div class="stat-card-sub">этот месяц</div></div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Ближайшие заезды</span>
+            <button class="btn btn-ghost btn-sm" onclick="showPanel('bookings',document.querySelector('.sb-item:nth-child(2)'))">Все брони</button>
+          </div>
+          <div class="card-body" style="padding:0">
+            <table class="tbl" id="upcomingTable">
+              <thead><tr><th>Гость</th><th>Заезд</th><th>Ночей</th><th>Сумма</th><th>Статус</th></tr></thead>
+              <tbody id="upcomingBody"><tr><td colspan="5" style="text-align:center;padding:32px;color:var(--text-muted)">Загрузка...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">Быстрые действия</span></div>
+          <div class="card-body" style="display:flex;flex-direction:column;gap:12px">
+            <button class="btn btn-ghost" style="justify-content:flex-start;width:100%" onclick="showPanel('calendar',document.querySelectorAll('.sb-item')[2])">⊞ &nbsp;Заблокировать даты</button>
+            <button class="btn btn-ghost" style="justify-content:flex-start;width:100%" onclick="showPanel('prices',document.querySelectorAll('.sb-item')[3])">◎ &nbsp;Изменить цены</button>
+            <button class="btn btn-ghost" style="justify-content:flex-start;width:100%" onclick="showPanel('settings',document.querySelectorAll('.sb-item')[4])">⊛ &nbsp;Код замка</button>
+            <div style="height:1px;background:var(--black-border)"></div>
+            <div style="font-size:11px;color:var(--text-muted);line-height:1.7">
+              <div style="margin-bottom:6px;color:var(--text-secondary);font-size:10px;letter-spacing:.2em;text-transform:uppercase">Код замка</div>
+              <div style="font-family:'Cormorant Garamond',serif;font-size:32px;color:var(--gold);letter-spacing:.4em" id="dashDoorCode">——</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BOOKINGS -->
+    <div class="panel" id="panel-bookings">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px">
+        <div></div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-ghost btn-sm" onclick="filterBookings('all')" id="fAll">Все</button>
+          <button class="btn btn-ghost btn-sm" onclick="filterBookings('confirmed')" id="fConf">Подтверждённые</button>
+          <button class="btn btn-ghost btn-sm" onclick="filterBookings('pending')" id="fPend">Ожидают</button>
+          <button class="btn btn-ghost btn-sm" onclick="filterBookings('cancelled')" id="fCanc">Отменённые</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-body" style="padding:0">
+          <table class="tbl">
+            <thead><tr><th>#</th><th>Гость</th><th>Телефон</th><th>Заезд</th><th>Выезд</th><th>Ночей</th><th>Сумма</th><th>Оплата</th><th>Статус</th><th></th></tr></thead>
+            <tbody id="bookingsBody"><tr><td colspan="10" style="text-align:center;padding:48px;color:var(--text-muted)">Загрузка бронирований...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- CALENDAR -->
+    <div class="panel" id="panel-calendar">
+      <div class="admin-cal-wrap">
+        <div class="admin-cal-box">
+          <div class="cal-header-admin">
+            <button class="cal-nav-btn" id="adminPrevM">‹</button>
+            <div class="cal-month-admin" id="adminCalLabel"></div>
+            <button class="cal-nav-btn" id="adminNextM">›</button>
+          </div>
+          <div class="admin-cal-dow">
+            <span>Пн</span><span>Вт</span><span>Ср</span><span>Чт</span><span>Пт</span><span>Сб</span><span>Вс</span>
+          </div>
+          <div class="admin-cal-grid" id="adminCalGrid"></div>
+          <div class="cal-legend-admin">
+            <div class="li"><div class="dot dot-client"></div>Забронировано гостем</div>
+            <div class="li"><div class="dot dot-blocked"></div>Заблокировано вами</div>
+            <div class="li"><div class="dot dot-free"></div>Выбрано</div>
+          </div>
+        </div>
+        <div class="admin-cal-info">
+          <div>
+            <div class="info-section-title">Управление датами</div>
+            <div style="font-size:11px;color:var(--text-muted);line-height:1.7;margin-bottom:16px">Кликните на даты для выбора диапазона, затем заблокируйте или разблокируйте.</div>
+            <div style="background:rgba(201,168,76,.04);border:1px solid rgba(201,168,76,.1);padding:16px;margin-bottom:16px">
+              <div style="font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--text-muted);margin-bottom:8px">Выбранный период</div>
+              <div style="font-family:'Cormorant Garamond',serif;font-size:18px;color:var(--gold)" id="adminSelDates">Выберите даты</div>
+            </div>
+            <div class="info-field">
+              <div class="info-label">Причина блокировки (необязательно)</div>
+              <input type="text" class="info-input" id="blockReason" placeholder="Например: технические работы">
+            </div>
+            <div style="display:flex;gap:8px;margin-top:16px">
+              <button class="btn btn-primary" style="flex:1;justify-content:center" onclick="blockDates()">Заблокировать</button>
+              <button class="btn btn-ghost" style="flex:1;justify-content:center" onclick="unblockDates()">Разблокировать</button>
+            </div>
+          </div>
+          <div style="border-top:1px solid var(--black-border);padding-top:20px">
+            <div class="info-section-title">Статус на сегодня</div>
+            <div id="todayStatus" style="font-size:12px;color:var(--text-secondary);line-height:1.8"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PRICES -->
+    <div class="panel" id="panel-prices">
+      <div class="card" style="max-width:700px">
+        <div class="card-header"><span class="card-title">Тарифы</span></div>
+        <div class="card-body">
+          <div class="price-grid">
+            <div class="price-input-box">
+              <div class="pib-label">Будние дни (₽/ночь)</div>
+              <input type="number" class="pib-input" id="pWeekday" value="3500">
+            </div>
+            <div class="price-input-box">
+              <div class="pib-label">Выходные (₽/ночь)</div>
+              <input type="number" class="pib-input" id="pWeekend" value="4500">
+            </div>
+            <div class="price-input-box">
+              <div class="pib-label">Уборка (₽)</div>
+              <input type="number" class="pib-input" id="pCleaning" value="1500">
+            </div>
+          </div>
+          <div style="margin-top:20px;display:flex;gap:12px">
+            <button class="btn btn-primary" onclick="savePrices()">Сохранить цены</button>
+            <button class="btn btn-ghost" onclick="loadPrices()">Сбросить</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div class="panel" id="panel-settings">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;max-width:900px">
+        <div class="card">
+          <div class="card-header"><span class="card-title">Код замка</span></div>
+          <div class="card-body">
+            <div class="door-code-display">
+              <div class="door-code-val door-code-masked" id="doorCodeAdmin">••••</div>
+              <button class="btn btn-ghost btn-sm" onclick="toggleCode()">👁</button>
+            </div>
+            <div class="info-field">
+              <div class="info-label">Новый код</div>
+              <input type="text" class="info-input" id="newCode" placeholder="Введите новый код" maxlength="8">
+            </div>
+            <button class="btn btn-primary" onclick="saveCode()" style="margin-top:8px">Обновить код</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">Описание квартиры</span></div>
+          <div class="card-body">
+            <div class="info-field">
+              <div class="info-label">Текст для сайта</div>
+              <textarea class="info-input" id="aptDesc" rows="6" placeholder="Описание апартаментов..." style="resize:vertical;line-height:1.6"></textarea>
+            </div>
+            <button class="btn btn-primary" onclick="saveDesc()" style="margin-top:8px">Сохранить</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">Уведомления</span></div>
+          <div class="card-body">
+            <div class="info-field"><div class="info-label">Email для уведомлений</div><input type="email" class="info-input" id="notifEmail" placeholder="admin@example.com"></div>
+            <div class="info-field"><div class="info-label">Telegram Chat ID</div><input type="text" class="info-input" id="notifTg" placeholder="-100xxxxxxxxxx"></div>
+            <button class="btn btn-primary" onclick="saveNotif()" style="margin-top:8px">Сохранить</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">API & Безопасность</span></div>
+          <div class="card-body">
+            <div style="font-size:11px;color:var(--text-muted);line-height:1.7;margin-bottom:16px">
+              <div style="margin-bottom:8px">Подключён к:<br><span style="color:var(--gold)" id="apiBaseDisplay">localhost (режим разработки)</span></div>
+              <div>Статус: <span id="apiStatusText" style="color:#4ade80">Активен</span></div>
+            </div>
+            <div class="info-field">
+              <div class="info-label">URL бэкенда</div>
+              <input type="text" class="info-input" id="apiBaseInput" placeholder="https://your-app.railway.app">
+            </div>
+            <div style="display:flex;gap:8px;margin-top:8px">
+              <button class="btn btn-primary" onclick="saveApiBase()">Сохранить</button>
+              <button class="btn btn-ghost" onclick="testApi()">Проверить</button>
+            </div>
+            <div style="margin-top:20px;border-top:1px solid var(--black-border);padding-top:16px">
+              <div class="info-label" style="margin-bottom:8px">Сменить пароль панели</div>
+              <input type="password" class="info-input" id="newPwd" placeholder="Новый пароль" style="margin-bottom:8px">
+              <button class="btn btn-ghost btn-sm" onclick="changePwd()">Изменить пароль</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<!-- BOOKING DETAIL MODAL -->
+<div class="modal-ov" id="bookingModal">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div class="modal-title" id="modalGuestName">Детали бронирования</div>
+    <div class="modal-booking-detail" id="modalDetails"></div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn btn-primary" onclick="confirmBooking()">✓ Подтвердить</button>
+      <button class="btn btn-ghost" onclick="closeModal()">Закрыть</button>
+      <button class="btn btn-danger" onclick="cancelBooking()">✕ Отменить</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================================
+// CONFIG — same API base as index.html
+// ============================================================
+let API_BASE = localStorage.getItem('gorodskaya-pauza_api_base') || 'https://apart-booking-v2-production.up.railway.app';
+let ADMIN_PWD = localStorage.getItem('gorodskaya-pauza_admin_pwd') || 'admin2024'; // Default pwd
+
+// ============================================================
+// AUTH
+// ============================================================
+function doLogin() {
+  const pwd = document.getElementById('loginPwd').value;
+  if (pwd === ADMIN_PWD) {
+    document.getElementById('loginScreen').style.display = 'none';
+    localStorage.setItem('gorodskaya-pauza_authed', '1');
+    initAdmin();
+  } else {
+    document.getElementById('loginErr').style.display = 'block';
+    setTimeout(() => document.getElementById('loginErr').style.display = 'none', 2000);
+  }
+}
+
+// Auto-login if already authed this session
+if (localStorage.getItem('gorodskaya-pauza_authed')) {
+  document.getElementById('loginScreen').style.display = 'none';
+  // init after DOM ready
+  document.addEventListener('DOMContentLoaded', initAdmin);
+}
+
+// ============================================================
+// DATA STATE
+// ============================================================
+let allBookings = [];
+let config = { weekday: 3500, weekend: 4500, cleaning: 1500, door_code: '0000' };
+let adminCalYear, adminCalMonth;
+let adminSelStart = null, adminSelEnd = null;
+let selectedBookingId = null;
+
+// Demo bookings (used when API unavailable)
+const DEMO_BOOKINGS = [
+  { id:'AUR-A1B2C3', guest_name:'Анна Петрова', guest_phone:'+7 901 234-56-78', guest_email:'anna@mail.ru', check_in:'2026-06-10', check_out:'2026-06-13', nights:3, total_price:12000, payment_method:'card', status:'confirmed', guests_count:2, notes:'' },
+  { id:'AUR-D4E5F6', guest_name:'Михаил Иванов', guest_phone:'+7 902 345-67-89', guest_email:'misha@gmail.com', check_in:'2026-06-18', check_out:'2026-06-20', nights:2, total_price:9000, payment_method:'sbp', status:'confirmed', guests_count:2, notes:'Поздний заезд' },
+  { id:'AUR-G7H8I9', guest_name:'Елена Смирнова', guest_phone:'+7 903 456-78-90', guest_email:'elena@yandex.ru', check_in:'2026-06-25', check_out:'2026-06-28', nights:3, total_price:15000, payment_method:'card', status:'pending', guests_count:3, notes:'Есть кошка' },
+  { id:'AUR-J0K1L2', guest_name:'Дмитрий Козлов', guest_phone:'+7 904 567-89-01', guest_email:'dmitry@mail.ru', check_in:'2026-07-04', check_out:'2026-07-07', nights:3, total_price:13500, payment_method:'cash', status:'confirmed', guests_count:1, notes:'' },
+  { id:'AUR-M3N4O5', guest_name:'Ольга Новикова', guest_phone:'+7 905 678-90-12', guest_email:'olga@gmail.com', check_in:'2026-05-20', check_out:'2026-05-23', nights:3, total_price:10500, payment_method:'card', status:'confirmed', guests_count:2, notes:'' },
+];
+
+// Admin-blocked dates (stored locally)
+let adminBlocked = JSON.parse(localStorage.getItem('gorodskaya-pauza_blocked') || '[]');
+
+// ============================================================
+// INIT
+// ============================================================
+async function initAdmin() {
+  // Update topbar date
+  document.getElementById('topbarDate').textContent = new Date().toLocaleDateString('ru-RU', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
+
+  // Load api base setting
+  const saved = localStorage.getItem('gorodskaya-pauza_api_base');
+  if (saved) {
+    document.getElementById('apiBaseInput').value = saved;
+    document.getElementById('apiBaseDisplay').textContent = saved;
+  }
+
+  // Check API
+  checkApi();
+
+  // Load data
+  await loadAll();
+
+  // Init admin calendar
+  const now = new Date();
+  adminCalYear = now.getFullYear();
+  adminCalMonth = now.getMonth();
+  renderAdminCal();
+
+  // Calendar nav
+  document.getElementById('adminPrevM').onclick = () => { adminCalMonth--; if(adminCalMonth<0){adminCalMonth=11;adminCalYear--;} renderAdminCal(); };
+  document.getElementById('adminNextM').onclick = () => { adminCalMonth++; if(adminCalMonth>11){adminCalMonth=0;adminCalYear++;} renderAdminCal(); };
+}
+
+async function checkApi() {
+  try {
+    const r = await fetch(`${API_BASE}/api/prices`, {signal: AbortSignal.timeout(3000)});
+    if (r.ok) {
+      setApiStatus(true);
+      return true;
+    }
+  } catch(e) {}
+  setApiStatus(false);
+  return false;
+}
+
+function setApiStatus(online) {
+  const dot = document.getElementById('apiDot');
+  const txt = document.getElementById('apiStatus');
+  const txtS = document.getElementById('apiStatusText');
+  if (online) {
+    dot.className = 'status-dot';
+    txt.textContent = 'API онлайн';
+    if(txtS) txtS.textContent = 'Активен';
+    if(txtS) txtS.style.color = '#4ade80';
+  } else {
+    dot.className = 'status-dot offline';
+    txt.textContent = 'Демо-режим';
+    if(txtS) txtS.textContent = 'Демо-режим';
+    if(txtS) txtS.style.color = 'var(--gold)';
+  }
+}
+
+async function loadAll() {
+  await Promise.all([loadBookings(), loadPrices(), loadDoorCode()]);
+  updateDashboard();
+}
+
+// ============================================================
+// API CALLS with demo fallback
+// ============================================================
+async function apiGet(path) {
+  const r = await fetch(`${API_BASE}${path}`, {signal: AbortSignal.timeout(4000)});
+  if (!r.ok) throw new Error(r.status);
+  return r.json();
+}
+
+async function apiPost(path, data) {
+  const r = await fetch(`${API_BASE}${path}`, {
+    method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data),
+    signal: AbortSignal.timeout(4000)
+  });
+  if (!r.ok) throw new Error(r.status);
+  return r.json();
+}
+
+async function apiPut(path, data) {
+  const r = await fetch(`${API_BASE}${path}`, {
+    method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data),
+    signal: AbortSignal.timeout(4000)
+  });
+  if (!r.ok) throw new Error(r.status);
+  return r.json();
+}
+
+// BOOKINGS
+async function loadBookings() {
+  try {
+    const data = await apiGet('/api/bookings?admin=1');
+    allBookings = Array.isArray(data) ? data : (data.bookings || data);
+  } catch(e) {
+    allBookings = [...DEMO_BOOKINGS];
+  }
+  renderBookingsTable(allBookings);
+}
+
+// PRICES
+async function loadPrices() {
+  try {
+    const data = await apiGet('/api/prices');
+    config.weekday  = data.weekday  || data.weekday_price  || config.weekday;
+    config.weekend  = data.weekend  || data.weekend_price  || config.weekend;
+    config.cleaning = data.cleaning || data.cleaning_price || config.cleaning;
+  } catch(e) {}
+  document.getElementById('pWeekday').value  = config.weekday;
+  document.getElementById('pWeekend').value  = config.weekend;
+  document.getElementById('pCleaning').value = config.cleaning;
+}
+
+async function savePrices() {
+  const payload = {
+    weekday:   parseInt(document.getElementById('pWeekday').value),
+    weekend:   parseInt(document.getElementById('pWeekend').value),
+    cleaning:  parseInt(document.getElementById('pCleaning').value),
+  };
+  try {
+    await apiPost('/api/prices', payload);
+    Object.assign(config, payload);
+    showToast('Цены сохранены', 'gold');
+  } catch(e) {
+    Object.assign(config, payload);
+    showToast('Сохранено локально (API недоступен)', 'gold');
+  }
+}
+
+// DOOR CODE
+async function loadDoorCode() {
+  try {
+    const data = await apiGet('/api/door-code');
+    config.door_code = data.code || data.door_code || config.door_code;
+  } catch(e) {}
+  document.getElementById('doorCodeAdmin').textContent = config.door_code;
+  document.getElementById('dashDoorCode').textContent = config.door_code;
+}
+
+async function saveCode() {
+  const code = document.getElementById('newCode').value.trim();
+  if (!code) return showToast('Введите код', 'err');
+  try {
+    await apiPost('/api/door-code', { code });
+  } catch(e) {}
+  config.door_code = code;
+  document.getElementById('doorCodeAdmin').textContent = code;
+  document.getElementById('dashDoorCode').textContent = code;
+  document.getElementById('newCode').value = '';
+  showToast('Код замка обновлён', 'gold');
+}
+
+let codeRevealed = false;
+function toggleCode() {
+  codeRevealed = !codeRevealed;
+  document.getElementById('doorCodeAdmin').classList.toggle('revealed', codeRevealed);
+}
+
+// DESCRIPTION
+async function loadDesc() {
+  try {
+    const r = await fetch(`${API_BASE}/api/description`);
+    const t = await r.text();
+    document.getElementById('aptDesc').value = t;
+  } catch(e) {}
+}
+
+async function saveDesc() {
+  const desc = document.getElementById('aptDesc').value;
+  try {
+    await apiPost('/api/description', { text: desc });
+    showToast('Описание сохранено', 'gold');
+  } catch(e) {
+    showToast('Сохранено (API недоступен)', 'gold');
+  }
+}
+
+// BLOCKED DATES
+async function blockDates() {
+  if (!adminSelStart) return showToast('Выберите даты', 'err');
+  const end = adminSelEnd || adminSelStart;
+  const dates = [];
+  const s = new Date(adminSelStart), e = new Date(end);
+  for (let d = new Date(s); d <= e; d.setDate(d.getDate()+1)) {
+    const ds = fmtDate(d);
+    if (!adminBlocked.includes(ds)) {
+      adminBlocked.push(ds);
+      dates.push(ds);
+    }
+  }
+  localStorage.setItem('gorodskaya-pauza_blocked', JSON.stringify(adminBlocked));
+  try {
+    await apiPost('/api/blocked-dates', { dates, reason: document.getElementById('blockReason').value });
+  } catch(e) {}
+  adminSelStart = null; adminSelEnd = null;
+  renderAdminCal();
+  showToast(`Заблокировано ${dates.length} дней`, 'gold');
+}
+
+async function unblockDates() {
+  if (!adminSelStart) return showToast('Выберите даты', 'err');
+  const end = adminSelEnd || adminSelStart;
+  const s = new Date(adminSelStart), e = new Date(end);
+  for (let d = new Date(s); d <= e; d.setDate(d.getDate()+1)) {
+    const ds = fmtDate(d);
+    adminBlocked = adminBlocked.filter(x => x !== ds);
+  }
+  localStorage.setItem('gorodskaya-pauza_blocked', JSON.stringify(adminBlocked));
+  try {
+    await apiPost('/api/unblock-dates', { start: adminSelStart, end: end });
+  } catch(e) {}
+  adminSelStart = null; adminSelEnd = null;
+  renderAdminCal();
+  showToast('Даты разблокированы', 'gold');
+}
+
+// ============================================================
+// DASHBOARD STATS
+// ============================================================
+function updateDashboard() {
+  const now = new Date();
+  const thisMonth = now.getMonth();
+  const thisYear = now.getFullYear();
+
+  const monthBookings = allBookings.filter(b => {
+    const d = new Date(b.check_in);
+    return d.getMonth() === thisMonth && d.getFullYear() === thisYear;
+  });
+
+  const revenue = monthBookings.reduce((sum,b) => sum + (b.total_price||0), 0);
+
+  // Count booked nights this month
+  const daysInMonth = new Date(thisYear, thisMonth+1, 0).getDate();
+  let bookedDays = 0;
+  for (let d = 1; d <= daysInMonth; d++) {
+    const ds = `${thisYear}-${String(thisMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    if (allBookings.some(b => b.check_in <= ds && b.check_out > ds && b.status !== 'cancelled')) bookedDays++;
+  }
+
+  document.getElementById('sTotal').textContent = allBookings.length;
+  document.getElementById('sMonth').textContent = monthBookings.length;
+  document.getElementById('sRevenue').textContent = (revenue/1000).toFixed(0) + 'K';
+  document.getElementById('sOccupancy').textContent = Math.round(bookedDays/daysInMonth*100) + '%';
+
+  // Upcoming bookings
+  const upcoming = allBookings
+    .filter(b => new Date(b.check_in) >= now && b.status !== 'cancelled')
+    .sort((a,b) => new Date(a.check_in)-new Date(b.check_in))
+    .slice(0, 5);
+
+  const tbody = document.getElementById('upcomingBody');
+  if (upcoming.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:32px;color:var(--text-muted)">Нет предстоящих броней</td></tr>';
+  } else {
+    tbody.innerHTML = upcoming.map(b => `
+      <tr onclick="openBookingModal(${JSON.stringify(b).split('"').join("'").replace(/'/g,"&#39;")})" style="cursor:pointer">
+        <td><strong style="color:var(--text-primary)">${b.guest_name}</strong></td>
+        <td>${fmtDateRu(b.check_in)}</td>
+        <td>${b.nights}</td>
+        <td style="color:var(--gold)">₽${(b.total_price||0).toLocaleString('ru')}</td>
+        <td>${statusBadge(b.status)}</td>
+      </tr>
+    `).join('');
+  }
+
+  // Today status
+  const todayDs = fmtDate(now);
+  const todayBook = allBookings.find(b => b.check_in <= todayDs && b.check_out > todayDs && b.status !== 'cancelled');
+  const tsEl = document.getElementById('todayStatus');
+  if (todayBook) {
+    tsEl.innerHTML = `<span style="color:#4ade80">● Занято</span><br>Гость: ${todayBook.guest_name}<br>Выезд: ${fmtDateRu(todayBook.check_out)}`;
+  } else {
+    tsEl.innerHTML = `<span style="color:var(--gold)">○ Свободно</span><br>Нет активных заездов`;
+  }
+
+  // Badge
+  const pending = allBookings.filter(b=>b.status==='pending').length;
+  const badge = document.getElementById('newBookBadge');
+  badge.textContent = pending;
+  badge.style.display = pending > 0 ? 'inline-block' : 'none';
+}
+
+// ============================================================
+// BOOKINGS TABLE
+// ============================================================
+let currentFilter = 'all';
+
+function filterBookings(f) {
+  currentFilter = f;
+  ['All','Conf','Pend','Canc'].forEach(x => {
+    document.getElementById('f'+x).className = 'btn btn-ghost btn-sm';
+  });
+  document.getElementById('f'+f.charAt(0).toUpperCase()+f.slice(1)).className = 'btn btn-primary btn-sm';
+
+  const filtered = f === 'all' ? allBookings : allBookings.filter(b => b.status === f);
+  renderBookingsTable(filtered);
+}
+
+function renderBookingsTable(list) {
+  const tbody = document.getElementById('bookingsBody');
+  if (!list || list.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:48px;color:var(--text-muted)">Нет бронирований</td></tr>';
+    return;
+  }
+  const sorted = [...list].sort((a,b) => new Date(b.check_in)-new Date(a.check_in));
+  tbody.innerHTML = sorted.map((b,i) => `
+    <tr onclick="openBookingModal(${encodeBooking(b)})" style="cursor:pointer">
+      <td style="color:var(--gold-muted);font-size:10px">${b.id||i+1}</td>
+      <td><strong style="color:var(--text-primary)">${b.guest_name}</strong></td>
+      <td>${b.guest_phone||'—'}</td>
+      <td>${fmtDateRu(b.check_in)}</td>
+      <td>${fmtDateRu(b.check_out)}</td>
+      <td>${b.nights}</td>
+      <td style="color:var(--gold)">₽${(b.total_price||0).toLocaleString('ru')}</td>
+      <td>${payBadge(b.payment_method)}</td>
+      <td>${statusBadge(b.status)}</td>
+      <td><button class="btn btn-ghost btn-icon" onclick="event.stopPropagation();openBookingModal(${encodeBooking(b)})">›</button></td>
+    </tr>
+  `).join('');
+}
+
+function encodeBooking(b) {
+  return "'"+btoa(encodeURIComponent(JSON.stringify(b)))+"'";
+}
+
+function openBookingModal(encoded) {
+  let b;
+  try { b = JSON.parse(decodeURIComponent(atob(encoded))); }
+  catch(e) { return; }
+  selectedBookingId = b.id;
+  document.getElementById('modalGuestName').textContent = b.guest_name;
+  document.getElementById('modalDetails').innerHTML = [
+    ['ID брони', b.id||'—'],
+    ['Email', b.guest_email||'—'],
+    ['Телефон', b.guest_phone||'—'],
+    ['Заезд', fmtDateRu(b.check_in)],
+    ['Выезд', fmtDateRu(b.check_out)],
+    ['Ночей', b.nights],
+    ['Гостей', b.guests_count||'—'],
+    ['Сумма', '₽'+(b.total_price||0).toLocaleString('ru')],
+    ['Оплата', b.payment_method||'—'],
+    ['Статус', statusBadge(b.status)],
+    ['Пожелания', b.notes||'—'],
+  ].map(([l,v]) => `<div class="mbd-box"><div class="mbd-label">${l}</div><div class="mbd-val">${v}</div></div>`).join('');
+  document.getElementById('bookingModal').classList.add('open');
+}
+
+async function confirmBooking() {
+  if (!selectedBookingId) return;
+  try { await apiPut(`/api/bookings/${selectedBookingId}`, {status:'confirmed'}); } catch(e) {}
+  const b = allBookings.find(x=>x.id===selectedBookingId);
+  if (b) b.status = 'confirmed';
+  closeModal(); renderBookingsTable(allBookings); updateDashboard();
+  showToast('Бронь подтверждена', 'gold');
+}
+
+async function cancelBooking() {
+  if (!selectedBookingId) return;
+  if (!confirm('Отменить бронирование?')) return;
+  try { await apiPut(`/api/bookings/${selectedBookingId}`, {status:'cancelled'}); } catch(e) {}
+  const b = allBookings.find(x=>x.id===selectedBookingId);
+  if (b) b.status = 'cancelled';
+  closeModal(); renderBookingsTable(allBookings); updateDashboard();
+  showToast('Бронь отменена', 'err');
+}
+
+function closeModal() { document.getElementById('bookingModal').classList.remove('open'); }
+
+// ============================================================
+// ADMIN CALENDAR
+// ============================================================
+const MONTHS_RU = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+
+function fmtDate(d) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function fmtDateRu(ds) {
+  if (!ds) return '—';
+  const d = new Date(ds+'T00:00:00');
+  return d.toLocaleDateString('ru-RU', {day:'numeric', month:'short', year:'2-digit'});
+}
+
+function renderAdminCal() {
+  document.getElementById('adminCalLabel').textContent = `${MONTHS_RU[adminCalMonth]} ${adminCalYear}`;
+  const grid = document.getElementById('adminCalGrid');
+  grid.innerHTML = '';
+
+  const firstDow = new Date(adminCalYear, adminCalMonth, 1).getDay();
+  const offset = firstDow === 0 ? 6 : firstDow - 1;
+  const dim = new Date(adminCalYear, adminCalMonth+1, 0).getDate();
+  const today = new Date(); today.setHours(0,0,0,0);
+  const todayS = fmtDate(today);
+
+  // Collect client-booked dates
+  const clientBooked = new Set();
+  allBookings.filter(b=>b.status!=='cancelled').forEach(b=>{
+    const s=new Date(b.check_in), e=new Date(b.check_out);
+    for(let d=new Date(s);d<e;d.setDate(d.getDate()+1)) clientBooked.add(fmtDate(d));
+  });
+
+  for(let i=0;i<offset;i++){const e=document.createElement('div');e.className='aday empty';grid.appendChild(e);}
+
+  for(let d=1;d<=dim;d++){
+    const ds=`${adminCalYear}-${String(adminCalMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const el=document.createElement('div');
+    el.className='aday';
+    el.textContent=d;
+    if(ds===todayS) el.classList.add('today');
+    const isPast = new Date(adminCalYear,adminCalMonth,d) < today;
+    if(isPast) el.classList.add('past');
+    else if(clientBooked.has(ds)) el.classList.add('booked-client');
+    else if(adminBlocked.includes(ds)) el.classList.add('blocked-admin');
+
+    if(adminSelStart && adminSelEnd && ds>=adminSelStart && ds<=adminSelEnd) el.classList.add('selected-admin');
+    else if(adminSelStart && !adminSelEnd && ds===adminSelStart) el.classList.add('selected-admin');
+
+    if(!isPast) {
+      el.addEventListener('click', () => onAdminDay(ds));
+    }
+    grid.appendChild(el);
+  }
+
+  // Update selected display
+  const el2 = document.getElementById('adminSelDates');
+  if(adminSelStart && adminSelEnd) el2.textContent = `${fmtDateRu(adminSelStart)} → ${fmtDateRu(adminSelEnd)}`;
+  else if(adminSelStart) el2.textContent = fmtDateRu(adminSelStart) + ' → ...';
+  else el2.textContent = 'Выберите даты';
+}
+
+function onAdminDay(ds) {
+  if(!adminSelStart || (adminSelStart && adminSelEnd)) { adminSelStart=ds; adminSelEnd=null; }
+  else { if(ds<=adminSelStart) { adminSelStart=ds; adminSelEnd=null; } else adminSelEnd=ds; }
+  renderAdminCal();
+}
+
+// ============================================================
+// SETTINGS
+// ============================================================
+function saveNotif() { showToast('Настройки уведомлений сохранены', 'gold'); }
+
+function saveApiBase() {
+  const v = document.getElementById('apiBaseInput').value.trim();
+  API_BASE = v;
+  localStorage.setItem('gorodskaya-pauza_api_base', v);
+  document.getElementById('apiBaseDisplay').textContent = v || 'localhost (режим разработки)';
+  checkApi();
+  showToast('URL сохранён', 'gold');
+}
+
+async function testApi() {
+  const ok = await checkApi();
+  showToast(ok ? '✓ API доступен' : '✗ API недоступен', ok ? 'gold' : 'err');
+}
+
+function changePwd() {
+  const pwd = document.getElementById('newPwd').value;
+  if(pwd.length < 4) return showToast('Минимум 4 символа', 'err');
+  ADMIN_PWD = pwd;
+  localStorage.setItem('gorodskaya-pauza_admin_pwd', pwd);
+  document.getElementById('newPwd').value = '';
+  showToast('Пароль изменён', 'gold');
+}
+
+// ============================================================
+// UI HELPERS
+// ============================================================
+function showPanel(id, el) {
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('panel-'+id).classList.add('active');
+  document.querySelectorAll('.sb-item').forEach(i=>i.classList.remove('active'));
+  if(el) el.classList.add('active');
+  const titles = {dashboard:'Дашборд',bookings:'Все брони',calendar:'Управление календарём',prices:'Цены',settings:'Настройки'};
+  document.getElementById('topbarTitle').textContent = titles[id]||id;
+  if(id==='settings') { loadDesc(); }
+}
+
+function statusBadge(s) {
+  const map = {confirmed:'<span class="badge badge-green">Подтверждено</span>', pending:'<span class="badge badge-gold">Ожидает</span>', cancelled:'<span class="badge badge-red">Отменено</span>'};
+  return map[s]||s;
+}
+
+function payBadge(m) {
+  const map = {card:'<span class="badge badge-blue">Карта</span>', sbp:'<span class="badge badge-gold">СБП</span>', cash:'<span class="badge badge-green">Нал.</span>'};
+  return map[m]||m;
+}
+
+function showToast(msg, type='gold') {
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className=`toast ${type} show`;
+  setTimeout(()=>t.classList.remove('show'),3000);
+}
+
+// ============================================================
+// KEYBOARD
+// ============================================================
+document.addEventListener('keydown', e => {
+  if(e.key==='Escape') { closeModal(); }
+  if(e.key==='Enter' && document.getElementById('loginScreen').style.display!=='none') { doLogin(); }
+});
+
+// Check if login needed
+if(!localStorage.getItem('gorodskaya-pauza_authed')) {
+  document.getElementById('loginPwd').focus();
+} else {
+  initAdmin();
+}
+</script>
+</body>
+</html>
