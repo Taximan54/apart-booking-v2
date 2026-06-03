@@ -273,36 +273,37 @@ async def create_booking(b: BookingCreate):
     )
 
     conn = get_db()
-    # Добавляем недостающие колонки если их нет
-    try:
-        conn.execute("ALTER TABLE bookings ADD COLUMN guest_email TEXT DEFAULT ''")
-    except Exception: pass
-    try:
-        conn.execute("ALTER TABLE bookings ADD COLUMN guests_count INTEGER DEFAULT 2")
-    except Exception: pass
-    try:
-        conn.execute("ALTER TABLE bookings ADD COLUMN notes TEXT DEFAULT ''")
-    except Exception: pass
-    try:
-        conn.execute("ALTER TABLE bookings ADD COLUMN payment_method TEXT DEFAULT 'card'")
-    except Exception: pass
-    try:
-        conn.execute("ALTER TABLE bookings ADD COLUMN total_price INTEGER DEFAULT 0")
-    except Exception: pass
-    try:
-        conn.execute("ALTER TABLE bookings ADD COLUMN status TEXT DEFAULT 'confirmed'")
-    except Exception: pass
-    try:
-        conn.execute("ALTER TABLE bookings ADD COLUMN created_at TEXT DEFAULT ''")
-    except Exception: pass
+
+    # Узнаём какие колонки реально есть в таблице
+    existing = [row[1] for row in conn.execute("PRAGMA table_info(bookings)").fetchall()]
+
+    # Добавляем недостающие колонки
+    new_columns = {
+        "nights":         "INTEGER DEFAULT 0",
+        "guest_email":    "TEXT DEFAULT ''",
+        "guests_count":   "INTEGER DEFAULT 2",
+        "notes":          "TEXT DEFAULT ''",
+        "payment_method": "TEXT DEFAULT 'card'",
+        "total_price":    "INTEGER DEFAULT 0",
+        "status":         "TEXT DEFAULT 'confirmed'",
+        "created_at":     "TEXT DEFAULT ''",
+        "source":         "TEXT DEFAULT 'website'",
+    }
+    for col, col_type in new_columns.items():
+        if col not in existing:
+            try:
+                conn.execute(f"ALTER TABLE bookings ADD COLUMN {col} {col_type}")
+            except Exception:
+                pass
     conn.commit()
 
+    # Вставляем запись
     conn.execute("""
         INSERT INTO bookings (id, check_in, check_out, nights,
             guest_name, guest_phone, guest_email,
             guests_count, notes, payment_method, total_price,
-            status, created_at)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,'confirmed',?)
+            status, created_at, source)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,'confirmed',?,'website')
     """, (
         booking_id, b.check_in, b.check_out, b.nights,
         b.guest_name, b.guest_phone, b.guest_email,
