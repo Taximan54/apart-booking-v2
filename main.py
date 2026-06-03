@@ -1,11 +1,15 @@
 import asyncio
 import os
 import json
+import sqlite3
 from datetime import datetime, timezone, timedelta
+from typing import Optional
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
+from pydantic import BaseModel
 from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
 
@@ -33,6 +37,14 @@ init_db()
 # =====================================================
 
 app = FastAPI()
+
+# CORS — разрешаем запросы с сайта
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # =====================================================
 # STATIC FILES
@@ -63,6 +75,48 @@ def now_nsk():
     return datetime.now(NSK)
 
 # =====================================================
+# PYDANTIC MODELS
+# =====================================================
+
+class Prices(BaseModel):
+    weekday: int
+    weekend: int
+    cleaning: int
+
+class DoorCode(BaseModel):
+    code: str
+
+class Description(BaseModel):
+    text: str
+
+class BookingCreate(BaseModel):
+    check_in: str
+    check_out: str
+    nights: int
+    guest_name: str
+    guest_phone: str
+    guest_email: str
+    guests_count: int = 2
+    notes: str = ""
+    payment_method: str = "card"
+    total_price: int = 0
+
+class BookingUpdate(BaseModel):
+    status: str
+
+# =====================================================
+# CONSTANTS
+# =====================================================
+
+DATA_DIR    = "/data"
+PRICE_FILE  = f"{DATA_DIR}/prices.json"
+CODE_FILE   = f"{DATA_DIR}/door_code.json"
+DESC_FILE   = f"{DATA_DIR}/description.txt"
+DB_FILE     = f"{DATA_DIR}/bookings.db"
+
+DEFAULT_PRICES = {"weekday": 3500, "weekend": 4500, "cleaning": 1500}
+
+# =====================================================
 # HOME PAGE
 # =====================================================
 
@@ -71,7 +125,7 @@ async def home():
     return """
     <html>
         <head>
-            <title>Premium Apart</title>
+            <title>Городская Пауза</title>
             <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
             <style>
                 body { margin:0; padding:40px; font-family:Arial; background:#f7f7f7; color:#111; }
@@ -82,7 +136,7 @@ async def home():
         </head>
         <body>
             <div class="card">
-                <h1>🏠 Premium Apart</h1>
+                <h1>🏠 Городская Пауза</h1>
                 <p class="status">System Online 🚀</p>
                 <p>SQLite Database Connected</p>
             </div>
@@ -91,7 +145,15 @@ async def home():
     """
 
 # =====================================================
-# API BOOKED DATES
+# HEALTH CHECK
+# =====================================================
+
+@app.get("/health")
+async def health():
+    return {"status": "ok", "database": "sqlite", "app": "gorodskaya-pauza"}
+
+# =====================================================
+# API — BOOKED DATES (старый эндпоинт, оставляем)
 # =====================================================
 
 @app.get("/api/booked-dates")
@@ -99,16 +161,8 @@ async def booked_dates():
     return get_booked_ranges()
 
 # =====================================================
-# API PRICES
+# API — PRICES
 # =====================================================
-
-PRICE_FILE = "/data/prices.json"
-
-DEFAULT_PRICES = {
-    "weekday": 3500,
-    "weekend": 4500,
-    "cleaning": 1500
-}
 
 @app.get("/api/prices")
 async def get_prices():
@@ -117,13 +171,144 @@ async def get_prices():
             return json.load(f)
     return DEFAULT_PRICES
 
+@app.post("/api/prices")
+async def set_prices(p: Prices):
+    with open(PRICE_FILE, "w") as f:
+        json.dump(p.dict(), f, ensure_ascii=False)
+    return {"ok": True}
+
 # =====================================================
-# HEALTH CHECK
+# API — DOOR CODE
 # =====================================================
 
-@app.get("/health")
-async def health():
-    return {"status": "ok", "database": "sqlite", "app": "premium-apart"}
+@app.get("/api/door-code")
+async def get_door_code():
+    if os.path.exists(CODE_FILE):
+        with open(CODE_FILE, "r") as f:
+            return json.load(f)
+    return {"code": load_door_code()}
+
+@app.post("/api/door-code")
+async def set_door_code(d: DoorCode):
+    with open(CODE_FILE, "w") as f:
+        json.dump({"code": d.code}, f)
+    return {"ok": True}
+
+# =====================================================
+# API — DESCRIPTION
+# =====================================================
+
+@app.get("/api/description")
+async def get_description():
+    if os.path.exists(DESC_FILE):
+        with open(DESC_FILE, "r") as f:
+            return f.read()
+    return "Изысканные апартаменты в центре города с дизайнерским ремонтом."
+
+@app.post("/api/description")
+async def set_description(d: Description):
+    with open(DESC_FILE, "w") as f:
+        f.write(d.text)
+    return {"ok": True}
+
+# =====================================================
+# API — BOOKINGS
+# =====================================================
+
+def get_db():
+    conn = sqlite3.connect(DB_FILE)
+    conn.row_factory = sqlite3.Row
+    # Создаём таблицу если нет
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS bookings (
+            id TEXT PRIMARY KEY,
+            check_in TEXT, check_out TEXT, nights INTEGER,
+            guest_name TEXT, guest_phone TEXT, guest_email TEXT,
+            guests_count INTEGER, notes TEXT,
+            payment_method TEXT, total_price INTEGER,
+            status TEXT DEFAULT 'confirmed',
+            created_at TEXT
+        )
+    """)
+    conn.commit()
+    return conn
+
+@app.get("/api/bookings")
+async def get_bookings(admin: Optional[str] = None):
+    conn = get_db()
+    rows = conn.execute(
+        "SELECT * FROM bookings ORDER BY check_in DESC"
+    ).fetchall()
+    conn.close()
+    bookings = [dict(r) for r in rows]
+
+    if admin:
+        # Для админки — полные данные
+        return bookings
+    else:
+        # Для сайта — только занятые даты
+        booked = []
+        for b in bookings:
+            if b.get("status") != "cancelled":
+                s = datetime.strptime(b["check_in"], "%Y-%m-%d")
+                e = datetime.strptime(b["check_out"], "%Y-%m-%d")
+                d = s
+                while d < e:
+                    booked.append(d.strftime("%Y-%m-%d"))
+                    d += timedelta(days=1)
+        return {"booked_dates": booked}
+
+@app.post("/api/bookings")
+async def create_booking(b: BookingCreate):
+    import random, string
+    booking_id = "ГП-" + "".join(
+        random.choices(string.ascii_uppercase + string.digits, k=6)
+    )
+
+    conn = get_db()
+    conn.execute("""
+        INSERT INTO bookings VALUES (?,?,?,?,?,?,?,?,?,?,?,'confirmed',?)
+    """, (
+        booking_id, b.check_in, b.check_out, b.nights,
+        b.guest_name, b.guest_phone, b.guest_email,
+        b.guests_count, b.notes, b.payment_method, b.total_price,
+        datetime.now().isoformat()
+    ))
+    conn.commit()
+    conn.close()
+
+    # Уведомление администраторам
+    for admin_id in ADMIN_IDS:
+        try:
+            await bot.send_message(
+                admin_id,
+                f"🆕 Новая бронь с сайта!\n\n"
+                f"📋 #{booking_id}\n"
+                f"👤 {b.guest_name}\n"
+                f"📞 {b.guest_phone}\n"
+                f"📧 {b.guest_email}\n"
+                f"📅 {b.check_in} → {b.check_out} ({b.nights} ночей)\n"
+                f"👥 Гостей: {b.guests_count}\n"
+                f"💳 Оплата: {b.payment_method}\n"
+                f"💰 Сумма: {b.total_price:,} ₽\n"
+                f"📝 {b.notes or '—'}"
+            )
+        except Exception:
+            pass
+
+    door_code = load_door_code()
+    return {"booking_id": booking_id, "door_code": door_code, "status": "confirmed"}
+
+@app.put("/api/bookings/{booking_id}")
+async def update_booking(booking_id: str, u: BookingUpdate):
+    conn = get_db()
+    conn.execute(
+        "UPDATE bookings SET status=? WHERE id=?",
+        (u.status, booking_id)
+    )
+    conn.commit()
+    conn.close()
+    return {"ok": True}
 
 # =====================================================
 # SCHEDULER — автоматические уведомления (время NSK)
@@ -168,7 +353,6 @@ async def send_notifications():
                         except Exception:
                             pass
 
-                # Уведомление администратору о выездах
                 if bookings:
                     text = "🚪 Сегодня выезды:\n\n"
                     for b in bookings:
@@ -246,7 +430,6 @@ async def send_notifications():
         except Exception as e:
             print(f"⚠️ Ошибка планировщика: {e}")
 
-        # Ждём 30 минут до следующей проверки
         await asyncio.sleep(30 * 60)
 
 
