@@ -268,49 +268,50 @@ async def get_bookings(admin: Optional[str] = None):
 @app.post("/api/bookings")
 async def create_booking(b: BookingCreate):
     import random, string
-    booking_id = "ГП-" + "".join(
-        random.choices(string.ascii_uppercase + string.digits, k=6)
-    )
+
+    # Реальная структура таблицы от бота:
+    # id, user_id, username, check_in, check_out, guests, status, created_at
+    # Добавляем недостающие колонки через ALTER TABLE
 
     conn = get_db()
 
-    # Узнаём какие колонки реально есть в таблице
-    existing = [row[1] for row in conn.execute("PRAGMA table_info(bookings)").fetchall()]
-
-    # Добавляем недостающие колонки
-    new_columns = {
-        "nights":         "INTEGER DEFAULT 0",
+    extra_columns = {
+        "guest_name":     "TEXT DEFAULT ''",
+        "guest_phone":    "TEXT DEFAULT ''",
         "guest_email":    "TEXT DEFAULT ''",
         "guests_count":   "INTEGER DEFAULT 2",
         "notes":          "TEXT DEFAULT ''",
         "payment_method": "TEXT DEFAULT 'card'",
         "total_price":    "INTEGER DEFAULT 0",
-        "status":         "TEXT DEFAULT 'confirmed'",
-        "created_at":     "TEXT DEFAULT ''",
         "source":         "TEXT DEFAULT 'website'",
     }
-    for col, col_type in new_columns.items():
-        if col not in existing:
-            try:
-                conn.execute(f"ALTER TABLE bookings ADD COLUMN {col} {col_type}")
-            except Exception:
-                pass
-    conn.commit()
+    for col, col_type in extra_columns.items():
+        try:
+            conn.execute(f"ALTER TABLE bookings ADD COLUMN {col} {col_type}")
+            conn.commit()
+        except Exception:
+            pass  # колонка уже существует
 
-    # Вставляем запись
+    # Генерируем читаемый ID для сайта (храним в username)
+    booking_ref = "ГП-" + "".join(
+        random.choices(string.ascii_uppercase + string.digits, k=6)
+    )
+
     conn.execute("""
-        INSERT INTO bookings (id, check_in, check_out, nights,
+        INSERT INTO bookings (
+            user_id, username, check_in, check_out, guests, status,
             guest_name, guest_phone, guest_email,
-            guests_count, notes, payment_method, total_price,
-            status, created_at, source)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,'confirmed',?,'website')
+            guests_count, notes, payment_method, total_price, source
+        )
+        VALUES (0, ?, ?, ?, ?, 'confirmed', ?, ?, ?, ?, ?, ?, ?, 'website')
     """, (
-        booking_id, b.check_in, b.check_out, b.nights,
+        booking_ref,
+        b.check_in, b.check_out, b.guests_count,
         b.guest_name, b.guest_phone, b.guest_email,
-        b.guests_count, b.notes, b.payment_method, b.total_price,
-        datetime.now().isoformat()
+        b.guests_count, b.notes, b.payment_method, b.total_price
     ))
     conn.commit()
+    booking_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
     conn.close()
 
     # Уведомление администраторам
