@@ -246,17 +246,24 @@ async def get_bookings(admin: Optional[str] = None):
         # Для админки — полные данные
         return bookings
     else:
-        # Для сайта — только занятые даты
+        # Для сайта — занятые даты + отдельно даты выезда
+        # Дата выезда НЕ блокируется — выезд в 12:00, заезд в 15:00
         booked = []
+        checkout_dates = []
         for b in bookings:
             if b.get("status") != "cancelled":
                 s = datetime.strptime(b["check_in"], "%Y-%m-%d")
                 e = datetime.strptime(b["check_out"], "%Y-%m-%d")
+                checkout_dates.append(b["check_out"])
                 d = s
                 while d < e:
+                    # check_out не добавляем в booked — она свободна для нового заезда
                     booked.append(d.strftime("%Y-%m-%d"))
                     d += timedelta(days=1)
-        return {"booked_dates": booked}
+        return {
+            "booked_dates": booked,
+            "checkout_dates": checkout_dates
+        }
 
 @app.post("/api/bookings")
 async def create_booking(b: BookingCreate):
@@ -266,8 +273,36 @@ async def create_booking(b: BookingCreate):
     )
 
     conn = get_db()
+    # Добавляем недостающие колонки если их нет
+    try:
+        conn.execute("ALTER TABLE bookings ADD COLUMN guest_email TEXT DEFAULT ''")
+    except Exception: pass
+    try:
+        conn.execute("ALTER TABLE bookings ADD COLUMN guests_count INTEGER DEFAULT 2")
+    except Exception: pass
+    try:
+        conn.execute("ALTER TABLE bookings ADD COLUMN notes TEXT DEFAULT ''")
+    except Exception: pass
+    try:
+        conn.execute("ALTER TABLE bookings ADD COLUMN payment_method TEXT DEFAULT 'card'")
+    except Exception: pass
+    try:
+        conn.execute("ALTER TABLE bookings ADD COLUMN total_price INTEGER DEFAULT 0")
+    except Exception: pass
+    try:
+        conn.execute("ALTER TABLE bookings ADD COLUMN status TEXT DEFAULT 'confirmed'")
+    except Exception: pass
+    try:
+        conn.execute("ALTER TABLE bookings ADD COLUMN created_at TEXT DEFAULT ''")
+    except Exception: pass
+    conn.commit()
+
     conn.execute("""
-        INSERT INTO bookings VALUES (?,?,?,?,?,?,?,?,?,?,?,'confirmed',?)
+        INSERT INTO bookings (id, check_in, check_out, nights,
+            guest_name, guest_phone, guest_email,
+            guests_count, notes, payment_method, total_price,
+            status, created_at)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,'confirmed',?)
     """, (
         booking_id, b.check_in, b.check_out, b.nights,
         b.guest_name, b.guest_phone, b.guest_email,
