@@ -64,7 +64,6 @@ bot = Bot(token=BOT_TOKEN)
 dp  = Dispatcher(storage=MemoryStorage())
 dp.include_router(user_router)
 dp.include_router(admin_router)
-dp.include_router(web_router)
 
 # =====================================================
 # TIMEZONE — Новосибирск UTC+7
@@ -533,12 +532,9 @@ async def send_notifications():
 # CALLBACKS — подтверждение/отклонение оплаты с сайта
 # =====================================================
 
-from aiogram import Router as AiogramRouter
 from aiogram.types import CallbackQuery
 
-web_router = AiogramRouter()
-
-@web_router.callback_query(lambda c: c.data.startswith("web_confirm_"))
+@dp.callback_query(lambda c: c.data.startswith("web_confirm_"))
 async def web_payment_confirm(callback: CallbackQuery):
     if callback.from_user.id not in ADMIN_IDS:
         return
@@ -581,7 +577,7 @@ async def web_payment_confirm(callback: CallbackQuery):
     await callback.answer("✅ Подтверждено!")
 
 
-@web_router.callback_query(lambda c: c.data.startswith("web_reject_"))
+@dp.callback_query(lambda c: c.data.startswith("web_reject_"))
 async def web_payment_reject(callback: CallbackQuery):
     if callback.from_user.id not in ADMIN_IDS:
         return
