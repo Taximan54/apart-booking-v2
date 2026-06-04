@@ -473,31 +473,33 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
 
         <!-- STEP 3 -->
         <div id="stp3" style="display:none;flex-direction:column;flex:1">
+
+          <!-- Итог -->
           <div class="pbd">
             <div class="pbrow"><span class="lbl" id="s3NightsLbl">—</span><span class="val" id="s3NightsCost">—</span></div>
             <div class="pbrow"><span class="lbl">Уборка</span><span class="val" id="s3Clean">—</span></div>
-            <div class="pbrow pbtotal"><span class="lbl">К оплате</span><span class="val" id="s3Total">—</span></div>
-          </div>
-          <div style="margin-top:20px;padding-top:20px;border-top:1px solid var(--black-border)">
-            <div class="pay-title">Способ оплаты</div>
-            <div class="pay-methods">
-              <div class="pmeth active" onclick="selPay('card',this)"><span class="pmeth-icon">💳</span>Карта</div>
-              <div class="pmeth" onclick="selPay('sbp',this)"><span class="pmeth-icon">⚡</span>СБП</div>
-              <div class="pmeth" onclick="selPay('cash',this)"><span class="pmeth-icon">💰</span>Наличные</div>
+            <div class="pbrow pbtotal"><span class="lbl">Итого</span><span class="val" id="s3Total">—</span></div>
+            <div class="pbrow" style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(201,168,76,.1)">
+              <span class="lbl" style="color:var(--gold)">Предоплата 20%</span>
+              <span class="val" style="color:var(--gold);font-size:16px;font-weight:500" id="s3Prepay">—</span>
             </div>
-            <div class="cform vis" id="cardF">
-              <div class="fgroup"><label class="flabel">Номер карты</label><input type="text" class="finput" id="cNum" placeholder="0000 0000 0000 0000" maxlength="19"></div>
-              <div class="frow">
-                <div class="fgroup"><label class="flabel">Срок</label><input type="text" class="finput" id="cExp" placeholder="ММ/ГГ" maxlength="5"></div>
-                <div class="fgroup"><label class="flabel">CVV</label><input type="text" class="finput" id="cCvv" placeholder="•••" maxlength="3"></div>
-              </div>
-            </div>
-            <div class="pay-info-box" id="sbpBox">Для оплаты через СБП после подтверждения вам придут реквизиты по SMS и email.</div>
-            <div class="pay-info-box" id="cashBox">Оплата наличными при заезде. Бронирование подтверждается администратором в течение 30 минут.</div>
           </div>
-          <div class="btn-row">
+
+          <!-- Инфо о флоу -->
+          <div style="padding:16px;background:rgba(201,168,76,.04);border:1px solid rgba(201,168,76,.1);margin:16px 0;font-size:12px;color:var(--text-secondary);line-height:1.8">
+            <div style="color:var(--gold);font-size:10px;letter-spacing:.2em;text-transform:uppercase;margin-bottom:8px">Как это работает</div>
+            1. Нажмите «Перейти к оплате» — откроется страница Т-Банка<br>
+            2. Оплатите предоплату 20% — в комментарии укажите номер брони<br>
+            3. Вернитесь сюда и нажмите «Я оплатил»<br>
+            4. Администратор подтвердит — вы получите код замка на email
+          </div>
+
+          <!-- Статус -->
+          <div id="payStatusBox" style="display:none;padding:16px;border:1px solid;margin-bottom:16px;font-size:12px;line-height:1.7;text-align:center"></div>
+
+          <div class="btn-row" id="payBtns">
             <button class="btn-outline-s" onclick="goS2back()">Назад</button>
-            <button class="btn-gold-w" style="flex:2" id="payBtn" onclick="submitBooking()">Оплатить</button>
+            <button class="btn-gold-w" style="flex:2" id="payBtn" onclick="submitBooking()">Забронировать</button>
           </div>
         </div>
       </div>
@@ -840,7 +842,8 @@ function updatePanel(){
   document.getElementById('pbTotal').textContent      = '₽' + total.toLocaleString('ru');
   document.getElementById('pbd').style.display = 'flex';
   document.getElementById('toS2').disabled = false;
-  bookingData = {nights, cost, total, start:selStart, end:selEnd, nw:nw(nights)};
+  const prepay = Math.ceil(total * 0.2);
+  bookingData = {nights, cost, total, prepay, start:selStart, end:selEnd, nw:nw(nights)};
 }
 
 // Навигация по месяцам
@@ -877,6 +880,13 @@ function goS3(){
   document.getElementById('s3NightsCost').textContent=`₽${bookingData.cost.toLocaleString('ru')}`;
   document.getElementById('s3Clean').textContent=`₽${CONFIG.cleaning.toLocaleString('ru')}`;
   document.getElementById('s3Total').textContent=`₽${bookingData.total.toLocaleString('ru')}`;
+  document.getElementById('s3Prepay').textContent=`₽${Math.ceil(bookingData.total*0.2).toLocaleString('ru')}`;
+  // Сбрасываем статус оплаты при переходе на шаг 3
+  document.getElementById('payStatusBox').style.display='none';
+  document.getElementById('payBtns').innerHTML=`
+    <button class="btn-outline-s" onclick="goS2back()">Назад</button>
+    <button class="btn-gold-w" style="flex:2" id="payBtn" onclick="submitBooking()">Забронировать</button>
+  `;
 }
 
 function selPay(m,el){
@@ -902,77 +912,122 @@ document.getElementById('cExp').addEventListener('input',function(e){
 // ============================================================
 // SUBMIT BOOKING
 // ============================================================
-async function submitBooking(){
-  if(payMethod==='card'){
-    const num=document.getElementById('cNum').value.replace(/\s/g,'');
-    const exp=document.getElementById('cExp').value;
-    const cvv=document.getElementById('cCvv').value;
-    if(num.length<16||!exp||cvv.length<3){showToast('Проверьте данные карты','err');return;}
-  }
-  const btn=document.getElementById('payBtn');
-  btn.innerHTML='Обработка... <span class="loading-spin"></span>';
-  btn.disabled=true;
+// Глобально храним данные текущей брони для шага "Я оплатил"
+let currentBookingRef = '';
+let currentBookingPayload = null;
 
-  const payload={
-    check_in: bookingData.start,
-    check_out: bookingData.end,
-    nights: bookingData.nights,
-    guest_name: document.getElementById('gName').value.trim()+' '+document.getElementById('gSurname').value.trim(),
-    guest_phone: document.getElementById('gPhone').value.trim(),
-    guest_email: document.getElementById('gEmail').value.trim(),
+const TBANK_URL = 'https://www.tbank.ru/cf/8TqKOl5vEpK';
+
+async function submitBooking(){
+  const btn = document.getElementById('payBtn');
+  btn.innerHTML = 'Создаём бронь... <span class="loading-spin"></span>';
+  btn.disabled = true;
+
+  const payload = {
+    check_in:     bookingData.start,
+    check_out:    bookingData.end,
+    nights:       bookingData.nights,
+    guest_name:   document.getElementById('gName').value.trim()+' '+document.getElementById('gSurname').value.trim(),
+    guest_phone:  document.getElementById('gPhone').value.trim(),
+    guest_email:  document.getElementById('gEmail').value.trim(),
     guests_count: parseInt(document.getElementById('gCount').value),
-    notes: document.getElementById('gNotes').value.trim(),
-    payment_method: payMethod,
-    total_price: bookingData.total
+    notes:        document.getElementById('gNotes').value.trim(),
+    payment_method: 'tbank',
+    total_price:  bookingData.total
   };
 
   try {
-    // Try real API first
-    let bookingRef='', doorCode=CONFIG.doorCode;
-    try {
-      const result = await API.createBooking(payload);
-      bookingRef = result.booking_id || result.id || '';
-      if(result.door_code) doorCode = result.door_code;
-    } catch(e) {
-      // API unavailable — simulate
-      console.warn('Booking API unavailable, simulating...');
-      await new Promise(r=>setTimeout(r,1500));
-      bookingRef = 'ГП-'+Math.random().toString(36).slice(2,8).toUpperCase();
-      // Get door code separately
-      try { const dc=await API.doorCode(); doorCode=dc.code||dc.door_code||CONFIG.doorCode; } catch(e2){}
-    }
+    const result = await API.createBooking(payload);
+    currentBookingRef     = result.booking_id || result.id || '';
+    currentBookingPayload = payload;
 
-    // Mark dates as booked locally
-    const s=new Date(bookingData.start), e2=new Date(bookingData.end);
-    for(let d=new Date(s);d<e2;d.setDate(d.getDate()+1)){
-      const dStr=ds(d.getFullYear(),d.getMonth(),d.getDate());
+    // Блокируем даты локально
+    const s = new Date(bookingData.start);
+    const e2 = new Date(bookingData.end);
+    for(let d = new Date(s); d < e2; d.setDate(d.getDate()+1)){
+      const dStr = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
       if(!CONFIG.bookedDates.includes(dStr)) CONFIG.bookedDates.push(dStr);
     }
-    // Дата выезда — добавляем в checkoutDates, не в bookedDates
-    const checkoutStr=ds(e2.getFullYear(),e2.getMonth(),e2.getDate());
-    if(!CONFIG.checkoutDates.includes(checkoutStr)) CONFIG.checkoutDates.push(checkoutStr);
+    const coStr = e2.getFullYear()+'-'+String(e2.getMonth()+1).padStart(2,'0')+'-'+String(e2.getDate()).padStart(2,'0');
+    if(!CONFIG.checkoutDates.includes(coStr)) CONFIG.checkoutDates.push(coStr);
     renderCal();
 
-    // Show success
-    document.getElementById('doorCodeDisp').textContent=doorCode;
-    document.getElementById('modalRef').textContent=bookingRef?'Номер брони: '+bookingRef:'';
-    document.getElementById('successModal').classList.add('open');
+    // Показываем кнопку оплаты и "Я оплатил"
+    showPaymentStep(currentBookingRef, bookingData.prepay);
 
-    // Reset
-    selStart=null;selEnd=null;
+  } catch(e) {
+    showToast('Ошибка создания брони. Попробуйте ещё раз.', 'err');
+    console.error(e);
+    btn.innerHTML = 'Забронировать';
+    btn.disabled = false;
+  }
+}
+
+function showPaymentStep(bookingRef, prepay){
+  // Меняем кнопки на флоу оплаты
+  document.getElementById('payBtns').innerHTML = `
+    <a href="${TBANK_URL}" target="_blank" class="btn-gold-w" style="flex:2;text-align:center;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:8px" onclick="window._tbankOpened=true">
+      💳 Перейти к оплате
+    </a>
+  `;
+
+  // Показываем статус и кнопку "Я оплатил"
+  const statusBox = document.getElementById('payStatusBox');
+  statusBox.style.display = 'block';
+  statusBox.style.borderColor = 'rgba(201,168,76,.3)';
+  statusBox.style.color = 'var(--text-secondary)';
+  statusBox.style.background = 'rgba(201,168,76,.04)';
+  statusBox.innerHTML = `
+    <div style="font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);margin-bottom:10px">Бронь создана</div>
+    <div style="font-family:'Cormorant Garamond',serif;font-size:22px;color:var(--gold);letter-spacing:.15em;margin-bottom:8px">${bookingRef}</div>
+    <div style="margin-bottom:12px">Укажите этот номер в комментарии к платежу</div>
+    <button onclick="clientPaid('${bookingRef}')" class="btn-gold-w" style="margin-top:8px">
+      ✓ Я оплатил — жду подтверждения
+    </button>
+  `;
+}
+
+async function clientPaid(bookingRef){
+  try {
+    await fetch(API.BASE + '/api/payment-notify', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        booking_ref:  bookingRef,
+        guest_name:   currentBookingPayload?.guest_name || '',
+        guest_phone:  currentBookingPayload?.guest_phone || '',
+        guest_email:  currentBookingPayload?.guest_email || '',
+        total_price:  currentBookingPayload?.total_price || 0,
+        check_in:     currentBookingPayload?.check_in || '',
+        check_out:    currentBookingPayload?.check_out || '',
+      })
+    });
+  } catch(e) { /* продолжаем даже если API недоступен */ }
+
+  const statusBox = document.getElementById('payStatusBox');
+  statusBox.style.borderColor = 'rgba(26,107,66,.4)';
+  statusBox.style.color = '#4ade80';
+  statusBox.style.background = 'rgba(26,107,66,.05)';
+  statusBox.innerHTML = `
+    <div style="font-size:28px;margin-bottom:8px">⏳</div>
+    <div style="font-size:13px">Администратор проверяет оплату</div>
+    <div style="font-size:11px;margin-top:6px;opacity:.7">Обычно это занимает несколько минут.<br>Код замка придёт на <strong>${currentBookingPayload?.guest_email || 'ваш email'}</strong></div>
+  `;
+  document.getElementById('payBtns').innerHTML = '';
+
+  // Сбрасываем форму
+  setTimeout(()=>{
+    selStart=null; selEnd=null;
     document.getElementById('diChI').textContent='—';
     document.getElementById('diChO').textContent='—';
     document.getElementById('pbd').style.display='none';
     document.getElementById('toS2').disabled=true;
     goS1();
-
-  } catch(e) {
-    showToast('Произошла ошибка. Попробуйте ещё раз.','err');
-    console.error(e);
-  } finally {
-    btn.innerHTML='Оплатить';
-    btn.disabled=false;
-  }
+    document.getElementById('step1dot').classList.remove('done');
+    document.getElementById('step2dot').classList.remove('done','active');
+    document.getElementById('step3dot').classList.remove('done','active');
+    document.getElementById('panelTitle').textContent='Выберите даты';
+  }, 4000);
 }
 
 function closeModal(){ document.getElementById('successModal').classList.remove('open'); }
