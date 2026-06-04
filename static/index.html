@@ -898,16 +898,7 @@ function selPay(m,el){
   document.getElementById('cashBox').style.display=m==='cash'?'block':'none';
 }
 
-// Card formatting
-document.getElementById('cNum').addEventListener('input',function(e){
-  let v=e.target.value.replace(/\D/g,'').slice(0,16);
-  e.target.value=v.replace(/(.{4})/g,'$1 ').trim();
-});
-document.getElementById('cExp').addEventListener('input',function(e){
-  let v=e.target.value.replace(/\D/g,'');
-  if(v.length>=2) v=v.slice(0,2)+'/'+v.slice(2,4);
-  e.target.value=v;
-});
+// Card formatting removed — no card fields in new payment flow
 
 // ============================================================
 // SUBMIT BOOKING
