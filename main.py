@@ -64,6 +64,7 @@ bot = Bot(token=BOT_TOKEN)
 dp  = Dispatcher(storage=MemoryStorage())
 dp.include_router(user_router)
 dp.include_router(admin_router)
+dp.include_router(web_router)
 
 # =====================================================
 # TIMEZONE — Новосибирск UTC+7
@@ -347,6 +348,59 @@ async def update_booking(booking_id: str, u: BookingUpdate):
     conn.close()
     return {"ok": True}
 
+
+# =====================================================
+# API — УВЕДОМЛЕНИЕ "Я ОПЛАТИЛ" С САЙТА
+# =====================================================
+
+class PaymentNotify(BaseModel):
+    booking_ref:  str
+    guest_name:   str
+    guest_phone:  str
+    guest_email:  str
+    total_price:  int
+    check_in:     str
+    check_out:    str
+
+@app.post("/api/payment-notify")
+async def payment_notify(p: PaymentNotify):
+    prepay = round(p.total_price * 0.2)
+
+    # Отправляем уведомление всем админам с кнопками подтвердить/отклонить
+    for admin_id in ADMIN_IDS:
+        try:
+            from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+            await bot.send_message(
+                admin_id,
+                f"💳 Гость сообщил об оплате (сайт)\n\n"
+                f"📋 Бронь: {p.booking_ref}\n"
+                f"👤 {p.guest_name}\n"
+                f"📞 {p.guest_phone}\n"
+                f"📧 {p.guest_email}\n"
+                f"📅 {p.check_in} → {p.check_out}\n\n"
+                f"💰 Сумма: {p.total_price:,} ₽\n"
+                f"💳 Ожидаем предоплату: {prepay:,} ₽\n\n"
+                f"Проверьте поступление и подтвердите:",
+                reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                    [
+                        InlineKeyboardButton(
+                            text="✅ Подтвердить оплату",
+                            callback_data=f"web_confirm_{p.booking_ref}"
+                        )
+                    ],
+                    [
+                        InlineKeyboardButton(
+                            text="❌ Не оплачено",
+                            callback_data=f"web_reject_{p.booking_ref}"
+                        )
+                    ]
+                ])
+            )
+        except Exception as e:
+            print(f"Notify error: {e}")
+
+    return {"ok": True}
+
 # =====================================================
 # SCHEDULER — автоматические уведомления (время NSK)
 # =====================================================
@@ -473,6 +527,96 @@ async def send_notifications():
 # =====================================================
 # START BOT
 # =====================================================
+
+
+# =====================================================
+# CALLBACKS — подтверждение/отклонение оплаты с сайта
+# =====================================================
+
+from aiogram import Router as AiogramRouter
+from aiogram.types import CallbackQuery
+
+web_router = AiogramRouter()
+
+@web_router.callback_query(lambda c: c.data.startswith("web_confirm_"))
+async def web_payment_confirm(callback: CallbackQuery):
+    if callback.from_user.id not in ADMIN_IDS:
+        return
+
+    booking_ref = callback.data.replace("web_confirm_", "")
+
+    # Получаем данные брони из БД
+    conn = get_db()
+    row = conn.execute(
+        "SELECT * FROM bookings WHERE username=? LIMIT 1",
+        (booking_ref,)
+    ).fetchone()
+    conn.close()
+
+    door_code = load_door_code()
+
+    if row:
+        guest_email = row["guest_email"] if "guest_email" in row.keys() else ""
+        guest_name  = row["guest_name"]  if "guest_name"  in row.keys() else "Гость"
+        check_in    = row["check_in"]
+        check_out   = row["check_out"]
+
+        # Отправляем письмо гостю если есть email (через Telegram — у нас нет smtp)
+        # Уведомляем через Telegram если есть user_id
+        user_id = row["user_id"] if row["user_id"] != 0 else None
+        if user_id:
+            try:
+                await callback.bot.send_message(
+                    user_id,
+                    f"✅ Оплата подтверждена!\n\n"
+                    f"Бронь {booking_ref} подтверждена.\n\n"
+                    f"За сутки до заезда в 12:00 вы получите инструкцию по заселению с кодом замка. 🏠"
+                )
+            except Exception:
+                pass
+
+    await callback.message.edit_text(
+        callback.message.text + f"\n\n✅ Оплата подтверждена администратором."
+    )
+    await callback.answer("✅ Подтверждено!")
+
+
+@web_router.callback_query(lambda c: c.data.startswith("web_reject_"))
+async def web_payment_reject(callback: CallbackQuery):
+    if callback.from_user.id not in ADMIN_IDS:
+        return
+
+    booking_ref = callback.data.replace("web_reject_", "")
+
+    # Отменяем бронь в БД
+    conn = get_db()
+    row = conn.execute(
+        "SELECT * FROM bookings WHERE username=? LIMIT 1",
+        (booking_ref,)
+    ).fetchone()
+    if row:
+        conn.execute(
+            "UPDATE bookings SET status='cancelled' WHERE username=?",
+            (booking_ref,)
+        )
+        conn.commit()
+        user_id = row["user_id"] if row["user_id"] != 0 else None
+        if user_id:
+            try:
+                await callback.bot.send_message(
+                    user_id,
+                    f"❌ Оплата не подтверждена\n\n"
+                    f"Бронь {booking_ref} отменена.\n\n"
+                    f"Если это ошибка — напишите нам."
+                )
+            except Exception:
+                pass
+    conn.close()
+
+    await callback.message.edit_text(
+        callback.message.text + f"\n\n❌ Оплата отклонена, бронь отменена."
+    )
+    await callback.answer("❌ Отклонено!")
 
 @app.on_event("startup")
 async def startup():
