@@ -2,6 +2,9 @@ import asyncio
 import os
 import json
 import sqlite3
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 from datetime import datetime, timezone, timedelta
 from typing import Optional
 
@@ -115,6 +118,105 @@ DESC_FILE   = f"{DATA_DIR}/description.txt"
 DB_FILE     = f"{DATA_DIR}/bookings.db"
 
 DEFAULT_PRICES = {"weekday": 3500, "weekend": 4500, "cleaning": 1500}
+
+# =====================================================
+# EMAIL — отправка через mail.ru SMTP
+# =====================================================
+
+MAIL_FROM     = os.getenv("MAIL_FROM", "citypause@mail.ru")
+MAIL_PASSWORD = os.getenv("MAIL_PASSWORD", "")
+MAIL_ADMIN    = os.getenv("MAIL_ADMIN", "citypause@mail.ru")
+
+def send_email(to: str, subject: str, html_body: str):
+    """Отправка email через mail.ru SMTP."""
+    if not MAIL_PASSWORD:
+        print("⚠️ MAIL_PASSWORD не задан — email не отправлен")
+        return
+    try:
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = subject
+        msg["From"]    = f"Городская Пауза <{MAIL_FROM}>"
+        msg["To"]      = to
+        msg.attach(MIMEText(html_body, "html", "utf-8"))
+
+        with smtplib.SMTP_SSL("smtp.mail.ru", 465) as server:
+            server.login(MAIL_FROM, MAIL_PASSWORD)
+            server.sendmail(MAIL_FROM, to, msg.as_string())
+        print(f"✅ EMAIL отправлен → {to}")
+    except Exception as e:
+        print(f"⚠️ Ошибка отправки email: {e}")
+
+def email_guest(booking_id: str, guest_name: str, guest_email: str,
+                check_in: str, check_out: str, nights: int,
+                total: int, prepay: int):
+    """Письмо гостю — подтверждение бронирования."""
+    html = f"""
+    <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#0A0A0A;color:#F0E6C8;padding:40px">
+      <div style="text-align:center;margin-bottom:32px">
+        <div style="font-size:28px;letter-spacing:4px;color:#C9A84C">ГОРОДСКАЯ ПАУЗА</div>
+        <div style="font-size:11px;letter-spacing:3px;color:#5A4A30;margin-top:6px;text-transform:uppercase">Апартаменты посуточно</div>
+      </div>
+      <div style="background:#141414;border:1px solid #1E1E1E;padding:32px;margin-bottom:24px">
+        <div style="font-size:13px;letter-spacing:2px;text-transform:uppercase;color:#C9A84C;margin-bottom:16px">Бронирование подтверждено</div>
+        <div style="font-size:32px;color:#C9A84C;letter-spacing:3px;margin-bottom:24px">{booking_id}</div>
+        <table style="width:100%;border-collapse:collapse">
+          <tr><td style="padding:8px 0;color:#5A4A30;font-size:12px">Гость</td><td style="padding:8px 0;color:#F0E6C8;font-size:12px">{guest_name}</td></tr>
+          <tr><td style="padding:8px 0;color:#5A4A30;font-size:12px">Заезд</td><td style="padding:8px 0;color:#F0E6C8;font-size:12px">{check_in}</td></tr>
+          <tr><td style="padding:8px 0;color:#5A4A30;font-size:12px">Выезд</td><td style="padding:8px 0;color:#F0E6C8;font-size:12px">{check_out}</td></tr>
+          <tr><td style="padding:8px 0;color:#5A4A30;font-size:12px">Ночей</td><td style="padding:8px 0;color:#F0E6C8;font-size:12px">{nights}</td></tr>
+          <tr style="border-top:1px solid #1E1E1E">
+            <td style="padding:12px 0;color:#A89060;font-size:13px">Итого</td>
+            <td style="padding:12px 0;color:#C9A84C;font-size:20px">₽{total:,}</td>
+          </tr>
+          <tr>
+            <td style="padding:4px 0;color:#5A4A30;font-size:12px">Предоплата 20%</td>
+            <td style="padding:4px 0;color:#C9A84C;font-size:13px">₽{prepay:,}</td>
+          </tr>
+        </table>
+      </div>
+      <div style="background:#141414;border:1px solid #1E1E1E;padding:24px;margin-bottom:24px">
+        <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#C9A84C;margin-bottom:12px">Что дальше</div>
+        <div style="font-size:12px;color:#A89060;line-height:1.8">
+          1. Оплатите предоплату 20% по ссылке Т-Банк<br>
+          2. Нажмите «Я оплатил» на сайте<br>
+          3. После подтверждения вы получите код замка<br>
+          4. Заезд с 15:00, выезд до 12:00
+        </div>
+      </div>
+      <div style="text-align:center;font-size:11px;color:#5A4A30;line-height:1.8">
+        По всем вопросам: <a href="mailto:citypause@mail.ru" style="color:#C9A84C">citypause@mail.ru</a><br>
+        <a href="https://citypause.ru" style="color:#C9A84C">citypause.ru</a>
+      </div>
+    </div>
+    """
+    send_email(guest_email, f"Бронирование {booking_id} — Городская Пауза", html)
+
+def email_admin(booking_id: str, guest_name: str, guest_phone: str,
+                guest_email: str, check_in: str, check_out: str,
+                nights: int, total: int, payment_method: str):
+    """Письмо админу — новая бронь."""
+    html = f"""
+    <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#0A0A0A;color:#F0E6C8;padding:40px">
+      <div style="font-size:20px;color:#C9A84C;margin-bottom:24px">🆕 Новая бронь с сайта</div>
+      <div style="background:#141414;border:1px solid #1E1E1E;padding:24px">
+        <table style="width:100%;border-collapse:collapse">
+          <tr><td style="padding:6px 0;color:#5A4A30;font-size:12px;width:140px">Бронь</td><td style="color:#C9A84C;font-size:13px">{booking_id}</td></tr>
+          <tr><td style="padding:6px 0;color:#5A4A30;font-size:12px">Гость</td><td style="color:#F0E6C8;font-size:12px">{guest_name}</td></tr>
+          <tr><td style="padding:6px 0;color:#5A4A30;font-size:12px">Телефон</td><td style="color:#F0E6C8;font-size:12px">{guest_phone}</td></tr>
+          <tr><td style="padding:6px 0;color:#5A4A30;font-size:12px">Email</td><td style="color:#F0E6C8;font-size:12px">{guest_email}</td></tr>
+          <tr><td style="padding:6px 0;color:#5A4A30;font-size:12px">Заезд</td><td style="color:#F0E6C8;font-size:12px">{check_in}</td></tr>
+          <tr><td style="padding:6px 0;color:#5A4A30;font-size:12px">Выезд</td><td style="color:#F0E6C8;font-size:12px">{check_out}</td></tr>
+          <tr><td style="padding:6px 0;color:#5A4A30;font-size:12px">Ночей</td><td style="color:#F0E6C8;font-size:12px">{nights}</td></tr>
+          <tr><td style="padding:6px 0;color:#5A4A30;font-size:12px">Оплата</td><td style="color:#F0E6C8;font-size:12px">{payment_method}</td></tr>
+          <tr style="border-top:1px solid #1E1E1E">
+            <td style="padding:10px 0;color:#A89060;font-size:13px">Сумма</td>
+            <td style="color:#C9A84C;font-size:18px">₽{total:,}</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+    """
+    send_email(MAIL_ADMIN, f"🆕 Новая бронь {booking_id} — Городская Пауза", html)
 
 # =====================================================
 # HOME PAGE
@@ -334,7 +436,23 @@ async def create_booking(b: BookingCreate):
             pass
 
     door_code = load_door_code()
-    return {"booking_id": booking_id, "door_code": door_code, "status": "confirmed"}
+
+    # Отправляем email гостю и админу
+    prepay = round(b.total_price * 0.2)
+    if b.guest_email:
+        import threading
+        threading.Thread(target=email_guest, args=(
+            booking_ref, b.guest_name, b.guest_email,
+            b.check_in, b.check_out, b.nights,
+            b.total_price, prepay
+        ), daemon=True).start()
+        threading.Thread(target=email_admin, args=(
+            booking_ref, b.guest_name, b.guest_phone,
+            b.guest_email, b.check_in, b.check_out,
+            b.nights, b.total_price, b.payment_method
+        ), daemon=True).start()
+
+    return {"booking_id": booking_ref, "door_code": door_code, "status": "confirmed"}
 
 @app.put("/api/bookings/{booking_id}")
 async def update_booking(booking_id: str, u: BookingUpdate):
