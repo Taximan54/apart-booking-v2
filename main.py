@@ -133,15 +133,19 @@ def send_email(to: str, subject: str, html_body: str):
         print("⚠️ MAIL_PASSWORD не задан — email не отправлен")
         return
     try:
+        from email.header import Header
+        from email.utils import formataddr
+
         msg = MIMEMultipart("alternative")
-        msg["Subject"] = subject
-        msg["From"]    = f"Городская Пауза <{MAIL_FROM}>"
+        msg["Subject"] = Header(subject, "utf-8")
+        msg["From"]    = formataddr((str(Header("Городская Пауза", "utf-8")), MAIL_FROM))
         msg["To"]      = to
+        msg["MIME-Version"] = "1.0"
         msg.attach(MIMEText(html_body, "html", "utf-8"))
 
         with smtplib.SMTP_SSL("smtp.mail.ru", 465) as server:
             server.login(MAIL_FROM, MAIL_PASSWORD)
-            server.sendmail(MAIL_FROM, to, msg.as_string())
+            server.sendmail(MAIL_FROM, [to], msg.as_string())
         print(f"✅ EMAIL отправлен → {to}")
     except Exception as e:
         print(f"⚠️ Ошибка отправки email: {e}")
