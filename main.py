@@ -101,8 +101,10 @@ class BookingCreate(BaseModel):
     guest_email: str
     guests_count: int = 2
     notes: str = ""
+    passport: str = ""
     payment_method: str = "card"
     total_price: int = 0
+    contract_signed: bool = False
 
 class BookingUpdate(BaseModel):
     status: str
@@ -149,6 +151,84 @@ def send_email(to: str, subject: str, html_body: str):
         print(f"✅ EMAIL отправлен → {to}")
     except Exception as e:
         print(f"⚠️ Ошибка отправки email: {e}")
+
+def email_contract(booking_id: str, guest_name: str, guest_email: str,
+                   check_in: str, check_out: str, nights: int,
+                   total: int, passport: str = ""):
+    """Отправка договора гостю на email."""
+    from datetime import date
+    today = date.today().strftime("%d.%m.%Y")
+    checkin_fmt  = datetime.strptime(check_in,  "%Y-%m-%d").strftime("%d.%m.%Y")
+    checkout_fmt = datetime.strptime(check_out, "%Y-%m-%d").strftime("%d.%m.%Y")
+    per_night = round(total / nights) if nights else total
+    deposit = 6000
+
+    contract_text = f"""ДОГОВОР КРАТКОСРОЧНОЙ АРЕНДЫ ПОМЕЩЕНИЯ
+
+{today} г.
+
+Мы, нижеподписавшиеся, Городская Пауза, именуемый в дальнейшем «Арендодатель», с одной стороны, и гражданин {guest_name}, паспорт серии {passport or "____________"}, именуемый в дальнейшем «Арендатор», с другой стороны, заключили настоящий Договор о нижеследующем:
+
+1. ПРЕДМЕТ ДОГОВОРА
+
+1.1. Арендодатель передает, а Арендатор принимает во временное платное пользование:
+г. Новосибирск, ул. Дачная, д. 5, кв. 286, 22 этаж
+
+1.2. Помещение передается в аренду на {nights} суток.
+Дата заселения: с 15:00, {checkin_fmt}
+Дата выселения: до 12:00, {checkout_fmt}
+
+2. АРЕНДНАЯ ПЛАТА
+
+2.1. Арендная плата: {per_night:,} ₽ в сутки.
+2.2. Полная стоимость: {total:,} ₽ — оплачивается при заселении.
+2.3. Обеспечительный платёж: {deposit:,} ₽ — возвращается после выезда.
+2.4. При досрочном расторжении без объективных причин оплата не возвращается.
+
+3. ОБЯЗАННОСТИ АРЕНДАТОРА
+
+• Соблюдать правила проживания и не нарушать права соседей
+• Не проводить шумные мероприятия
+• Не проживать с животными
+• Не курить в помещении и на лоджии
+• Не зажигать ароматические свечи
+• Бережно относиться к имуществу
+
+4. ОТВЕТСТВЕННОСТЬ
+
+4.1. При повреждении имущества Арендатор возмещает убытки.
+4.2. При нарушении правил обеспечительный платёж не возвращается.
+
+5. ПРОЧИЕ УСЛОВИЯ
+
+5.1. Договор вступает в силу с момента подписания.
+5.2. Арендатор даёт согласие на обработку персональных данных (ФЗ-152).
+5.3. Арендатор предоставляет копию паспорта при заселении.
+
+Арендодатель: Городская Пауза (citypause@mail.ru)
+Арендатор: {guest_name}
+Бронь: {booking_id}
+
+Договор подписан электронно на сайте citypause.ru"""
+
+    html = f"""
+    <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#0A0A0A;color:#F0E6C8;padding:40px">
+      <div style="text-align:center;margin-bottom:32px">
+        <div style="font-size:24px;letter-spacing:4px;color:#C9A84C">ГОРОДСКАЯ ПАУЗА</div>
+        <div style="font-size:11px;letter-spacing:2px;color:#5A4A30;margin-top:4px;text-transform:uppercase">Договор аренды</div>
+      </div>
+      <div style="background:#141414;border:1px solid #1E1E1E;padding:24px;margin-bottom:16px">
+        <div style="font-size:11px;letter-spacing:2px;color:#C9A84C;margin-bottom:12px;text-transform:uppercase">Бронь {booking_id}</div>
+        <pre style="font-size:11px;color:#A89060;line-height:1.8;white-space:pre-wrap;font-family:Arial,sans-serif">{contract_text}</pre>
+      </div>
+      <div style="text-align:center;font-size:11px;color:#5A4A30">
+        <a href="https://citypause.ru" style="color:#C9A84C">citypause.ru</a> · 
+        <a href="mailto:citypause@mail.ru" style="color:#C9A84C">citypause@mail.ru</a>
+      </div>
+    </div>
+    """
+    send_email(guest_email, f"Договор аренды {booking_id} — Городская Пауза", html)
+
 
 def email_guest(booking_id: str, guest_name: str, guest_email: str,
                 check_in: str, check_out: str, nights: int,
@@ -426,10 +506,16 @@ async def create_booking(b: BookingCreate):
     # Email — сначала, в отдельных потоках (не блокирует)
     import threading
     if b.guest_email:
+        passport = getattr(b, 'passport', '')
         threading.Thread(target=email_guest, args=(
             booking_ref, b.guest_name, b.guest_email,
             b.check_in, b.check_out, b.nights,
             b.total_price, prepay
+        ), daemon=True).start()
+        threading.Thread(target=email_contract, args=(
+            booking_ref, b.guest_name, b.guest_email,
+            b.check_in, b.check_out, b.nights,
+            b.total_price, passport
         ), daemon=True).start()
         threading.Thread(target=email_admin, args=(
             booking_ref, b.guest_name, b.guest_phone,

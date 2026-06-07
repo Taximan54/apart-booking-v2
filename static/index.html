@@ -430,6 +430,7 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
           <div class="sdot active" id="sd1"></div>
           <div class="sdot" id="sd2"></div>
           <div class="sdot" id="sd3"></div>
+          <div class="sdot" id="sd4"></div>
         </div>
         <div class="panel-title" id="panelTitle">Выберите даты</div>
 
@@ -464,6 +465,7 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
               <option value="1">1 гость</option><option value="2" selected>2 гостя</option><option value="3">3 гостя</option><option value="4">4 гостя</option>
             </select>
           </div>
+          <div class="fgroup"><label class="flabel">Серия и номер паспорта</label><input type="text" class="finput" id="gPassport" placeholder="0000 000000"></div>
           <div class="fgroup"><label class="flabel">Пожелания (необязательно)</label><input type="text" class="finput" id="gNotes" placeholder="Особые пожелания..."></div>
           <div style="margin-top:16px;padding:16px;background:rgba(201,168,76,.04);border:1px solid rgba(201,168,76,.1)">
             <label style="display:flex;align-items:flex-start;gap:12px;cursor:pointer">
@@ -477,7 +479,25 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
           </div>
           <div class="btn-row">
             <button class="btn-outline-s" onclick="goS1()">Назад</button>
-            <button class="btn-gold-w" style="flex:2" onclick="goS3()">К оплате</button>
+            <button class="btn-gold-w" style="flex:2" onclick="goToContract()">К договору</button>
+          </div>
+        </div>
+
+        <!-- STEP CONTRACT -->
+        <div id="stpContract" style="display:none;flex-direction:column;flex:1">
+          <div style="font-size:10px;letter-spacing:.3em;text-transform:uppercase;color:var(--text-muted);margin-bottom:16px">Ознакомьтесь и подпишите договор</div>
+          <div id="contractText" style="background:var(--black);border:1px solid var(--black-border);padding:20px;max-height:320px;overflow-y:auto;font-size:11px;color:var(--text-secondary);line-height:1.8;font-weight:300;margin-bottom:16px"></div>
+          <div style="padding:16px;background:rgba(201,168,76,.04);border:1px solid rgba(201,168,76,.1);margin-bottom:16px">
+            <label style="display:flex;align-items:flex-start;gap:12px;cursor:pointer">
+              <input type="checkbox" id="contractCheck" style="margin-top:3px;accent-color:var(--gold);width:16px;height:16px;flex-shrink:0">
+              <span style="font-size:11px;color:var(--text-muted);line-height:1.6;font-weight:300">
+                Я ознакомился(ась) с условиями договора краткосрочной аренды и согласен(а) с ними
+              </span>
+            </label>
+          </div>
+          <div class="btn-row">
+            <button class="btn-outline-s" onclick="goS2fromContract()">Назад</button>
+            <button class="btn-gold-w" style="flex:2" onclick="goS3fromContract()">Подписать и продолжить</button>
           </div>
         </div>
 
@@ -874,15 +894,152 @@ document.getElementById('nextMonth').addEventListener('click', function(){
 // ============================================================
 function setStep(n){
   [1,2,3].forEach(i=>{
-    document.getElementById(`stp${i}`).style.display=i===n?'flex':'none';
+    const el=document.getElementById(`stp${i}`);
+    if(el) el.style.display=i===n?'flex':'none';
     const dot=document.getElementById(`sd${i}`);
-    dot.className='sdot'+(i<n?' done':i===n?' active':'');
+    if(dot) dot.className='sdot'+(i<n?' done':i===n?' active':'');
   });
+  const contract=document.getElementById('stpContract');
+  if(contract) contract.style.display='none';
 }
 
 function goS1(){setStep(1);document.getElementById('panelTitle').textContent='Выберите даты';}
 function goS2(){if(!selStart||!selEnd) return;setStep(2);document.getElementById('panelTitle').textContent='Данные гостя';}
 function goS2back(){setStep(2);document.getElementById('panelTitle').textContent='Данные гостя';}
+
+// ── ДОГОВОР ──────────────────────────────────────
+const APARTMENT_ADDRESS = "г. Новосибирск, ул. Дачная, д. 5, кв. 286, 22 этаж";
+const DEPOSIT_AMOUNT = 6000;
+
+function buildContract(){
+  const name    = (document.getElementById('gName').value.trim() + ' ' + document.getElementById('gSurname').value.trim()).trim();
+  const passport = document.getElementById('gPassport').value.trim() || '____________';
+  const guests  = document.getElementById('gCount').value;
+  const notes   = document.getElementById('gNotes').value.trim() || 'нет';
+  const nights  = bookingData.nights;
+  const nw      = bookingData.nw;
+  const total   = bookingData.total;
+  const cost    = bookingData.cost;
+  const perNight = Math.round(cost / nights);
+  const fmt = d => new Date(d+'T00:00:00').toLocaleDateString('ru-RU',{day:'numeric',month:'long',year:'numeric'});
+
+  return `ДОГОВОР КРАТКОСРОЧНОЙ АРЕНДЫ ПОМЕЩЕНИЯ
+
+${new Date().toLocaleDateString('ru-RU',{day:'numeric',month:'long',year:'numeric'})} г.
+
+Мы, нижеподписавшиеся, Городская Пауза, именуемый в дальнейшем «Арендодатель», с одной стороны, и гражданин ${name}, паспорт серии ${passport}, именуемый в дальнейшем «Арендатор», с другой стороны, заключили настоящий Договор о нижеследующем:
+
+1. ПРЕДМЕТ ДОГОВОРА
+
+1.1. Арендодатель передает, а Арендатор принимает во временное платное пользование: ${APARTMENT_ADDRESS}
+
+1.2. Помещение передается в аренду на ${nights} ${nw}.
+Дата заселения: с 15:00, ${fmt(bookingData.start)}
+Дата выселения: до 12:00, ${fmt(bookingData.end)}
+
+1.3. Помимо Арендатора в помещении будет проживать: ${guests} чел.
+
+2. АРЕНДНАЯ ПЛАТА
+
+2.1. За пользование помещением устанавливается плата в размере ${perNight.toLocaleString('ru')} ₽ в сутки.
+
+2.2. Полная стоимость проживания — ${total.toLocaleString('ru')} ₽. Данная сумма уплачивается Арендатором при заселении.
+
+2.3. При заезде вносится обеспечительный платёж в размере ${DEPOSIT_AMOUNT.toLocaleString('ru')} ₽ за сохранность имущества, который возвращается после выезда и полной уборки.
+
+2.4. В случае досрочного расторжения без объективных причин оплаченные денежные средства не возвращаются.
+
+3. ПРАВА И ОБЯЗАННОСТИ СТОРОН
+
+3.1. Арендодатель обязуется предоставить помещение с мебелью, бытовой техникой, посудой и постельным бельём.
+
+3.2. Арендатор обязуется:
+• Соблюдать правила пользования помещением и не нарушать права соседей
+• Бережно относиться к имуществу Арендодателя
+• Не проводить шумные мероприятия
+• Не проживать с животными
+• Не курить в помещении и на лоджии
+• Не зажигать ароматические свечи
+• Не двигать мебель
+
+4. ОТВЕТСТВЕННОСТЬ СТОРОН
+
+4.1. В случае повреждения имущества Арендатор обязуется возместить все причинённые убытки.
+4.2. При нарушении правил проживания обеспечительный платёж не возвращается.
+
+5. ПРОЧИЕ УСЛОВИЯ
+
+5.1. Договор вступает в силу с момента его подписания.
+5.2. Арендатор даёт согласие на обработку персональных данных согласно ФЗ-152.
+5.3. Арендатор обязуется предоставить копию паспорта при заселении.
+
+ПЕРЕЧЕНЬ ИМУЩЕСТВА:
+Кухонный гарнитур, телевизор, диван, вытяжка, стиральная машина, шкаф платяной, тумбочка, роутер, ТВ-приставка, фен, плита, утюг, микроволновка, электрический чайник.
+
+Арендодатель: Городская Пауза (citypause@mail.ru)
+Арендатор: ${name}`;
+}
+
+function goToContract(){
+  if(!document.getElementById('gName').value.trim()||!document.getElementById('gPhone').value.trim()||!document.getElementById('gEmail').value.trim()){
+    showToast('Заполните все обязательные поля','err'); return;
+  }
+  if(!document.getElementById('privacyCheck').checked){
+    showToast('Необходимо согласие на обработку персональных данных','err'); return;
+  }
+  // Генерируем договор
+  document.getElementById('contractText').innerText = buildContract();
+  // Переходим к шагу договора
+  document.getElementById('stp2').style.display='none';
+  document.getElementById('stpContract').style.display='flex';
+  document.getElementById('panelTitle').textContent='Договор аренды';
+  document.getElementById('sd2').classList.remove('active'); document.getElementById('sd2').classList.add('done');
+  document.getElementById('sd3').classList.add('active');
+}
+
+function goS2fromContract(){
+  document.getElementById('stpContract').style.display='none';
+  document.getElementById('stp2').style.display='flex';
+  document.getElementById('panelTitle').textContent='Данные гостя';
+  document.getElementById('sd3').classList.remove('active');
+  document.getElementById('sd2').classList.remove('done'); document.getElementById('sd2').classList.add('active');
+}
+
+function goS3fromContract(){
+  if(!document.getElementById('contractCheck').checked){
+    showToast('Необходимо подписать договор','err'); return;
+  }
+  document.getElementById('stpContract').style.display='none';
+  document.getElementById('stp3').style.display='flex';
+  document.getElementById('panelTitle').textContent='Оплата';
+  document.getElementById('sd3').classList.remove('active'); document.getElementById('sd3').classList.add('done');
+  document.getElementById('sd4').classList.add('active');
+  // Заполняем данные шага 3
+  document.getElementById('s3NightsLbl').textContent=bookingData.nights+' '+bookingData.nw;
+  document.getElementById('s3NightsCost').textContent='₽'+bookingData.cost.toLocaleString('ru');
+  document.getElementById('s3Clean').textContent='₽'+CONFIG.cleaning.toLocaleString('ru');
+  document.getElementById('s3Total').textContent='₽'+bookingData.total.toLocaleString('ru');
+  document.getElementById('s3Prepay').textContent='₽'+Math.ceil(bookingData.total*0.2).toLocaleString('ru');
+  document.getElementById('payStatusBox').style.display='none';
+  document.getElementById('payBtns').innerHTML=`
+    <button class="btn-outline-s" onclick="goBackToContract()">Назад</button>
+    <button class="btn-gold-w" style="flex:2" id="payBtn" onclick="submitBooking()">Забронировать</button>
+  `;
+}
+
+function goBackToContract(){
+  document.getElementById('stp3').style.display='none';
+  document.getElementById('stpContract').style.display='flex';
+  document.getElementById('panelTitle').textContent='Договор аренды';
+  document.getElementById('sd4').classList.remove('active');
+  document.getElementById('sd3').classList.remove('done'); document.getElementById('sd3').classList.add('active');
+}
+
+function goS2back(){
+  setStep(2);
+  document.getElementById('panelTitle').textContent='Данные гостя';
+}
+
 function goS3(){
   if(!document.getElementById('gName').value.trim()||!document.getElementById('gPhone').value.trim()||!document.getElementById('gEmail').value.trim()){showToast('Заполните все обязательные поля','err');return;}
   if(!document.getElementById('privacyCheck').checked){showToast('Необходимо согласие на обработку персональных данных','err');return;}
@@ -935,8 +1092,10 @@ async function submitBooking(){
     guest_email:  document.getElementById('gEmail').value.trim(),
     guests_count: parseInt(document.getElementById('gCount').value),
     notes:        document.getElementById('gNotes').value.trim(),
+    passport:     document.getElementById('gPassport').value.trim(),
     payment_method: 'tbank',
-    total_price:  bookingData.total
+    total_price:  bookingData.total,
+    contract_signed: true
   };
 
   try {
