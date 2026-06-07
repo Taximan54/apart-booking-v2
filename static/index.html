@@ -980,6 +980,21 @@ ${new Date().toLocaleDateString('ru-RU',{day:'numeric',month:'long',year:'numeri
 Арендатор: ${name}`;
 }
 
+function safeDot(id, action, cls){
+  const el = document.getElementById(id);
+  if(!el) return;
+  if(action==='add') el.classList.add(cls);
+  else if(action==='remove') el.classList.remove(cls);
+  else if(action==='set') el.className = 'sdot ' + cls;
+}
+
+function hideAllSteps(){
+  ['stp1','stp2','stp3','stpContract'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.style.display='none';
+  });
+}
+
 function goToContract(){
   if(!document.getElementById('gName').value.trim()||!document.getElementById('gPhone').value.trim()||!document.getElementById('gEmail').value.trim()){
     showToast('Заполните все обязательные поля','err'); return;
@@ -987,34 +1002,31 @@ function goToContract(){
   if(!document.getElementById('privacyCheck').checked){
     showToast('Необходимо согласие на обработку персональных данных','err'); return;
   }
-  // Генерируем договор
   document.getElementById('contractText').innerText = buildContract();
-  // Переходим к шагу договора
-  document.getElementById('stp2').style.display='none';
+  hideAllSteps();
   document.getElementById('stpContract').style.display='flex';
   document.getElementById('panelTitle').textContent='Договор аренды';
-  document.getElementById('sd2').classList.remove('active'); document.getElementById('sd2').classList.add('done');
-  document.getElementById('sd3').classList.add('active');
+  safeDot('sd2','remove','active'); safeDot('sd2','add','done');
+  safeDot('sd3','add','active');
 }
 
 function goS2fromContract(){
-  document.getElementById('stpContract').style.display='none';
+  hideAllSteps();
   document.getElementById('stp2').style.display='flex';
   document.getElementById('panelTitle').textContent='Данные гостя';
-  document.getElementById('sd3').classList.remove('active');
-  document.getElementById('sd2').classList.remove('done'); document.getElementById('sd2').classList.add('active');
+  safeDot('sd3','remove','active');
+  safeDot('sd2','remove','done'); safeDot('sd2','add','active');
 }
 
 function goS3fromContract(){
   if(!document.getElementById('contractCheck').checked){
     showToast('Необходимо подписать договор','err'); return;
   }
-  document.getElementById('stpContract').style.display='none';
+  hideAllSteps();
   document.getElementById('stp3').style.display='flex';
   document.getElementById('panelTitle').textContent='Оплата';
-  document.getElementById('sd3').classList.remove('active'); document.getElementById('sd3').classList.add('done');
-  document.getElementById('sd4').classList.add('active');
-  // Заполняем данные шага 3
+  safeDot('sd3','remove','active'); safeDot('sd3','add','done');
+  safeDot('sd4','add','active');
   document.getElementById('s3NightsLbl').textContent=bookingData.nights+' '+bookingData.nw;
   document.getElementById('s3NightsCost').textContent='₽'+bookingData.cost.toLocaleString('ru');
   document.getElementById('s3Clean').textContent='₽'+CONFIG.cleaning.toLocaleString('ru');
@@ -1028,11 +1040,11 @@ function goS3fromContract(){
 }
 
 function goBackToContract(){
-  document.getElementById('stp3').style.display='none';
+  hideAllSteps();
   document.getElementById('stpContract').style.display='flex';
   document.getElementById('panelTitle').textContent='Договор аренды';
-  document.getElementById('sd4').classList.remove('active');
-  document.getElementById('sd3').classList.remove('done'); document.getElementById('sd3').classList.add('active');
+  safeDot('sd4','remove','active');
+  safeDot('sd3','remove','done'); safeDot('sd3','add','active');
 }
 
 function goS2back(){
