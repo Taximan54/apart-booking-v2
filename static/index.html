@@ -465,6 +465,16 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
             </select>
           </div>
           <div class="fgroup"><label class="flabel">Пожелания (необязательно)</label><input type="text" class="finput" id="gNotes" placeholder="Особые пожелания..."></div>
+          <div style="margin-top:16px;padding:16px;background:rgba(201,168,76,.04);border:1px solid rgba(201,168,76,.1)">
+            <label style="display:flex;align-items:flex-start;gap:12px;cursor:pointer">
+              <input type="checkbox" id="privacyCheck" style="margin-top:3px;accent-color:var(--gold);width:16px;height:16px;flex-shrink:0">
+              <span style="font-size:11px;color:var(--text-muted);line-height:1.6;font-weight:300">
+                Я согласен(а) с 
+                <a href="/static/privacy.html" target="_blank" style="color:var(--gold);text-decoration:none">политикой конфиденциальности</a> 
+                и даю согласие на обработку персональных данных в соответствии с ФЗ-152
+              </span>
+            </label>
+          </div>
           <div class="btn-row">
             <button class="btn-outline-s" onclick="goS1()">Назад</button>
             <button class="btn-gold-w" style="flex:2" onclick="goS3()">К оплате</button>
@@ -518,6 +528,7 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
     <div style="color:var(--gold);font-size:11px;letter-spacing:.2em;margin-bottom:8px">КОНТАКТЫ</div>
     <div id="footerEmail">citypause@mail.ru</div>
     <div id="footerPhone">+7 (495) 000-00-00</div>
+    <div style="margin-top:12px"><a href="/static/privacy.html" style="font-size:10px;color:var(--text-muted);text-decoration:none;letter-spacing:.1em;transition:color .3s" onmouseover="this.style.color='var(--gold)'" onmouseout="this.style.color='var(--text-muted)'">Политика конфиденциальности</a></div>
   </div>
   <div class="footer-r">
     <div>© 2026 Городская Пауза</div>
@@ -874,6 +885,7 @@ function goS2(){if(!selStart||!selEnd) return;setStep(2);document.getElementById
 function goS2back(){setStep(2);document.getElementById('panelTitle').textContent='Данные гостя';}
 function goS3(){
   if(!document.getElementById('gName').value.trim()||!document.getElementById('gPhone').value.trim()||!document.getElementById('gEmail').value.trim()){showToast('Заполните все обязательные поля','err');return;}
+  if(!document.getElementById('privacyCheck').checked){showToast('Необходимо согласие на обработку персональных данных','err');return;}
   setStep(3);
   document.getElementById('panelTitle').textContent='Оплата';
   document.getElementById('s3NightsLbl').textContent=`${bookingData.nights} ${bookingData.nw}`;
