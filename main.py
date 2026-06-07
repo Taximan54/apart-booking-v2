@@ -420,13 +420,30 @@ async def create_booking(b: BookingCreate):
     booking_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
     conn.close()
 
-    # Уведомление администраторам
+    door_code = load_door_code()
+    prepay = round(b.total_price * 0.2)
+
+    # Email — сначала, в отдельных потоках (не блокирует)
+    import threading
+    if b.guest_email:
+        threading.Thread(target=email_guest, args=(
+            booking_ref, b.guest_name, b.guest_email,
+            b.check_in, b.check_out, b.nights,
+            b.total_price, prepay
+        ), daemon=True).start()
+        threading.Thread(target=email_admin, args=(
+            booking_ref, b.guest_name, b.guest_phone,
+            b.guest_email, b.check_in, b.check_out,
+            b.nights, b.total_price, b.payment_method
+        ), daemon=True).start()
+
+    # Telegram — после (может зависнуть из-за блокировок)
     for admin_id in ADMIN_IDS:
         try:
             await bot.send_message(
                 admin_id,
                 f"🆕 Новая бронь с сайта!\n\n"
-                f"📋 #{booking_id}\n"
+                f"📋 {booking_ref}\n"
                 f"👤 {b.guest_name}\n"
                 f"📞 {b.guest_phone}\n"
                 f"📧 {b.guest_email}\n"
@@ -438,23 +455,6 @@ async def create_booking(b: BookingCreate):
             )
         except Exception:
             pass
-
-    door_code = load_door_code()
-
-    # Отправляем email гостю и админу
-    prepay = round(b.total_price * 0.2)
-    if b.guest_email:
-        import threading
-        threading.Thread(target=email_guest, args=(
-            booking_ref, b.guest_name, b.guest_email,
-            b.check_in, b.check_out, b.nights,
-            b.total_price, prepay
-        ), daemon=True).start()
-        threading.Thread(target=email_admin, args=(
-            booking_ref, b.guest_name, b.guest_phone,
-            b.guest_email, b.check_in, b.check_out,
-            b.nights, b.total_price, b.payment_method
-        ), daemon=True).start()
 
     return {"booking_id": booking_ref, "door_code": door_code, "status": "confirmed"}
 
