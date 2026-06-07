@@ -120,6 +120,8 @@ DESC_FILE   = f"{DATA_DIR}/description.txt"
 DB_FILE     = f"{DATA_DIR}/bookings.db"
 
 DEFAULT_PRICES = {"weekday": 3500, "weekend": 4500, "cleaning": 1500}
+CONTRACT_FILE = f"{DATA_DIR}/contract_template.txt"
+CONTRACT_STATIC = "static/contract_template.txt"  # fallback из репозитория
 
 # =====================================================
 # EMAIL — отправка через mail.ru SMTP
@@ -152,6 +154,22 @@ def send_email(to: str, subject: str, html_body: str):
     except Exception as e:
         print(f"⚠️ Ошибка отправки email: {e}")
 
+def fill_contract_template(template: str, data: dict) -> str:
+    """Подставляет данные в плейсхолдеры шаблона."""
+    for key, value in data.items():
+        template = template.replace("{{" + key + "}}", str(value))
+    return template
+
+def load_contract_template() -> str:
+    """Загружает шаблон договора."""
+    if os.path.exists(CONTRACT_FILE):
+        with open(CONTRACT_FILE, "r", encoding="utf-8") as f:
+            return f.read()
+    if os.path.exists(CONTRACT_STATIC):
+        with open(CONTRACT_STATIC, "r", encoding="utf-8") as f:
+            return f.read()
+    return ""
+
 def email_contract(booking_id: str, guest_name: str, guest_email: str,
                    check_in: str, check_out: str, nights: int,
                    total: int, passport: str = ""):
@@ -163,72 +181,24 @@ def email_contract(booking_id: str, guest_name: str, guest_email: str,
     per_night = round(total / nights) if nights else total
     deposit = 6000
 
-    contract_text = f"""ДОГОВОР КРАТКОСРОЧНОЙ АРЕНДЫ ПОМЕЩЕНИЯ
-
-{today} г.
-
-Мы, нижеподписавшиеся, Городская Пауза, именуемый в дальнейшем «Арендодатель», с одной стороны, и гражданин {guest_name}, паспорт серии {passport or "____________"}, именуемый в дальнейшем «Арендатор», с другой стороны, заключили настоящий Договор о нижеследующем:
-
-1. ПРЕДМЕТ ДОГОВОРА
-
-1.1. Арендодатель передает, а Арендатор принимает во временное платное пользование:
-г. Новосибирск, ул. Дачная, д. 5, кв. 286, 22 этаж
-
-1.2. Помещение передается в аренду на {nights} суток.
-Дата заселения: с 15:00, {checkin_fmt}
-Дата выселения: до 12:00, {checkout_fmt}
-
-2. АРЕНДНАЯ ПЛАТА
-
-2.1. Арендная плата: {per_night:,} ₽ в сутки.
-2.2. Полная стоимость: {total:,} ₽ — оплачивается при заселении.
-2.3. Обеспечительный платёж: {deposit:,} ₽ — возвращается после выезда.
-2.4. При досрочном расторжении без объективных причин оплата не возвращается.
-
-3. ОБЯЗАННОСТИ АРЕНДАТОРА
-
-• Соблюдать правила проживания и не нарушать права соседей
-• Не проводить шумные мероприятия
-• Не проживать с животными
-• Не курить в помещении и на лоджии
-• Не зажигать ароматические свечи
-• Бережно относиться к имуществу
-
-4. ОТВЕТСТВЕННОСТЬ
-
-4.1. При повреждении имущества Арендатор возмещает убытки.
-4.2. При нарушении правил обеспечительный платёж не возвращается.
-
-5. ПРОЧИЕ УСЛОВИЯ
-
-5.1. Договор вступает в силу с момента подписания.
-5.2. Арендатор даёт согласие на обработку персональных данных (ФЗ-152).
-5.3. Арендатор предоставляет копию паспорта при заселении.
-
-Арендодатель: Городская Пауза (citypause@mail.ru)
-Арендатор: {guest_name}
-Бронь: {booking_id}
-
-Договор подписан электронно на сайте citypause.ru"""
-
-    html = f"""
-    <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#0A0A0A;color:#F0E6C8;padding:40px">
-      <div style="text-align:center;margin-bottom:32px">
-        <div style="font-size:24px;letter-spacing:4px;color:#C9A84C">ГОРОДСКАЯ ПАУЗА</div>
-        <div style="font-size:11px;letter-spacing:2px;color:#5A4A30;margin-top:4px;text-transform:uppercase">Договор аренды</div>
-      </div>
-      <div style="background:#141414;border:1px solid #1E1E1E;padding:24px;margin-bottom:16px">
-        <div style="font-size:11px;letter-spacing:2px;color:#C9A84C;margin-bottom:12px;text-transform:uppercase">Бронь {booking_id}</div>
-        <pre style="font-size:11px;color:#A89060;line-height:1.8;white-space:pre-wrap;font-family:Arial,sans-serif">{contract_text}</pre>
-      </div>
-      <div style="text-align:center;font-size:11px;color:#5A4A30">
-        <a href="https://citypause.ru" style="color:#C9A84C">citypause.ru</a> · 
-        <a href="mailto:citypause@mail.ru" style="color:#C9A84C">citypause@mail.ru</a>
-      </div>
-    </div>
-    """
-    send_email(guest_email, f"Договор аренды {booking_id} — Городская Пауза", html)
-
+    template = load_contract_template()
+    contract_text = fill_contract_template(template, {
+        "ДАТА_ДОГОВОРА":  today,
+        "АРЕНДОДАТЕЛЬ":   "Городская Пауза",
+        "ФИО":            guest_name,
+        "ПАСПОРТ":        passport or "____________",
+        "АДРЕС":          "г. Новосибирск, ул. Дачная, д. 5, квартира 286, 22 этаж",
+        "НОЧЕЙ":          str(nights),
+        "ДАТА_ЗАЕЗДА":    checkin_fmt,
+        "ДАТА_ВЫЕЗДА":    checkout_fmt,
+        "ГОСТЕЙ":         "—",
+        "ЦЕНА_СУТКИ":     f"{per_night:,}".replace(",", " "),
+        "СУММА":          f"{total:,}".replace(",", " "),
+        "ДЕПОЗИТ":        f"{deposit:,}".replace(",", " "),
+        "EMAIL":          "citypause@mail.ru",
+        "САЙТ":           "citypause.ru",
+        "НОМЕР_БРОНИ":    booking_id,
+    }) if template else f"""ДОГОВОР КРАТКОСРОЧНОЙ АРЕНДЫ ПОМЕЩЕНИЯ
 
 def email_guest(booking_id: str, guest_name: str, guest_email: str,
                 check_in: str, check_out: str, nights: int,
@@ -606,6 +576,30 @@ async def payment_notify(p: PaymentNotify):
         except Exception as e:
             print(f"Notify error: {e}")
 
+    return {"ok": True}
+
+# =====================================================
+# API — ШАБЛОН ДОГОВОРА
+# =====================================================
+
+@app.get("/api/contract-template")
+async def get_contract_template():
+    # Сначала ищем в /data (редактируемый), потом в static (из репо)
+    if os.path.exists(CONTRACT_FILE):
+        with open(CONTRACT_FILE, "r", encoding="utf-8") as f:
+            return f.read()
+    if os.path.exists(CONTRACT_STATIC):
+        with open(CONTRACT_STATIC, "r", encoding="utf-8") as f:
+            return f.read()
+    return "Шаблон договора не найден. Загрузите contract_template.txt в /data/"
+
+class ContractTemplate(BaseModel):
+    text: str
+
+@app.post("/api/contract-template")
+async def set_contract_template(c: ContractTemplate):
+    with open(CONTRACT_FILE, "w", encoding="utf-8") as f:
+        f.write(c.text)
     return {"ok": True}
 
 # =====================================================

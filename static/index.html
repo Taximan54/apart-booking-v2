@@ -908,106 +908,81 @@ function goS2(){if(!selStart||!selEnd) return;setStep(2);document.getElementById
 function goS2back(){setStep(2);document.getElementById('panelTitle').textContent='Данные гостя';}
 
 // ── ДОГОВОР ──────────────────────────────────────
-const APARTMENT_ADDRESS = "г. Новосибирск, ул. Дачная, д. 5, кв. 286, 22 этаж";
-const DEPOSIT_AMOUNT = 6000;
+let contractTemplate = null;
 
-function buildContract(){
-  const name    = (document.getElementById('gName').value.trim() + ' ' + document.getElementById('gSurname').value.trim()).trim();
+async function loadContractTemplate() {
+  if(contractTemplate) return contractTemplate;
+  try {
+    const r = await fetch(API.BASE + '/api/contract-template');
+    contractTemplate = await r.text();
+    return contractTemplate;
+  } catch(e) {
+    return null;
+  }
+}
+
+function fillTemplate(template, data) {
+  let result = template;
+  for(const [key, val] of Object.entries(data)){
+    result = result.split('{{' + key + '}}').join(val);
+  }
+  return result;
+}
+
+async function buildContract() {
+  const name     = (document.getElementById('gName').value.trim() + ' ' + document.getElementById('gSurname').value.trim()).trim();
   const passport = document.getElementById('gPassport').value.trim() || '____________';
-  const guests  = document.getElementById('gCount').value;
-  const notes   = document.getElementById('gNotes').value.trim() || 'нет';
-  const nights  = bookingData.nights;
-  const nw      = bookingData.nw;
-  const total   = bookingData.total;
-  const cost    = bookingData.cost;
+  const guests   = document.getElementById('gCount').value;
+  const nights   = bookingData.nights;
+  const nw       = bookingData.nw;
+  const total    = bookingData.total;
+  const cost     = bookingData.cost;
   const perNight = Math.round(cost / nights);
-  const fmt = d => new Date(d+'T00:00:00').toLocaleDateString('ru-RU',{day:'numeric',month:'long',year:'numeric'});
+  const today    = new Date().toLocaleDateString('ru-RU',{day:'numeric',month:'long',year:'numeric'});
+  const fmt      = d => new Date(d+'T00:00:00').toLocaleDateString('ru-RU',{day:'numeric',month:'long',year:'numeric'});
 
-  return `ДОГОВОР КРАТКОСРОЧНОЙ АРЕНДЫ ПОМЕЩЕНИЯ
+  const data = {
+    'ДАТА_ДОГОВОРА':  today,
+    'АРЕНДОДАТЕЛЬ':   'Городская Пауза',
+    'ФИО':            name,
+    'ПАСПОРТ':        passport,
+    'АДРЕС':          'г. Новосибирск, ул. Дачная, д. 5, квартира 286, 22 этаж',
+    'НОЧЕЙ':          String(nights),
+    'ДАТА_ЗАЕЗДА':    fmt(bookingData.start),
+    'ДАТА_ВЫЕЗДА':    fmt(bookingData.end),
+    'ГОСТЕЙ':         String(guests),
+    'ЦЕНА_СУТКИ':     perNight.toLocaleString('ru'),
+    'СУММА':          total.toLocaleString('ru'),
+    'ДЕПОЗИТ':        '6 000',
+    'EMAIL':          'citypause@mail.ru',
+    'САЙТ':           'citypause.ru',
+    'НОМЕР_БРОНИ':    'будет присвоен после оплаты',
+  };
 
-${new Date().toLocaleDateString('ru-RU',{day:'numeric',month:'long',year:'numeric'})} г.
+  const template = await loadContractTemplate();
+  if(template) return fillTemplate(template, data);
 
-Мы, нижеподписавшиеся, Городская Пауза, именуемый в дальнейшем «Арендодатель», с одной стороны, и гражданин ${name}, паспорт серии ${passport}, именуемый в дальнейшем «Арендатор», с другой стороны, заключили настоящий Договор о нижеследующем:
-
-1. ПРЕДМЕТ ДОГОВОРА
-
-1.1. Арендодатель передает, а Арендатор принимает во временное платное пользование: ${APARTMENT_ADDRESS}
-
-1.2. Помещение передается в аренду на ${nights} ${nw}.
-Дата заселения: с 15:00, ${fmt(bookingData.start)}
-Дата выселения: до 12:00, ${fmt(bookingData.end)}
-
-1.3. Помимо Арендатора в помещении будет проживать: ${guests} чел.
-
-2. АРЕНДНАЯ ПЛАТА
-
-2.1. За пользование помещением устанавливается плата в размере ${perNight.toLocaleString('ru')} ₽ в сутки.
-
-2.2. Полная стоимость проживания — ${total.toLocaleString('ru')} ₽. Данная сумма уплачивается Арендатором при заселении.
-
-2.3. При заезде вносится обеспечительный платёж в размере ${DEPOSIT_AMOUNT.toLocaleString('ru')} ₽ за сохранность имущества, который возвращается после выезда и полной уборки.
-
-2.4. В случае досрочного расторжения без объективных причин оплаченные денежные средства не возвращаются.
-
-3. ПРАВА И ОБЯЗАННОСТИ СТОРОН
-
-3.1. Арендодатель обязуется предоставить помещение с мебелью, бытовой техникой, посудой и постельным бельём.
-
-3.2. Арендатор обязуется:
-• Соблюдать правила пользования помещением и не нарушать права соседей
-• Бережно относиться к имуществу Арендодателя
-• Не проводить шумные мероприятия
-• Не проживать с животными
-• Не курить в помещении и на лоджии
-• Не зажигать ароматические свечи
-• Не двигать мебель
-
-4. ОТВЕТСТВЕННОСТЬ СТОРОН
-
-4.1. В случае повреждения имущества Арендатор обязуется возместить все причинённые убытки.
-4.2. При нарушении правил проживания обеспечительный платёж не возвращается.
-
-5. ПРОЧИЕ УСЛОВИЯ
-
-5.1. Договор вступает в силу с момента его подписания.
-5.2. Арендатор даёт согласие на обработку персональных данных согласно ФЗ-152.
-5.3. Арендатор обязуется предоставить копию паспорта при заселении.
-
-ПЕРЕЧЕНЬ ИМУЩЕСТВА:
-Кухонный гарнитур, телевизор, диван, вытяжка, стиральная машина, шкаф платяной, тумбочка, роутер, ТВ-приставка, фен, плита, утюг, микроволновка, электрический чайник.
-
-Арендодатель: Городская Пауза (citypause@mail.ru)
-Арендатор: ${name}`;
+  // Fallback если API недоступен
+  return 'Шаблон договора загружается... Попробуйте обновить страницу.';
 }
 
-function safeDot(id, action, cls){
-  const el = document.getElementById(id);
-  if(!el) return;
-  if(action==='add') el.classList.add(cls);
-  else if(action==='remove') el.classList.remove(cls);
-  else if(action==='set') el.className = 'sdot ' + cls;
-}
-
-function hideAllSteps(){
-  ['stp1','stp2','stp3','stpContract'].forEach(id=>{
-    const el = document.getElementById(id);
-    if(el) el.style.display='none';
-  });
-}
-
-function goToContract(){
+async function goToContract(){
   if(!document.getElementById('gName').value.trim()||!document.getElementById('gPhone').value.trim()||!document.getElementById('gEmail').value.trim()){
     showToast('Заполните все обязательные поля','err'); return;
   }
   if(!document.getElementById('privacyCheck').checked){
     showToast('Необходимо согласие на обработку персональных данных','err'); return;
   }
-  document.getElementById('contractText').innerText = buildContract();
+  // Показываем шаг договора сразу
   hideAllSteps();
   document.getElementById('stpContract').style.display='flex';
   document.getElementById('panelTitle').textContent='Договор аренды';
   safeDot('sd2','remove','active'); safeDot('sd2','add','done');
   safeDot('sd3','add','active');
+  // Загружаем договор асинхронно
+  document.getElementById('contractText').innerText = 'Загрузка договора...';
+  const text = await buildContract();
+  document.getElementById('contractText').innerText = text;
 }
 
 function goS2fromContract(){

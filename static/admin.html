@@ -211,6 +211,7 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
       <div class="sb-section-label">Управление</div>
       <a class="sb-item" onclick="showPanel('calendar',this)"><span class="sb-icon">⊞</span>Календарь</a>
       <a class="sb-item" onclick="showPanel('prices',this)"><span class="sb-icon">◎</span>Цены</a>
+      <a class="sb-item" onclick="showPanel('contract',this)"><span class="sb-icon">✎</span>Договор</a>
       <a class="sb-item" onclick="showPanel('settings',this)"><span class="sb-icon">⊛</span>Настройки</a>
     </div>
   </nav>
@@ -359,6 +360,46 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
           <div style="margin-top:20px;display:flex;gap:12px">
             <button class="btn btn-primary" onclick="savePrices()">Сохранить цены</button>
             <button class="btn btn-ghost" onclick="loadPrices()">Сбросить</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CONTRACT -->
+    <div class="panel" id="panel-contract">
+      <div class="card" style="max-width:900px">
+        <div class="card-header">
+          <span class="card-title">Шаблон договора аренды</span>
+          <button class="btn btn-ghost btn-sm" onclick="resetContract()">Сбросить</button>
+        </div>
+        <div class="card-body">
+          <div style="font-size:11px;color:var(--text-muted);line-height:1.7;margin-bottom:20px;padding:12px 16px;background:rgba(201,168,76,.04);border:1px solid rgba(201,168,76,.1)">
+            <div style="color:var(--gold);font-size:10px;letter-spacing:.2em;text-transform:uppercase;margin-bottom:8px">Доступные плейсхолдеры</div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px">
+              <code style="color:var(--gold);font-size:11px">{{ФИО}}</code>
+              <code style="color:var(--gold);font-size:11px">{{ПАСПОРТ}}</code>
+              <code style="color:var(--gold);font-size:11px">{{ДАТА_ДОГОВОРА}}</code>
+              <code style="color:var(--gold);font-size:11px">{{ДАТА_ЗАЕЗДА}}</code>
+              <code style="color:var(--gold);font-size:11px">{{ДАТА_ВЫЕЗДА}}</code>
+              <code style="color:var(--gold);font-size:11px">{{НОЧЕЙ}}</code>
+              <code style="color:var(--gold);font-size:11px">{{ГОСТЕЙ}}</code>
+              <code style="color:var(--gold);font-size:11px">{{ЦЕНА_СУТКИ}}</code>
+              <code style="color:var(--gold);font-size:11px">{{СУММА}}</code>
+              <code style="color:var(--gold);font-size:11px">{{ДЕПОЗИТ}}</code>
+              <code style="color:var(--gold);font-size:11px">{{АДРЕС}}</code>
+              <code style="color:var(--gold);font-size:11px">{{АРЕНДОДАТЕЛЬ}}</code>
+              <code style="color:var(--gold);font-size:11px">{{EMAIL}}</code>
+              <code style="color:var(--gold);font-size:11px">{{САЙТ}}</code>
+              <code style="color:var(--gold);font-size:11px">{{НОМЕР_БРОНИ}}</code>
+            </div>
+          </div>
+          <div class="info-field">
+            <div class="info-label">Текст договора</div>
+            <textarea class="info-input" id="contractEditor" rows="30" style="resize:vertical;line-height:1.7;font-size:12px;font-family:monospace" placeholder="Загрузка..."></textarea>
+          </div>
+          <div style="display:flex;gap:12px;margin-top:16px">
+            <button class="btn btn-primary" onclick="saveContract()">Сохранить договор</button>
+            <button class="btn btn-ghost" onclick="previewContract()">Предпросмотр</button>
           </div>
         </div>
       </div>
@@ -993,6 +1034,52 @@ function showToast(msg, type='gold') {
 // ============================================================
 // KEYBOARD
 // ============================================================
+// ── ДОГОВОР ──────────────────────────────────────
+async function loadContractForEditor() {
+  try {
+    const r = await fetch(`${API_BASE}/api/contract-template`);
+    const text = await r.text();
+    document.getElementById('contractEditor').value = text;
+  } catch(e) {
+    document.getElementById('contractEditor').value = 'Ошибка загрузки шаблона';
+  }
+}
+
+async function saveContract() {
+  const text = document.getElementById('contractEditor').value;
+  try {
+    await apiPost('/api/contract-template', { text });
+    showToast('Договор сохранён', 'gold');
+  } catch(e) {
+    showToast('Ошибка сохранения', 'err');
+  }
+}
+
+async function resetContract() {
+  if(!confirm('Сбросить договор к стандартному шаблону?')) return;
+  try {
+    const r = await fetch('/static/contract_template.txt');
+    const text = await r.text();
+    document.getElementById('contractEditor').value = text;
+    showToast('Шаблон сброшен — нажмите «Сохранить»', 'gold');
+  } catch(e) {
+    showToast('Ошибка загрузки шаблона', 'err');
+  }
+}
+
+function previewContract() {
+  const text = document.getElementById('contractEditor').value;
+  const w = window.open('', '_blank');
+  w.document.write('<pre style="font-family:Arial;padding:40px;max-width:800px;margin:0 auto;line-height:1.8">' + text + '</pre>');
+}
+
+// Загружаем договор при открытии панели
+const _origShowPanel = showPanel;
+function showPanel(id, el) {
+  _origShowPanel(id, el);
+  if(id === 'contract') loadContractForEditor();
+}
+
 document.addEventListener('keydown', e => {
   if(e.key==='Escape') { closeModal(); }
   if(e.key==='Enter' && document.getElementById('loginScreen').style.display!=='none') { doLogin(); }
