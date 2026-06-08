@@ -981,20 +981,18 @@ function safeDot(id, action, cls){
   else if(action==='remove') el.classList.remove(cls);
 }
 
-function goToContract(){
+async function goToContract(){
   if(!document.getElementById('gName').value.trim()||!document.getElementById('gPhone').value.trim()||!document.getElementById('gEmail').value.trim()){
     showToast('Заполните все обязательные поля','err'); return;
   }
   if(!document.getElementById('privacyCheck').checked){
     showToast('Необходимо согласие на обработку персональных данных','err'); return;
   }
-  // Показываем шаг договора сразу
   hideAllSteps();
   document.getElementById('stpContract').style.display='flex';
   document.getElementById('panelTitle').textContent='Договор аренды';
   safeDot('sd2','remove','active'); safeDot('sd2','add','done');
   safeDot('sd3','add','active');
-  // Загружаем договор асинхронно
   document.getElementById('contractText').innerText = 'Загрузка договора...';
   const text = await buildContract();
   document.getElementById('contractText').innerText = text;
