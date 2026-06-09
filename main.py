@@ -11,7 +11,7 @@ from typing import Optional
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, PlainTextResponse
 from pydantic import BaseModel
 from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
@@ -341,12 +341,11 @@ async def set_description(d: Description):
 async def get_contract_template():
     if os.path.exists(CONTRACT_FILE):
         with open(CONTRACT_FILE, "r", encoding="utf-8") as f:
-            return f.read()
+            return PlainTextResponse(f.read())
     if os.path.exists(CONTRACT_STATIC):
         with open(CONTRACT_STATIC, "r", encoding="utf-8") as f:
-            return f.read()
-    return "Shablon dogovora ne nayden."
-
+            return PlainTextResponse(f.read())
+    return PlainTextResponse("Shablon dogovora ne nayden.")
 @app.post("/api/contract-template")
 async def set_contract_template(c: ContractTemplate):
     with open(CONTRACT_FILE, "w", encoding="utf-8") as f:
