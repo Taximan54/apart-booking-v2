@@ -200,7 +200,9 @@ def email_contract(booking_id, guest_name, guest_email, check_in, check_out, nig
     per_night = round(total / nights) if nights else total
     deposit = 6000
 
+    print("DEBUG email_contract: loading template...")
     template = load_contract_template()
+    print("DEBUG template length: " + str(len(template)) if template else "DEBUG template: EMPTY")
     if template:
         contract_text = fill_contract(template, {
             "DATA_DOGOVORA": today,
@@ -501,8 +503,8 @@ async def payment_notify(p: PaymentNotify):
                 "Summa: " + str(p.total_price) + " rub\n"
                 "Predoplata: " + str(prepay) + " rub",
                 reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-                    [InlineKeyboardButton(text="OK Podtverdit oplatu", callback_data="web_confirm_" + p.booking_ref)],
-                    [InlineKeyboardButton(text="X Ne oplaceno", callback_data="web_reject_" + p.booking_ref)]
+                    [InlineKeyboardButton(text="✅ Подтвердить оплату", callback_data="web_confirm_" + p.booking_ref)],
+                    [InlineKeyboardButton(text="❌ Не оплачено", callback_data="web_reject_" + p.booking_ref)]
                 ])
             )
         except Exception as e:
