@@ -445,17 +445,17 @@ async def create_booking(b: BookingCreate):
             booking_ref, b.guest_name, b.guest_email,
             b.check_in, b.check_out, b.nights,
             b.total_price, prepay
-        ), daemon=True).start()
+        ).start()
         threading.Thread(target=email_contract, args=(
             booking_ref, b.guest_name, b.guest_email,
             b.check_in, b.check_out, b.nights,
             b.total_price, b.passport
-        ), daemon=True).start()
+        ).start()
         threading.Thread(target=email_admin, args=(
             booking_ref, b.guest_name, b.guest_phone,
             b.guest_email, b.check_in, b.check_out,
             b.nights, b.total_price, b.payment_method
-        ), daemon=True).start()
+        ).start()
 
     for admin_id in ADMIN_IDS:
         try:
