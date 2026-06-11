@@ -457,17 +457,21 @@ async def create_booking(b: BookingCreate):
             b.nights, b.total_price, b.payment_method
         ).start()
 
+    # Telegram — с таймаутом 3 сек, не блокирует основной поток
     for admin_id in ADMIN_IDS:
         try:
-            await bot.send_message(
-                admin_id,
-                "Novaya bron s sayta!\n\n"
-                "Bron: " + booking_ref + "\n"
-                "Gost: " + b.guest_name + "\n"
-                "Tel: " + b.guest_phone + "\n"
-                "Email: " + b.guest_email + "\n"
-                "Daty: " + b.check_in + " -> " + b.check_out + "\n"
-                "Summa: " + str(b.total_price) + " rub"
+            await asyncio.wait_for(
+                bot.send_message(
+                    admin_id,
+                    "Novaya bron s sayta!\n\n"
+                    "Bron: " + booking_ref + "\n"
+                    "Gost: " + b.guest_name + "\n"
+                    "Tel: " + b.guest_phone + "\n"
+                    "Email: " + b.guest_email + "\n"
+                    "Daty: " + b.check_in + " -> " + b.check_out + "\n"
+                    "Summa: " + str(b.total_price) + " rub"
+                ),
+                timeout=3.0
             )
         except Exception:
             pass
