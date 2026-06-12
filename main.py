@@ -584,7 +584,14 @@ async def send_notifications():
 @app.on_event("startup")
 async def startup():
     print("APPLICATION STARTED")
-    asyncio.create_task(dp.start_polling(bot))
+    async def safe_polling():
+        while True:
+            try:
+                await dp.start_polling(bot)
+            except Exception as e:
+                print("Bot polling error: " + str(e))
+                await asyncio.sleep(30)
+    asyncio.create_task(safe_polling())
     asyncio.create_task(send_notifications())
     print("SCHEDULER STARTED")
 
