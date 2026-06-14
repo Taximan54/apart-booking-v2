@@ -280,7 +280,8 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
         <div style="display:flex;gap:8px">
           <button class="btn btn-ghost btn-sm" onclick="filterBookings('all')" id="fAll">Все</button>
           <button class="btn btn-ghost btn-sm" onclick="filterBookings('confirmed')" id="fConf">Подтверждённые</button>
-          <button class="btn btn-ghost btn-sm" onclick="filterBookings('pending')" id="fPend">Ожидают</button>
+          <button class="btn btn-ghost btn-sm" onclick="filterBookings('waiting_payment')" id="fPend">Ждут оплаты</button>
+          <button class="btn btn-ghost btn-sm" onclick="filterBookings('payment_pending')" id="fPay">Оплата проверяется</button>
           <button class="btn btn-ghost btn-sm" onclick="filterBookings('cancelled')" id="fCanc">Отменённые</button>
         </div>
       </div>
@@ -489,7 +490,7 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
 // ============================================================
 // CONFIG — same API base as index.html
 // ============================================================
-let API_BASE = localStorage.getItem('gorodskaya-pauza_api_base') || 'https://apart-booking-v2-production.up.railway.app';
+let API_BASE = localStorage.getItem('gorodskaya-pauza_api_base') || 'https://citypause.ru';
 let ADMIN_PWD = localStorage.getItem('gorodskaya-pauza_admin_pwd') || 'admin2024'; // Default pwd
 
 // ============================================================
@@ -827,11 +828,13 @@ let currentFilter = 'all';
 
 function filterBookings(f) {
   currentFilter = f;
-  ['All','Conf','Pend','Canc'].forEach(x => {
-    document.getElementById('f'+x).className = 'btn btn-ghost btn-sm';
-  });
-  document.getElementById('f'+f.charAt(0).toUpperCase()+f.slice(1)).className = 'btn btn-primary btn-sm';
-
+  document.querySelectorAll('.btn-sm').forEach(btn => btn.className = 'btn btn-ghost btn-sm');
+  const btnMap = {
+    'all': 'fAll', 'confirmed': 'fConf',
+    'waiting_payment': 'fPend', 'payment_pending': 'fPay', 'cancelled': 'fCanc'
+  };
+  const activeBtn = document.getElementById(btnMap[f] || 'fAll');
+  if(activeBtn) activeBtn.className = 'btn btn-primary btn-sm';
   const filtered = f === 'all' ? allBookings : allBookings.filter(b => b.status === f);
   renderBookingsTable(filtered);
 }
@@ -887,23 +890,48 @@ function openBookingModal(encoded) {
 
 async function confirmBooking() {
   if (!selectedBookingId) return;
-  try { await apiPut(`/api/bookings/${selectedBookingId}`, {status:'confirmed'}); } catch(e) {}
-  const b = allBookings.find(x=>x.id===selectedBookingId);
-  if (b) b.status = 'confirmed';
-  closeModal(); renderBookingsTable(allBookings); updateDashboard();
-  showToast('Бронь подтверждена', 'gold');
+  const btn = document.querySelector('#bookingModal .btn-primary');
+  if(btn) { btn.textContent = 'Подтверждаем...'; btn.disabled = true; }
+  try {
+    // Используем новый эндпоинт — подтверждение оплаты
+    // selectedBookingId может быть числовым id или строкой username (GP-XXXXXX)
+    const b = allBookings.find(x => x.id == selectedBookingId || x.username == selectedBookingId);
+    const ref = b ? (b.username || b.id) : selectedBookingId;
+    const result = await fetch(API_BASE + '/api/bookings/' + ref + '/confirm', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'}
+    }).then(r => r.json());
+    if (b) b.status = 'confirmed';
+    closeModal();
+    renderBookingsTable(allBookings);
+    updateDashboard();
+    showToast('Оплата подтверждена — договор и код замка отправлены гостю', 'gold');
+  } catch(e) {
+    showToast('Ошибка подтверждения: ' + e.message, 'err');
+  } finally {
+    if(btn) { btn.textContent = '✓ Подтвердить'; btn.disabled = false; }
+  }
 }
 
 async function cancelBooking() {
   if (!selectedBookingId) return;
   if (!confirm('Отменить бронирование?')) return;
-  try { await apiPut(`/api/bookings/${selectedBookingId}`, {status:'cancelled'}); } catch(e) {}
-  const b = allBookings.find(x=>x.id===selectedBookingId);
-  if (b) b.status = 'cancelled';
-  closeModal(); renderBookingsTable(allBookings); updateDashboard();
-  showToast('Бронь отменена', 'err');
+  try {
+    const b = allBookings.find(x => x.id == selectedBookingId || x.username == selectedBookingId);
+    const ref = b ? (b.username || b.id) : selectedBookingId;
+    await fetch(API_BASE + '/api/bookings/' + ref + '/cancel', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'}
+    });
+    if (b) b.status = 'cancelled';
+    closeModal();
+    renderBookingsTable(allBookings);
+    updateDashboard();
+    showToast('Бронь отменена', 'err');
+  } catch(e) {
+    showToast('Ошибка отмены', 'err');
+  }
 }
-
 function closeModal() { document.getElementById('bookingModal').classList.remove('open'); }
 
 // ============================================================
@@ -1016,8 +1044,15 @@ function showPanel(id, el) {
 }
 
 function statusBadge(s) {
-  const map = {confirmed:'<span class="badge badge-green">Подтверждено</span>', pending:'<span class="badge badge-gold">Ожидает</span>', cancelled:'<span class="badge badge-red">Отменено</span>'};
-  return map[s]||s;
+  const map = {
+    confirmed:       '<span class="badge badge-green">Подтверждено</span>',
+    waiting_payment: '<span class="badge badge-gold">Ждёт оплаты</span>',
+    payment_pending: '<span class="badge badge-blue">Оплата проверяется</span>',
+    pending:         '<span class="badge badge-gold">Ожидает</span>',
+    cancelled:       '<span class="badge badge-red">Отменено</span>',
+    blocked:         '<span class="badge badge-red">Заблокировано</span>',
+  };
+  return map[s] || '<span class="badge">' + (s||'—') + '</span>';
 }
 
 function payBadge(m) {
