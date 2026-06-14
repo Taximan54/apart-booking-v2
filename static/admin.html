@@ -1035,12 +1035,14 @@ function changePwd() {
 // ============================================================
 function showPanel(id, el) {
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
-  document.getElementById('panel-'+id).classList.add('active');
+  const panel = document.getElementById('panel-'+id);
+  if(panel) panel.classList.add('active');
   document.querySelectorAll('.sb-item').forEach(i=>i.classList.remove('active'));
   if(el) el.classList.add('active');
-  const titles = {dashboard:'Дашборд',bookings:'Все брони',calendar:'Управление календарём',prices:'Цены',settings:'Настройки'};
+  const titles = {dashboard:'Дашборд',bookings:'Все брони',calendar:'Управление календарём',prices:'Цены',settings:'Настройки',contract:'Договор'};
   document.getElementById('topbarTitle').textContent = titles[id]||id;
   if(id==='settings') { loadDesc(); }
+  if(id==='contract') { if(typeof loadContractForEditor==='function') loadContractForEditor(); }
 }
 
 function statusBadge(s) {
@@ -1108,12 +1110,7 @@ function previewContract() {
   w.document.write('<pre style="font-family:Arial;padding:40px;max-width:800px;margin:0 auto;line-height:1.8">' + text + '</pre>');
 }
 
-// Загружаем договор при открытии панели
-const _origShowPanel = showPanel;
-function showPanel(id, el) {
-  _origShowPanel(id, el);
-  if(id === 'contract') loadContractForEditor();
-}
+// Загрузка договора встроена в основной showPanel
 
 document.addEventListener('keydown', e => {
   if(e.key==='Escape') { closeModal(); }
