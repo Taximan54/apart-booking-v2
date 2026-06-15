@@ -307,7 +307,7 @@ def email_booking_confirmed(booking, door_code):
         "\u0414\u041e\u0413\u041e\u0412\u041e\u0420 \u0410\u0420\u0415\u041d\u0414\u042b</div>"
         "<pre style='font-size:10px;color:#A89060;line-height:1.7;white-space:pre-wrap;"
         "font-family:Arial,sans-serif;max-height:400px;overflow:hidden'>"
-        + contract_text[:3000] + "...</pre>"
+        + contract_text + "</pre>"
         "</div>"
         "<div style='text-align:center;font-size:11px;color:#5A4A30'>"
         "citypause@mail.ru | citypause.ru</div></div>"
