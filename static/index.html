@@ -444,6 +444,15 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
           <div class="pbd" id="pbd" style="display:none">
             <div class="pbrow"><span class="lbl" id="pbNightsLbl">—</span><span class="val" id="pbNightsCost">—</span></div>
             <div class="pbrow"><span class="lbl">Уборка</span><span class="val" id="pbClean">—</span></div>
+            <div id="promoRow" style="display:flex;gap:8px;margin:4px 0">
+              <input type="text" id="promoInput" placeholder="Промокод" style="flex:1;background:var(--black-card);border:1px solid var(--black-border);color:var(--text-primary);padding:10px 12px;font-family:'Montserrat',sans-serif;font-size:12px;outline:none;text-transform:uppercase">
+              <button type="button" id="promoBtn" onclick="applyPromoCode()" style="flex:0 0 100px;background:transparent;border:1px solid rgba(201,168,76,.3);color:var(--text-secondary);font-family:'Montserrat',sans-serif;font-size:10px;letter-spacing:.1em;text-transform:uppercase;cursor:pointer">Применить</button>
+            </div>
+            <div class="pbrow" id="pbPromoMsg" style="display:none;font-size:11px"></div>
+            <div class="pbrow" id="pbPromoRow" style="display:none">
+              <span class="lbl" id="pbPromoLbl">Промокод</span>
+              <span class="val" id="pbPromoVal" style="color:var(--gold)">—</span>
+            </div>
             <div class="pbrow pbtotal"><span class="lbl">Итого</span><span class="val" id="pbTotal">—</span></div>
           </div>
           <div style="margin-top:auto;padding-top:20px">
@@ -457,6 +466,7 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
             <div class="fgroup"><label class="flabel">Имя</label><input type="text" class="finput" id="gName" placeholder="Ваше имя"></div>
             <div class="fgroup"><label class="flabel">Фамилия</label><input type="text" class="finput" id="gSurname" placeholder="Фамилия"></div>
           </div>
+          <div class="fgroup"><label class="flabel">Отчество (если есть)</label><input type="text" class="finput" id="gPatronymic" placeholder="Отчество"></div>
           <div class="fgroup"><label class="flabel">Телефон</label><input type="tel" class="finput" id="gPhone" placeholder="+7 (___) ___-__-__"></div>
           <div class="fgroup"><label class="flabel">Email</label><input type="email" class="finput" id="gEmail" placeholder="your@email.com"></div>
           <div class="fgroup">
@@ -591,13 +601,16 @@ const PHOTOS = [
 // API CONFIG — замените BASE_URL на URL вашего FastAPI сервера
 // ============================================================
 const API = {
-  BASE: 'https://apart-booking-v2-production.up.railway.app',
+  BASE: 'https://citypause.ru',
   prices:     () => fetch(`${API.BASE}/api/prices`).then(r=>r.json()),
   bookings:   () => fetch(`${API.BASE}/api/bookings`).then(r=>r.json()),
   doorCode:   () => fetch(`${API.BASE}/api/door-code`).then(r=>r.json()),
   description:() => fetch(`${API.BASE}/api/description`).then(r=>r.text()),
   createBooking: (data) => fetch(`${API.BASE}/api/bookings`, {
     method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)
+  }).then(r=>r.json()),
+  validatePromo: (code) => fetch(`${API.BASE}/api/promo-codes/validate`, {
+    method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({code})
   }).then(r=>r.json()),
   images: () => Promise.resolve(PHOTOS.map(p=>p.src))
 };
@@ -610,6 +623,7 @@ let selStart=null, selEnd=null, hoverDate=null;
 const _now=new Date(); let curYear=_now.getFullYear(), curMonth=_now.getMonth();
 let payMethod='card';
 let bookingData={};
+let appliedPromo=null;
 let galleryImages=[];
 let lbIdx=0;
 
@@ -865,17 +879,75 @@ function updatePanel(){
     cost += isWE(d.getFullYear(), d.getMonth(), d.getDate())
       ? CONFIG.weekend : CONFIG.weekday;
   }
-  const total = cost + CONFIG.cleaning;
+  const subtotal = cost + CONFIG.cleaning;
+  let discount = 0;
+  if(appliedPromo){
+    discount = Math.round(subtotal * appliedPromo.percent / 100);
+  }
+  const total = subtotal - discount;
   const nw = n => n%10===1&&!(n>=11&&n<=19) ? 'ночь'
                 : n%10>=2&&n%10<=4&&!(n>=11&&n<=19) ? 'ночи' : 'ночей';
   document.getElementById('pbNightsLbl').textContent  = nights + ' ' + nw(nights) + ' × тариф';
   document.getElementById('pbNightsCost').textContent = '₽' + cost.toLocaleString('ru');
   document.getElementById('pbClean').textContent      = '₽' + CONFIG.cleaning.toLocaleString('ru');
+  if(appliedPromo){
+    document.getElementById('pbPromoRow').style.display = 'flex';
+    document.getElementById('pbPromoLbl').textContent = 'Промокод ' + appliedPromo.code + ' (−' + appliedPromo.percent + '%)';
+    document.getElementById('pbPromoVal').textContent = '−₽' + discount.toLocaleString('ru');
+  } else {
+    document.getElementById('pbPromoRow').style.display = 'none';
+  }
   document.getElementById('pbTotal').textContent      = '₽' + total.toLocaleString('ru');
   document.getElementById('pbd').style.display = 'flex';
   document.getElementById('toS2').disabled = false;
   const prepay = Math.ceil(total * 0.2);
-  bookingData = {nights, cost, total, prepay, start:selStart, end:selEnd, nw:nw(nights)};
+  bookingData = {nights, cost, subtotal, discount, total, prepay, start:selStart, end:selEnd, nw:nw(nights), promo: appliedPromo};
+}
+
+async function applyPromoCode(){
+  const input = document.getElementById('promoInput');
+  const code  = input.value.trim();
+  const msg   = document.getElementById('pbPromoMsg');
+  if(!code) return;
+  const btn = document.getElementById('promoBtn');
+  btn.disabled = true;
+  const prevLabel = btn.textContent;
+  btn.textContent = '...';
+  try {
+    const res = await API.validatePromo(code);
+    if(res.valid){
+      appliedPromo = { code: res.code, percent: res.percent };
+      input.disabled = true;
+      btn.disabled = false;
+      btn.textContent = 'Убрать';
+      btn.onclick = removePromoCode;
+      msg.style.display = 'none';
+    } else {
+      appliedPromo = null;
+      msg.style.display = 'flex';
+      msg.innerHTML = '<span class="lbl" style="color:#C0392B">Промокод не найден</span>';
+      btn.disabled = false;
+      btn.textContent = prevLabel;
+    }
+  } catch(e){
+    msg.style.display = 'flex';
+    msg.innerHTML = '<span class="lbl" style="color:#C0392B">Не удалось проверить код</span>';
+    btn.disabled = false;
+    btn.textContent = prevLabel;
+  }
+  if(selStart && selEnd) updatePanel();
+}
+
+function removePromoCode(){
+  appliedPromo = null;
+  const input = document.getElementById('promoInput');
+  const btn   = document.getElementById('promoBtn');
+  input.disabled = false;
+  input.value = '';
+  btn.textContent = 'Применить';
+  btn.onclick = applyPromoCode;
+  document.getElementById('pbPromoMsg').style.display = 'none';
+  if(selStart && selEnd) updatePanel();
 }
 
 // Навигация по месяцам
@@ -931,7 +1003,10 @@ function fillTemplate(template, data) {
 }
 
 async function buildContract() {
-  const name     = (document.getElementById('gName').value.trim() + ' ' + document.getElementById('gSurname').value.trim()).trim();
+  const surname     = document.getElementById('gSurname').value.trim();
+  const firstName   = document.getElementById('gName').value.trim();
+  const patronymic  = document.getElementById('gPatronymic').value.trim();
+  const name        = [surname, firstName, patronymic].filter(Boolean).join(' ');
   const passport = document.getElementById('gPassport').value.trim() || '____________';
   const guests   = document.getElementById('gCount').value;
   const nights   = bookingData.nights;
@@ -1087,7 +1162,7 @@ async function submitBooking(){
     check_in:     bookingData.start,
     check_out:    bookingData.end,
     nights:       bookingData.nights,
-    guest_name:   document.getElementById('gName').value.trim()+' '+document.getElementById('gSurname').value.trim(),
+    guest_name:   [document.getElementById('gSurname').value.trim(), document.getElementById('gName').value.trim(), document.getElementById('gPatronymic').value.trim()].filter(Boolean).join(' '),
     guest_phone:  document.getElementById('gPhone').value.trim(),
     guest_email:  document.getElementById('gEmail').value.trim(),
     guests_count: parseInt(document.getElementById('gCount').value),
@@ -1095,7 +1170,8 @@ async function submitBooking(){
     passport:     document.getElementById('gPassport').value.trim(),
     payment_method: 'tbank',
     total_price:  bookingData.total,
-    contract_signed: true
+    contract_signed: true,
+    promo_code:   appliedPromo ? appliedPromo.code : ''
   };
 
   try {

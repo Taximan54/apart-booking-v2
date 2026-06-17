@@ -211,6 +211,7 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
       <div class="sb-section-label">Управление</div>
       <a class="sb-item" onclick="showPanel('calendar',this)"><span class="sb-icon">⊞</span>Календарь</a>
       <a class="sb-item" onclick="showPanel('prices',this)"><span class="sb-icon">◎</span>Цены</a>
+      <a class="sb-item" onclick="showPanel('promo',this)"><span class="sb-icon">%</span>Промокоды</a>
       <a class="sb-item" onclick="showPanel('contract',this)"><span class="sb-icon">✎</span>Договор</a>
       <a class="sb-item" onclick="showPanel('settings',this)"><span class="sb-icon">⊛</span>Настройки</a>
     </div>
@@ -361,6 +362,26 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
           <div style="margin-top:20px;display:flex;gap:12px">
             <button class="btn btn-primary" onclick="savePrices()">Сохранить цены</button>
             <button class="btn btn-ghost" onclick="loadPrices()">Сбросить</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PROMO CODES -->
+    <div class="panel" id="panel-promo">
+      <div class="card" style="max-width:700px">
+        <div class="card-header">
+          <span class="card-title">Промокоды</span>
+          <button class="btn btn-ghost btn-sm" onclick="addPromoRow()">+ Добавить код</button>
+        </div>
+        <div class="card-body">
+          <table class="tbl" id="promoTable">
+            <thead><tr><th>Код</th><th>Скидка, %</th><th></th></tr></thead>
+            <tbody id="promoTableBody"></tbody>
+          </table>
+          <div style="margin-top:20px;display:flex;gap:12px">
+            <button class="btn btn-primary" onclick="savePromoCodes()">Сохранить промокоды</button>
+            <button class="btn btn-ghost" onclick="loadPromoCodes()">Сбросить</button>
           </div>
         </div>
       </div>
@@ -597,7 +618,7 @@ function setApiStatus(online) {
 }
 
 async function loadAll() {
-  await Promise.all([loadBookings(), loadPrices(), loadDoorCode()]);
+  await Promise.all([loadBookings(), loadPrices(), loadDoorCode(), loadPromoCodes()]);
   updateDashboard();
 }
 
@@ -665,6 +686,59 @@ async function savePrices() {
   } catch(e) {
     Object.assign(config, payload);
     showToast('Сохранено локально (API недоступен)', 'gold');
+  }
+}
+
+// PROMO CODES
+async function loadPromoCodes() {
+  let codes = {};
+  try {
+    codes = await apiGet('/api/promo-codes');
+  } catch(e) {}
+  renderPromoTable(codes);
+}
+
+function renderPromoTable(codes) {
+  const tbody = document.getElementById('promoTableBody');
+  tbody.innerHTML = '';
+  const entries = Object.entries(codes || {});
+  if (entries.length === 0) {
+    addPromoRow();
+  } else {
+    entries.forEach(([code, percent]) => addPromoRow(code, percent));
+  }
+}
+
+function addPromoRow(code = '', percent = '') {
+  const tbody = document.getElementById('promoTableBody');
+  const tr = document.createElement('tr');
+  tr.innerHTML =
+    '<td><input type="text" class="pib-input promo-code-input" ' +
+    'style="font-size:14px;padding:8px 10px;text-transform:uppercase" ' +
+    'value="' + code + '" placeholder="SUMMER10"></td>' +
+    '<td><input type="number" class="pib-input promo-percent-input" ' +
+    'style="font-size:14px;padding:8px 10px;width:90px" ' +
+    'value="' + percent + '" placeholder="10"></td>' +
+    '<td><button class="btn btn-danger btn-sm" onclick="this.closest(\'tr\').remove()">✕</button></td>';
+  tbody.appendChild(tr);
+}
+
+async function savePromoCodes() {
+  const rows = document.querySelectorAll('#promoTableBody tr');
+  const codes = {};
+  rows.forEach(tr => {
+    const codeInput    = tr.querySelector('.promo-code-input');
+    const percentInput = tr.querySelector('.promo-percent-input');
+    const code    = codeInput.value.trim().toUpperCase();
+    const percent = parseInt(percentInput.value);
+    if (code && !isNaN(percent)) codes[code] = percent;
+  });
+  try {
+    await apiPost('/api/promo-codes', {codes});
+    showToast('Промокоды сохранены', 'gold');
+    renderPromoTable(codes);
+  } catch(e) {
+    showToast('Не удалось сохранить промокоды — проверьте соединение с API', 'err');
   }
 }
 
@@ -872,7 +946,7 @@ function openBookingModal(encoded) {
   catch(e) { return; }
   selectedBookingId = b.id;
   document.getElementById('modalGuestName').textContent = b.guest_name;
-  document.getElementById('modalDetails').innerHTML = [
+  const detailRows = [
     ['ID брони', b.id||'—'],
     ['Email', b.guest_email||'—'],
     ['Телефон', b.guest_phone||'—'],
@@ -881,10 +955,17 @@ function openBookingModal(encoded) {
     ['Ночей', b.nights],
     ['Гостей', b.guests_count||'—'],
     ['Сумма', '₽'+(b.total_price||0).toLocaleString('ru')],
+  ];
+  if (b.promo_code) {
+    detailRows.push(['Промокод', b.promo_code + ' (−' + (b.discount_percent||0) + '%)']);
+  }
+  detailRows.push(
     ['Оплата', b.payment_method||'—'],
     ['Статус', statusBadge(b.status)],
     ['Пожелания', b.notes||'—'],
-  ].map(([l,v]) => `<div class="mbd-box"><div class="mbd-label">${l}</div><div class="mbd-val">${v}</div></div>`).join('');
+  );
+  document.getElementById('modalDetails').innerHTML = detailRows
+    .map(([l,v]) => `<div class="mbd-box"><div class="mbd-label">${l}</div><div class="mbd-val">${v}</div></div>`).join('');
   document.getElementById('bookingModal').classList.add('open');
 }
 
@@ -1039,7 +1120,7 @@ function showPanel(id, el) {
   if(panel) panel.classList.add('active');
   document.querySelectorAll('.sb-item').forEach(i=>i.classList.remove('active'));
   if(el) el.classList.add('active');
-  const titles = {dashboard:'Дашборд',bookings:'Все брони',calendar:'Управление календарём',prices:'Цены',settings:'Настройки',contract:'Договор'};
+  const titles = {dashboard:'Дашборд',bookings:'Все брони',calendar:'Управление календарём',prices:'Цены',promo:'Промокоды',settings:'Настройки',contract:'Договор'};
   document.getElementById('topbarTitle').textContent = titles[id]||id;
   if(id==='settings') { loadDesc(); }
   if(id==='contract') { if(typeof loadContractForEditor==='function') loadContractForEditor(); }

@@ -7,8 +7,10 @@ import random
 import string
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.mime.base import MIMEBase
+from email import encoders
 from datetime import datetime, date, timezone, timedelta
-from typing import Optional
+from typing import Optional, Dict
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -55,6 +57,12 @@ class Prices(BaseModel):
     weekend: int
     cleaning: int
 
+class PromoCodes(BaseModel):
+    codes: Dict[str, int]   # {"SUMMER10": 10} — код -> процент скидки
+
+class PromoValidate(BaseModel):
+    code: str
+
 class DoorCode(BaseModel):
     code: str
 
@@ -77,6 +85,7 @@ class BookingCreate(BaseModel):
     payment_method: str = "tbank"
     total_price: int = 0
     contract_signed: bool = False
+    promo_code: str = ""
 
 class BookingUpdate(BaseModel):
     status: str
@@ -96,6 +105,7 @@ class PaymentNotify(BaseModel):
 
 DATA_DIR         = "/data"
 PRICE_FILE       = f"{DATA_DIR}/prices.json"
+PROMO_FILE       = f"{DATA_DIR}/promo_codes.json"
 CODE_FILE        = f"{DATA_DIR}/door_code.json"
 DESC_FILE        = f"{DATA_DIR}/description.txt"
 DB_FILE          = f"{DATA_DIR}/bookings.db"
@@ -114,19 +124,37 @@ MAIL_FROM     = os.getenv("MAIL_FROM", "citypause@mail.ru")
 MAIL_PASSWORD = os.getenv("MAIL_PASSWORD", "")
 MAIL_ADMIN    = os.getenv("MAIL_ADMIN", "citypause@mail.ru")
 
-def send_email(to, subject, html_body):
+def send_email(to, subject, html_body, attachments=None):
+    """
+    attachments: список словарей [{"filename": "dogovor_123.txt", "content": "...текст..."}]
+    Текстовые вложения кодируются в UTF-8 и прикрепляются как отдельный .txt файл,
+    чтобы длинный договор не обрезался почтовым клиентом при показе тела письма.
+    """
     if not MAIL_PASSWORD:
         print("WARNING: MAIL_PASSWORD not set")
         return
     try:
         from email.header import Header
         from email.utils import formataddr
-        msg = MIMEMultipart("alternative")
+        msg = MIMEMultipart("mixed")
         msg["Subject"] = Header(subject, "utf-8")
         msg["From"]    = formataddr((str(Header("Gorodskaya Pauza", "utf-8")), MAIL_FROM))
         msg["To"]      = to
         msg["MIME-Version"] = "1.0"
-        msg.attach(MIMEText(html_body, "html", "utf-8"))
+
+        body_part = MIMEMultipart("alternative")
+        body_part.attach(MIMEText(html_body, "html", "utf-8"))
+        msg.attach(body_part)
+
+        for att in (attachments or []):
+            filename = att.get("filename", "attachment.txt")
+            content  = att.get("content", "")
+            part = MIMEBase("application", "octet-stream")
+            part.set_payload(content.encode("utf-8"))
+            encoders.encode_base64(part)
+            part.add_header("Content-Disposition", f'attachment; filename="{filename}"')
+            msg.attach(part)
+
         with smtplib.SMTP_SSL("smtp.mail.ru", 465) as server:
             server.login(MAIL_FROM, MAIL_PASSWORD)
             server.sendmail(MAIL_FROM, [to], msg.as_string())
@@ -159,7 +187,11 @@ def generate_contract(booking):
     checkout_fmt = datetime.strptime(booking["check_out"], "%Y-%m-%d").strftime("%d.%m.%Y")
     nights       = booking.get("nights") or booking.get("guests", 1)
     total        = booking.get("total_price", 0)
-    per_night    = round(total / nights) if nights else total
+    discount_pct = booking.get("discount_percent", 0) or 0
+    # total_price уже учитывает скидку по промокоду — для "цены за ночь" в договоре
+    # восстанавливаем исходную (до скидки) сумму, чтобы тариф совпадал с тем, что гость видел при выборе дат
+    pre_discount_total = round(total / (1 - discount_pct / 100)) if discount_pct else total
+    per_night    = round(pre_discount_total / nights) if nights else pre_discount_total
 
     template = load_contract_template()
     if not template:
@@ -271,6 +303,7 @@ def email_booking_confirmed(booking, door_code):
 
     contract_text = generate_contract(booking)
     save_contract(booking_ref, contract_text)
+    contract_filename = f"dogovor_{booking_ref}.txt"
 
     html = (
         "<div style='font-family:Arial,sans-serif;max-width:600px;margin:0 auto;"
@@ -305,20 +338,29 @@ def email_booking_confirmed(booking, door_code):
         "<div style='background:#141414;border:1px solid #1E1E1E;padding:24px;margin-bottom:24px'>"
         "<div style='font-size:11px;color:#C9A84C;margin-bottom:12px'>"
         "\u0414\u041e\u0413\u041e\u0412\u041e\u0420 \u0410\u0420\u0415\u041d\u0414\u042b</div>"
-        "<pre style='font-size:10px;color:#A89060;line-height:1.7;white-space:pre-wrap;"
-        "font-family:Arial,sans-serif;max-height:400px;overflow:hidden'>"
-        + contract_text + "</pre>"
+        "<div style='font-size:12px;color:#A89060;line-height:1.7'>"
+        "\u041f\u043e\u043b\u043d\u044b\u0439 \u0442\u0435\u043a\u0441\u0442 \u0434\u043e\u0433\u043e\u0432\u043e\u0440\u0430 \u043f\u0440\u0438\u043b\u043e\u0436\u0435\u043d \u043a \u044d\u0442\u043e\u043c\u0443 \u043f\u0438\u0441\u044c\u043c\u0443 \u043e\u0442\u0434\u0435\u043b\u044c\u043d\u044b\u043c \u0444\u0430\u0439\u043b\u043e\u043c " + contract_filename + " \u2014 \u043e\u0442\u043a\u0440\u043e\u0439\u0442\u0435 \u0432\u043b\u043e\u0436\u0435\u043d\u0438\u0435, \u0447\u0442\u043e\u0431\u044b \u043f\u0440\u043e\u0447\u0438\u0442\u0430\u0442\u044c \u0438 \u0441\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c \u0434\u043e\u0433\u043e\u0432\u043e\u0440.</div>"
         "</div>"
         "<div style='text-align:center;font-size:11px;color:#5A4A30'>"
         "citypause@mail.ru | citypause.ru</div></div>"
     )
     send_email(guest_email,
                "\u0411\u0440\u043e\u043d\u044c \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0430 \u2014 " + booking_ref,
-               html)
+               html,
+               attachments=[{"filename": contract_filename, "content": contract_text}])
 
 def email_admin_new_booking(booking_id, guest_name, guest_phone, guest_email,
-                             check_in, check_out, nights, total):
+                             check_in, check_out, nights, total,
+                             promo_code="", discount_percent=0):
     """Письмо админу — новая бронь ожидает подтверждения."""
+    promo_row = ""
+    if promo_code:
+        promo_row = (
+            "<tr><td style='padding:6px 0;color:#5A4A30;font-size:12px'>"
+            "\u041f\u0440\u043e\u043c\u043e\u043a\u043e\u0434</td>"
+            "<td style='color:#C9A84C;font-size:12px'>" + promo_code +
+            " (\u2212" + str(discount_percent) + "%)</td></tr>"
+        )
     html = (
         "<div style='font-family:Arial,sans-serif;max-width:600px;margin:0 auto;"
         "background:#0A0A0A;color:#F0E6C8;padding:40px'>"
@@ -345,6 +387,7 @@ def email_admin_new_booking(booking_id, guest_name, guest_phone, guest_email,
         "<tr><td style='padding:6px 0;color:#5A4A30;font-size:12px'>"
         "\u0412\u044b\u0435\u0437\u0434</td>"
         "<td style='color:#F0E6C8;font-size:12px'>" + check_out + "</td></tr>"
+        + promo_row +
         "<tr style='border-top:1px solid #1E1E1E'>"
         "<td style='padding:10px 0;color:#A89060;font-size:13px'>"
         "\u0421\u0443\u043c\u043c\u0430</td>"
@@ -393,6 +436,8 @@ def get_db():
         "nights":         "INTEGER DEFAULT 1",
         "source":         "TEXT DEFAULT 'website'",
         "confirmed_at":   "TEXT DEFAULT ''",
+        "promo_code":     "TEXT DEFAULT ''",
+        "discount_percent": "INTEGER DEFAULT 0",
     }.items():
         try:
             conn.execute("ALTER TABLE bookings ADD COLUMN " + col + " " + col_type)
@@ -433,6 +478,40 @@ async def set_prices(p: Prices):
     with open(PRICE_FILE, "w") as f:
         json.dump(p.dict(), f, ensure_ascii=False)
     return {"ok": True}
+
+# =====================================================
+# API — PROMO CODES
+# =====================================================
+
+@app.get("/api/promo-codes")
+async def get_promo_codes():
+    if os.path.exists(PROMO_FILE):
+        with open(PROMO_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return {}
+
+@app.post("/api/promo-codes")
+async def set_promo_codes(p: PromoCodes):
+    # Нормализуем коды в верхний регистр — чтобы ввод не зависел от регистра
+    normalized = {
+        code.strip().upper(): percent
+        for code, percent in p.codes.items()
+        if code.strip()
+    }
+    with open(PROMO_FILE, "w", encoding="utf-8") as f:
+        json.dump(normalized, f, ensure_ascii=False)
+    return {"ok": True}
+
+@app.post("/api/promo-codes/validate")
+async def validate_promo_code(v: PromoValidate):
+    codes = {}
+    if os.path.exists(PROMO_FILE):
+        with open(PROMO_FILE, "r", encoding="utf-8") as f:
+            codes = json.load(f)
+    code_norm = v.code.strip().upper()
+    if code_norm in codes:
+        return {"valid": True, "code": code_norm, "percent": codes[code_norm]}
+    return {"valid": False, "percent": 0}
 
 # =====================================================
 # API — DOOR CODE
@@ -521,16 +600,31 @@ async def create_booking(b: BookingCreate):
     conn = get_db()
     booking_ref = "ГП-" + "".join(random.choices(string.ascii_uppercase + string.digits, k=6))
 
+    # Промокод проверяем на сервере — не доверяем процентам от клиента
+    promo_code_clean = ""
+    discount_percent = 0
+    if b.promo_code:
+        promo_codes_db = {}
+        if os.path.exists(PROMO_FILE):
+            with open(PROMO_FILE, "r", encoding="utf-8") as f:
+                promo_codes_db = json.load(f)
+        code_norm = b.promo_code.strip().upper()
+        if code_norm in promo_codes_db:
+            promo_code_clean = code_norm
+            discount_percent = promo_codes_db[code_norm]
+
     conn.execute("""
         INSERT INTO bookings (
             user_id, username, check_in, check_out, guests, status,
             guest_name, guest_phone, guest_email, guests_count,
-            notes, passport, payment_method, total_price, nights, source
-        ) VALUES (0, ?, ?, ?, ?, 'waiting_payment', ?, ?, ?, ?, ?, ?, ?, ?, ?, 'website')
+            notes, passport, payment_method, total_price, nights, source,
+            promo_code, discount_percent
+        ) VALUES (0, ?, ?, ?, ?, 'waiting_payment', ?, ?, ?, ?, ?, ?, ?, ?, ?, 'website', ?, ?)
     """, (
         booking_ref, b.check_in, b.check_out, b.guests_count,
         b.guest_name, b.guest_phone, b.guest_email, b.guests_count,
-        b.notes, b.passport, b.payment_method, b.total_price, b.nights
+        b.notes, b.passport, b.payment_method, b.total_price, b.nights,
+        promo_code_clean, discount_percent
     ))
     conn.commit()
     conn.close()
@@ -547,8 +641,16 @@ async def create_booking(b: BookingCreate):
         # Email админу
         threading.Thread(target=email_admin_new_booking, args=(
             booking_ref, b.guest_name, b.guest_phone, b.guest_email,
-            b.check_in, b.check_out, b.nights, b.total_price
+            b.check_in, b.check_out, b.nights, b.total_price,
+            promo_code_clean, discount_percent
         )).start()
+
+    promo_line = ""
+    if promo_code_clean:
+        promo_line = (
+            "\u041f\u0440\u043e\u043c\u043e\u043a\u043e\u0434: " + promo_code_clean +
+            " (\u2212" + str(discount_percent) + "%)\n"
+        )
 
     # Telegram — опционально
     for admin_id in ADMIN_IDS:
@@ -562,6 +664,7 @@ async def create_booking(b: BookingCreate):
                     "\u0422\u0435\u043b: " + b.guest_phone + "\n"
                     "\u0414\u0430\u0442\u044b: " + b.check_in + " \u2192 " + b.check_out + "\n"
                     "\u0421\u0443\u043c\u043c\u0430: " + str(b.total_price) + " \u20bd\n"
+                    + promo_line +
                     "\u0421\u0442\u0430\u0442\u0443\u0441: \u0436\u0434\u0451\u0442 \u043e\u043f\u043b\u0430\u0442\u044b"
                 ), timeout=3.0
             )
