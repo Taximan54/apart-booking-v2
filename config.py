@@ -1,4 +1,6 @@
 import os
+from dotenv import load_dotenv
+load_dotenv()
 
 # =====================================================
 # BOT TOKEN
@@ -15,7 +17,7 @@ ADMIN_IDS = [
 # =====================================================
 # BASE URL (RAILWAY DOMAIN)
 # =====================================================
-BASE_URL = "https://apart-booking-v2-production.up.railway.app"
+BASE_URL = "https://citypause.ru"
 
 # =====================================================
 # WEBAPP (КАЛЕНДАРЬ)

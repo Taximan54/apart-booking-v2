@@ -1261,9 +1261,9 @@ async function clientPaid(bookingRef){
     document.getElementById('pbd').style.display='none';
     document.getElementById('toS2').disabled=true;
     goS1();
-    document.getElementById('step1dot').classList.remove('done');
-    document.getElementById('step2dot').classList.remove('done','active');
-    document.getElementById('step3dot').classList.remove('done','active');
+    document.getElementById('sd1').classList.remove('done');
+    document.getElementById('sd2').classList.remove('done','active');
+    document.getElementById('sd3').classList.remove('done','active');
     document.getElementById('panelTitle').textContent='Выберите даты';
   }, 4000);
 }
