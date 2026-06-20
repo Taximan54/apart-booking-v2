@@ -869,6 +869,12 @@ function updatePanel(){
   const s = new Date(selStart + 'T00:00:00');
   const e = new Date(selEnd   + 'T00:00:00');
   const nights = Math.round((e - s) / 86400000);
+  if(nights < 2){
+    showToast('Минимальный срок бронирования — 2 ночи', 'err');
+    selEnd = null;
+    renderCal();
+    return;
+  }
   const fmt = dt => dt.toLocaleDateString('ru-RU',{day:'numeric',month:'short'});
   document.getElementById('diChI').textContent = fmt(s);
   document.getElementById('diChO').textContent = fmt(e);
