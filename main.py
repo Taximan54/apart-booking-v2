@@ -5,6 +5,11 @@ import sqlite3
 import smtplib
 import random
 import string
+import hmac
+import hashlib
+import secrets
+import time
+import base64
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
@@ -12,7 +17,7 @@ from email import encoders
 from datetime import datetime, date, timezone, timedelta
 from typing import Optional, Dict
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Header, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, PlainTextResponse
@@ -63,6 +68,13 @@ class PromoCodes(BaseModel):
 class PromoValidate(BaseModel):
     code: str
 
+class AdminLogin(BaseModel):
+    password: str
+
+class ChangePassword(BaseModel):
+    old_password: str
+    new_password: str
+
 class DoorCode(BaseModel):
     code: str
 
@@ -112,9 +124,72 @@ DB_FILE          = f"{DATA_DIR}/bookings.db"
 CONTRACT_FILE    = f"{DATA_DIR}/contract_template.txt"
 CONTRACT_STATIC  = "static/contract_template.txt"
 CONTRACTS_DIR    = f"{DATA_DIR}/contracts"
+AUTH_FILE        = f"{DATA_DIR}/admin_auth.json"
 DEFAULT_PRICES   = {"weekday": 3500, "weekend": 4500, "cleaning": 1500}
 
 os.makedirs(CONTRACTS_DIR, exist_ok=True)
+
+# =====================================================
+# ADMIN AUTH
+# =====================================================
+# Пароль для входа в админку: сначала проверяем /data/admin_auth.json
+# (его создаёт смена пароля через саму админку), если файла нет — берём
+# ADMIN_PASSWORD из .env. Если ни там, ни там пароля нет — вход запрещён
+# для всех (без скрытого дефолтного пароля типа "admin2024").
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "")
+# SESSION_SECRET лучше задать в .env, чтобы токены не протухали при каждом
+# restart — если не задан, генерируется случайный при каждом старте процесса
+# (тогда после любого деплоя придётся перелогиниться в админке).
+SESSION_SECRET = os.getenv("SESSION_SECRET") or secrets.token_hex(32)
+SESSION_TTL    = 60 * 60 * 24 * 7  # токен живёт 7 дней
+
+def hash_password(password: str, salt: bytes = None) -> str:
+    if salt is None:
+        salt = secrets.token_bytes(16)
+    digest = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, 200_000)
+    return salt.hex() + ":" + digest.hex()
+
+def verify_password(password: str, stored: str) -> bool:
+    try:
+        salt_hex, digest_hex = stored.split(":")
+        salt = bytes.fromhex(salt_hex)
+        expected = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, 200_000)
+        return hmac.compare_digest(expected.hex(), digest_hex)
+    except Exception:
+        return False
+
+def check_admin_password(password: str) -> bool:
+    if os.path.exists(AUTH_FILE):
+        with open(AUTH_FILE, "r") as f:
+            stored_hash = json.load(f).get("password_hash", "")
+        return verify_password(password, stored_hash)
+    # Пароль через панель ещё не задавался — фоллбэк на .env
+    return bool(ADMIN_PASSWORD) and hmac.compare_digest(password, ADMIN_PASSWORD)
+
+def make_token() -> str:
+    expires = int(time.time()) + SESSION_TTL
+    payload = str(expires).encode()
+    sig = hmac.new(SESSION_SECRET.encode(), payload, hashlib.sha256).hexdigest()
+    return base64.urlsafe_b64encode(payload + b"." + sig.encode()).decode()
+
+def verify_token(token: str) -> bool:
+    try:
+        raw = base64.urlsafe_b64decode(token.encode())
+        payload, sig = raw.rsplit(b".", 1)
+        expected_sig = hmac.new(SESSION_SECRET.encode(), payload, hashlib.sha256).hexdigest()
+        if not hmac.compare_digest(sig.decode(), expected_sig):
+            return False
+        return time.time() < int(payload.decode())
+    except Exception:
+        return False
+
+def require_admin(authorization: Optional[str] = Header(None)):
+    """Dependency для защиты админских эндпоинтов — добавлять как Depends(require_admin)."""
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    if not verify_token(authorization[len("Bearer "):]):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    return True
 
 # =====================================================
 # EMAIL
@@ -463,6 +538,26 @@ async def booked_dates():
     return get_booked_ranges()
 
 # =====================================================
+# API — ADMIN AUTH
+# =====================================================
+
+@app.post("/api/admin/login")
+async def admin_login(creds: AdminLogin):
+    if not check_admin_password(creds.password):
+        raise HTTPException(status_code=401, detail="\u041d\u0435\u0432\u0435\u0440\u043d\u044b\u0439 \u043f\u0430\u0440\u043e\u043b\u044c")
+    return {"token": make_token()}
+
+@app.post("/api/admin/change-password")
+async def change_password(cp: ChangePassword, _: bool = Depends(require_admin)):
+    if not check_admin_password(cp.old_password):
+        raise HTTPException(status_code=401, detail="\u0421\u0442\u0430\u0440\u044b\u0439 \u043f\u0430\u0440\u043e\u043b\u044c \u0432\u0432\u0435\u0434\u0451\u043d \u043d\u0435\u0432\u0435\u0440\u043d\u043e")
+    if len(cp.new_password) < 4:
+        raise HTTPException(status_code=400, detail="\u041c\u0438\u043d\u0438\u043c\u0443\u043c 4 \u0441\u0438\u043c\u0432\u043e\u043b\u0430")
+    with open(AUTH_FILE, "w") as f:
+        json.dump({"password_hash": hash_password(cp.new_password)}, f)
+    return {"ok": True}
+
+# =====================================================
 # API — PRICES
 # =====================================================
 
@@ -474,7 +569,7 @@ async def get_prices():
     return DEFAULT_PRICES
 
 @app.post("/api/prices")
-async def set_prices(p: Prices):
+async def set_prices(p: Prices, _: bool = Depends(require_admin)):
     with open(PRICE_FILE, "w") as f:
         json.dump(p.dict(), f, ensure_ascii=False)
     return {"ok": True}
@@ -484,14 +579,14 @@ async def set_prices(p: Prices):
 # =====================================================
 
 @app.get("/api/promo-codes")
-async def get_promo_codes():
+async def get_promo_codes(_: bool = Depends(require_admin)):
     if os.path.exists(PROMO_FILE):
         with open(PROMO_FILE, "r", encoding="utf-8") as f:
             return json.load(f)
     return {}
 
 @app.post("/api/promo-codes")
-async def set_promo_codes(p: PromoCodes):
+async def set_promo_codes(p: PromoCodes, _: bool = Depends(require_admin)):
     # Нормализуем коды в верхний регистр — чтобы ввод не зависел от регистра
     normalized = {
         code.strip().upper(): percent
@@ -518,14 +613,14 @@ async def validate_promo_code(v: PromoValidate):
 # =====================================================
 
 @app.get("/api/door-code")
-async def get_door_code():
+async def get_door_code(_: bool = Depends(require_admin)):
     if os.path.exists(CODE_FILE):
         with open(CODE_FILE, "r") as f:
             return json.load(f)
     return {"code": load_door_code()}
 
 @app.post("/api/door-code")
-async def set_door_code(d: DoorCode):
+async def set_door_code(d: DoorCode, _: bool = Depends(require_admin)):
     with open(CODE_FILE, "w") as f:
         json.dump({"code": d.code}, f)
     return {"ok": True}
@@ -542,7 +637,7 @@ async def get_description():
     return ""
 
 @app.post("/api/description")
-async def set_description(d: Description):
+async def set_description(d: Description, _: bool = Depends(require_admin)):
     with open(DESC_FILE, "w") as f:
         f.write(d.text)
     return {"ok": True}
@@ -562,7 +657,7 @@ async def get_contract_template():
     return PlainTextResponse("")
 
 @app.post("/api/contract-template")
-async def set_contract_template(c: ContractTemplate):
+async def set_contract_template(c: ContractTemplate, _: bool = Depends(require_admin)):
     with open(CONTRACT_FILE, "w", encoding="utf-8") as f:
         f.write(c.text)
     return {"ok": True}
@@ -572,7 +667,11 @@ async def set_contract_template(c: ContractTemplate):
 # =====================================================
 
 @app.get("/api/bookings")
-async def get_bookings(admin: Optional[str] = None):
+async def get_bookings(admin: Optional[str] = None, authorization: Optional[str] = Header(None)):
+    if admin:
+        if not authorization or not authorization.startswith("Bearer ") \
+           or not verify_token(authorization[len("Bearer "):]):
+            raise HTTPException(status_code=401, detail="Unauthorized")
     conn = get_db()
     rows = conn.execute("SELECT * FROM bookings ORDER BY check_in DESC").fetchall()
     conn.close()
@@ -674,7 +773,7 @@ async def create_booking(b: BookingCreate):
     return {"booking_id": booking_ref, "status": "waiting_payment"}
 
 @app.put("/api/bookings/{booking_id}")
-async def update_booking(booking_id: str, u: BookingUpdate):
+async def update_booking(booking_id: str, u: BookingUpdate, _: bool = Depends(require_admin)):
     conn = get_db()
     conn.execute("UPDATE bookings SET status=? WHERE id=?", (u.status, booking_id))
     conn.commit()
@@ -686,7 +785,7 @@ async def update_booking(booking_id: str, u: BookingUpdate):
 # =====================================================
 
 @app.post("/api/bookings/{booking_ref}/confirm")
-async def confirm_booking(booking_ref: str):
+async def confirm_booking(booking_ref: str, _: bool = Depends(require_admin)):
     """Подтверждение оплаты из веб-админки — главный флоу."""
     conn = get_db()
 
@@ -742,7 +841,7 @@ async def confirm_booking(booking_ref: str):
     return {"ok": True, "booking_id": booking.get("username"), "door_code": door_code}
 
 @app.post("/api/bookings/{booking_ref}/cancel")
-async def cancel_booking_api(booking_ref: str):
+async def cancel_booking_api(booking_ref: str, _: bool = Depends(require_admin)):
     """Отмена брони из веб-админки."""
     conn = get_db()
     row = conn.execute(
@@ -816,7 +915,7 @@ async def payment_notify(p: PaymentNotify):
 # =====================================================
 
 @app.get("/api/contracts/{booking_ref}")
-async def get_contract(booking_ref: str):
+async def get_contract(booking_ref: str, _: bool = Depends(require_admin)):
     """Получить сохранённый договор."""
     path = os.path.join(CONTRACTS_DIR, booking_ref + ".txt")
     if os.path.exists(path):
