@@ -213,6 +213,8 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
       <a class="sb-item" onclick="showPanel('prices',this)"><span class="sb-icon">◎</span>Цены</a>
       <a class="sb-item" onclick="showPanel('promo',this)"><span class="sb-icon">%</span>Промокоды</a>
       <a class="sb-item" onclick="showPanel('contract',this)"><span class="sb-icon">✎</span>Договор</a>
+      <a class="sb-item" onclick="showPanel('checkin',this)"><span class="sb-icon">🔑</span>Памятка гостю</a>
+      <a class="sb-item" onclick="showPanel('checkout',this)"><span class="sb-icon">✓</span>Чек-лист выезда</a>
       <a class="sb-item" onclick="showPanel('settings',this)"><span class="sb-icon">⊛</span>Настройки</a>
       <a class="sb-item" onclick="logout()"><span class="sb-icon">⏻</span>Выйти</a>
     </div>
@@ -423,6 +425,53 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
           <div style="display:flex;gap:12px;margin-top:16px">
             <button class="btn btn-primary" onclick="saveContract()">Сохранить договор</button>
             <button class="btn btn-ghost" onclick="previewContract()">Предпросмотр</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CHECKIN MEMO -->
+    <div class="panel" id="panel-checkin">
+      <div class="card" style="max-width:900px">
+        <div class="card-header">
+          <span class="card-title">Памятка гостю при заселении</span>
+        </div>
+        <div class="card-body">
+          <div style="font-size:11px;color:var(--text-muted);line-height:1.7;margin-bottom:20px;padding:12px 16px;background:rgba(201,168,76,.04);border:1px solid rgba(201,168,76,.1)">
+            <div style="color:var(--gold);font-size:10px;letter-spacing:.2em;text-transform:uppercase;margin-bottom:8px">Доступные плейсхолдеры</div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px">
+              <code style="color:var(--gold);font-size:11px">{{КОД_ЗАМКА}}</code>
+            </div>
+            <div style="margin-top:8px;color:var(--text-muted)">Файл хранится на сервере в <code>/data/checkin_memo.txt</code> — редактируется здесь без перезапуска.</div>
+          </div>
+          <div class="info-field">
+            <div class="info-label">Текст памятки</div>
+            <textarea class="info-input" id="checkinEditor" rows="25" style="resize:vertical;line-height:1.7;font-size:12px;font-family:monospace" placeholder="Загрузка..."></textarea>
+          </div>
+          <div style="display:flex;gap:12px;margin-top:16px">
+            <button class="btn btn-primary" onclick="saveCheckinMemo()">Сохранить памятку</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CHECKOUT CHECKLIST -->
+    <div class="panel" id="panel-checkout">
+      <div class="card" style="max-width:900px">
+        <div class="card-header">
+          <span class="card-title">Чек-лист выезда</span>
+        </div>
+        <div class="card-body">
+          <div style="font-size:11px;color:var(--text-muted);line-height:1.7;margin-bottom:20px;padding:12px 16px;background:rgba(201,168,76,.04);border:1px solid rgba(201,168,76,.1)">
+            <div style="color:var(--gold);font-size:10px;letter-spacing:.2em;text-transform:uppercase;margin-bottom:8px">Описание</div>
+            Отправляется гостю автоматически в 10:00 в день выезда. Файл хранится на сервере в <code>/data/checkout_checklist.txt</code> — редактируется здесь без перезапуска.
+          </div>
+          <div class="info-field">
+            <div class="info-label">Текст чек-листа</div>
+            <textarea class="info-input" id="checkoutEditor" rows="25" style="resize:vertical;line-height:1.7;font-size:12px;font-family:monospace" placeholder="Загрузка..."></textarea>
+          </div>
+          <div style="display:flex;gap:12px;margin-top:16px">
+            <button class="btn btn-primary" onclick="saveCheckoutChecklist()">Сохранить чек-лист</button>
           </div>
         </div>
       </div>
@@ -1191,10 +1240,12 @@ function showPanel(id, el) {
   if(panel) panel.classList.add('active');
   document.querySelectorAll('.sb-item').forEach(i=>i.classList.remove('active'));
   if(el) el.classList.add('active');
-  const titles = {dashboard:'Дашборд',bookings:'Все брони',calendar:'Управление календарём',prices:'Цены',promo:'Промокоды',settings:'Настройки',contract:'Договор'};
+  const titles = {dashboard:'Дашборд',bookings:'Все брони',calendar:'Управление календарём',prices:'Цены',promo:'Промокоды',settings:'Настройки',contract:'Договор',checkin:'Памятка гостю',checkout:'Чек-лист выезда'};
   document.getElementById('topbarTitle').textContent = titles[id]||id;
   if(id==='settings') { loadDesc(); }
   if(id==='contract') { if(typeof loadContractForEditor==='function') loadContractForEditor(); }
+  if(id==='checkin')  { if(typeof loadCheckinMemo==='function') loadCheckinMemo(); }
+  if(id==='checkout') { if(typeof loadCheckoutChecklist==='function') loadCheckoutChecklist(); }
 }
 
 function statusBadge(s) {
@@ -1264,6 +1315,50 @@ function previewContract() {
 }
 
 // Загрузка договора встроена в основной showPanel
+
+// CHECKIN MEMO
+async function loadCheckinMemo() {
+  try {
+    const r = await fetch(`${API_BASE}/api/checkin-memo`, {
+      headers: ADMIN_TOKEN ? {'Authorization': 'Bearer ' + ADMIN_TOKEN} : {}
+    });
+    document.getElementById('checkinEditor').value = await r.text();
+  } catch(e) {
+    document.getElementById('checkinEditor').value = 'Ошибка загрузки';
+  }
+}
+
+async function saveCheckinMemo() {
+  const text = document.getElementById('checkinEditor').value;
+  try {
+    await apiPost('/api/checkin-memo', { text });
+    showToast('Памятка сохранена', 'gold');
+  } catch(e) {
+    showToast('Ошибка сохранения', 'err');
+  }
+}
+
+// CHECKOUT CHECKLIST
+async function loadCheckoutChecklist() {
+  try {
+    const r = await fetch(`${API_BASE}/api/checkout-checklist`, {
+      headers: ADMIN_TOKEN ? {'Authorization': 'Bearer ' + ADMIN_TOKEN} : {}
+    });
+    document.getElementById('checkoutEditor').value = await r.text();
+  } catch(e) {
+    document.getElementById('checkoutEditor').value = 'Ошибка загрузки';
+  }
+}
+
+async function saveCheckoutChecklist() {
+  const text = document.getElementById('checkoutEditor').value;
+  try {
+    await apiPost('/api/checkout-checklist', { text });
+    showToast('Чек-лист сохранён', 'gold');
+  } catch(e) {
+    showToast('Ошибка сохранения', 'err');
+  }
+}
 
 document.addEventListener('keydown', e => {
   if(e.key==='Escape') { closeModal(); }
