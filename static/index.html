@@ -454,6 +454,13 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
               <span class="val" id="pbPromoVal" style="color:var(--gold)">—</span>
             </div>
             <div class="pbrow pbtotal"><span class="lbl">Итого</span><span class="val" id="pbTotal">—</span></div>
+            <div style="margin-top:16px;padding:14px 16px;background:rgba(201,168,76,0.04);border:1px solid rgba(201,168,76,0.15)">
+              <div style="font-size:10px;color:var(--gold);letter-spacing:.15em;text-transform:uppercase;margin-bottom:10px">Порядок оплаты</div>
+              <div class="pbrow" style="margin-bottom:6px"><span class="lbl">Предоплата сейчас (20%)</span><span class="val" id="pbPrepay" style="color:var(--gold)">—</span></div>
+              <div class="pbrow" style="margin-bottom:6px"><span class="lbl">Остаток при заселении</span><span class="val" id="pbRemainder">—</span></div>
+              <div class="pbrow"><span class="lbl">Депозит при заселении</span><span class="val" id="pbDeposit">₽6 000</span></div>
+              <div style="font-size:10px;color:var(--text-muted);margin-top:8px;line-height:1.6">Остаток и депозит — наличными или переводом.<br>Депозит возвращается при выезде.</div>
+            </div>
           </div>
           <div style="margin-top:auto;padding-top:20px">
             <button class="btn-gold-w" id="toS2" disabled onclick="goS2()">Продолжить</button>
@@ -904,6 +911,10 @@ function updatePanel(){
     document.getElementById('pbPromoRow').style.display = 'none';
   }
   document.getElementById('pbTotal').textContent      = '₽' + total.toLocaleString('ru');
+  const prepay2    = Math.ceil(total * 0.2);
+  const remainder  = total - prepay2;
+  document.getElementById('pbPrepay').textContent    = '₽' + prepay2.toLocaleString('ru');
+  document.getElementById('pbRemainder').textContent = '₽' + remainder.toLocaleString('ru');
   document.getElementById('pbd').style.display = 'flex';
   document.getElementById('toS2').disabled = false;
   const prepay = Math.ceil(total * 0.2);
