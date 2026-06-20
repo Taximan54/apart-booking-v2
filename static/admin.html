@@ -498,8 +498,9 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
     <button class="modal-close" onclick="closeModal()">✕</button>
     <div class="modal-title" id="modalGuestName">Детали бронирования</div>
     <div class="modal-booking-detail" id="modalDetails"></div>
-    <div style="display:flex;gap:10px;flex-wrap:wrap">
-      <button class="btn btn-primary" onclick="confirmBooking()">✓ Подтвердить</button>
+    <div style="display:flex;gap:10px;flex-wrap:wrap" id="modalBtns">
+      <button class="btn btn-primary" id="btnConfirm" onclick="confirmBooking()">✓ Подтвердить</button>
+      <button class="btn btn-primary" id="btnFullPay" onclick="fullPaymentBooking()" style="background:#2D6A4F;display:none">✓ Полная оплата получена</button>
       <button class="btn btn-ghost" onclick="closeModal()">Закрыть</button>
       <button class="btn btn-danger" onclick="cancelBooking()">✕ Отменить</button>
     </div>
@@ -1011,16 +1012,22 @@ function openBookingModal(encoded) {
   );
   document.getElementById('modalDetails').innerHTML = detailRows
     .map(([l,v]) => `<div class="mbd-box"><div class="mbd-label">${l}</div><div class="mbd-val">${v}</div></div>`).join('');
+
+  // Показываем кнопки в зависимости от статуса
+  const s = b.status;
+  const btnConfirm = document.getElementById('btnConfirm');
+  const btnFullPay = document.getElementById('btnFullPay');
+  btnConfirm.style.display = (s === 'waiting_payment' || s === 'payment_pending') ? '' : 'none';
+  btnFullPay.style.display = (s === 'confirmed') ? '' : 'none';
+
   document.getElementById('bookingModal').classList.add('open');
 }
 
 async function confirmBooking() {
   if (!selectedBookingId) return;
-  const btn = document.querySelector('#bookingModal .btn-primary');
+  const btn = document.getElementById('btnConfirm');
   if(btn) { btn.textContent = 'Подтверждаем...'; btn.disabled = true; }
   try {
-    // Используем новый эндпоинт — подтверждение оплаты
-    // selectedBookingId может быть числовым id или строкой username (GP-XXXXXX)
     const b = allBookings.find(x => x.id == selectedBookingId || x.username == selectedBookingId);
     const ref = b ? (b.username || b.id) : selectedBookingId;
     const result = await apiPost('/api/bookings/' + ref + '/confirm', {});
@@ -1028,7 +1035,7 @@ async function confirmBooking() {
     closeModal();
     renderBookingsTable(allBookings);
     updateDashboard();
-    showToast('Оплата подтверждена — договор и код замка отправлены гостю', 'gold');
+    showToast('Предоплата подтверждена — договор отправлен гостю', 'gold');
   } catch(e) {
     showToast('Ошибка подтверждения: ' + e.message, 'err');
   } finally {
@@ -1036,9 +1043,28 @@ async function confirmBooking() {
   }
 }
 
+async function fullPaymentBooking() {
+  if (!selectedBookingId) return;
+  const btn = document.getElementById('btnFullPay');
+  if(btn) { btn.textContent = 'Отправляем...'; btn.disabled = true; }
+  try {
+    const b = allBookings.find(x => x.id == selectedBookingId || x.username == selectedBookingId);
+    const ref = b ? (b.username || b.id) : selectedBookingId;
+    await apiPost('/api/bookings/' + ref + '/full-payment', {});
+    if (b) b.status = 'fully_paid';
+    closeModal();
+    renderBookingsTable(allBookings);
+    updateDashboard();
+    showToast('Полная оплата подтверждена — памятка с кодом замка отправлена гостю', 'gold');
+  } catch(e) {
+    showToast('Ошибка: ' + e.message, 'err');
+  } finally {
+    if(btn) { btn.textContent = '✓ Полная оплата получена'; btn.disabled = false; }
+  }
+}
+
 async function cancelBooking() {
   if (!selectedBookingId) return;
-  if (!confirm('Отменить бронирование?')) return;
   try {
     const b = allBookings.find(x => x.id == selectedBookingId || x.username == selectedBookingId);
     const ref = b ? (b.username || b.id) : selectedBookingId;
@@ -1174,6 +1200,7 @@ function showPanel(id, el) {
 function statusBadge(s) {
   const map = {
     confirmed:       '<span class="badge badge-green">Подтверждено</span>',
+    fully_paid:      '<span class="badge badge-green" style="background:#2D6A4F">Оплачено полностью</span>',
     waiting_payment: '<span class="badge badge-gold">Ждёт оплаты</span>',
     payment_pending: '<span class="badge badge-blue">Оплата проверяется</span>',
     pending:         '<span class="badge badge-gold">Ожидает</span>',

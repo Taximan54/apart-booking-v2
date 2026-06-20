@@ -84,6 +84,60 @@ class Description(BaseModel):
 class ContractTemplate(BaseModel):
     text: str
 
+class CheckinMemo(BaseModel):
+    text: str
+
+DEFAULT_CHECKIN_MEMO = """Добро пожаловать в Городскую Паузу!
+
+Адрес: г. Новосибирск, ул. Дачная, д. 5, кв. 286, 22 этаж
+
+КОД ЗАМКА: {{КОД_ЗАМКА}}
+
+WiFi: название сети и пароль указаны на роутере в прихожей
+
+Заезд с 15:00, выезд до 12:00
+
+Правила проживания:
+— Не курить в квартире
+— Не приводить дополнительных гостей без согласования
+— Соблюдать тишину с 23:00 до 7:00
+— Бережно относиться к имуществу
+
+Контакт хозяина: {{ТЕЛЕФОН_ХОЗЯИНА}}
+
+Приятного отдыха!"""
+
+DEFAULT_CHECKOUT_CHECKLIST = """Чек-лист перед выездом
+
+Выезд до 12:00
+
+Пожалуйста, перед уходом:
+
+☐ Вынести мусор в контейнеры на первом этаже
+☐ Помыть использованную посуду
+☐ Закрыть все окна и балконную дверь
+☐ Выключить свет и бытовую технику
+☐ Закрыть кран горячей и холодной воды
+☐ Убедиться что не забыли личные вещи
+☐ Закрыть входную дверь (замок защёлкнется автоматически)
+
+Спасибо что выбрали Городскую Паузу!
+Ждём вас снова."""
+
+DEFAULT_REVIEW_TEMPLATE = """Спасибо за ваш визит в Городскую Паузу!
+
+Надеемся, что отдых прошёл комфортно.
+
+Если вам понравилось, пожалуйста, оставьте отзыв на Авито — это очень помогает нам развиваться.
+
+А для вашего следующего визита мы подготовили промокод на скидку {{ПРОЦЕНТ_СКИДКИ}}%:
+
+ПРОМОКОД: {{ПРОМОКОД}}
+
+Бронируйте напрямую на citypause.ru — никаких комиссий сервисов.
+
+До встречи!"""
+
 class BookingCreate(BaseModel):
     check_in: str
     check_out: str
@@ -123,6 +177,9 @@ DESC_FILE        = f"{DATA_DIR}/description.txt"
 DB_FILE          = f"{DATA_DIR}/bookings.db"
 CONTRACT_FILE    = f"{DATA_DIR}/contract_template.txt"
 CONTRACT_STATIC  = "static/contract_template.txt"
+CHECKIN_FILE     = f"{DATA_DIR}/checkin_memo.txt"
+CHECKOUT_FILE    = f"{DATA_DIR}/checkout_checklist.txt"
+REVIEW_FILE      = f"{DATA_DIR}/review_template.txt"
 CONTRACTS_DIR    = f"{DATA_DIR}/contracts"
 AUTH_FILE        = f"{DATA_DIR}/admin_auth.json"
 DEFAULT_PRICES   = {"weekday": 3500, "weekend": 4500, "cleaning": 1500}
@@ -310,9 +367,121 @@ def save_contract(booking_ref, contract_text):
         f.write(contract_text)
     return path
 
-# =====================================================
-# EMAIL FUNCTIONS
-# =====================================================
+def load_checkin_memo(door_code=""):
+    """Загружает памятку гостю, подставляет код замка."""
+    if os.path.exists(CHECKIN_FILE):
+        with open(CHECKIN_FILE, "r", encoding="utf-8") as f:
+            text = f.read()
+    else:
+        text = DEFAULT_CHECKIN_MEMO
+    return text.replace("{{КОД_ЗАМКА}}", str(door_code))
+
+def load_checkout_checklist():
+    """Загружает чек-лист выезда."""
+    if os.path.exists(CHECKOUT_FILE):
+        with open(CHECKOUT_FILE, "r", encoding="utf-8") as f:
+            return f.read()
+    return DEFAULT_CHECKOUT_CHECKLIST
+
+def load_review_template(promo_code="", discount_percent=10):
+    """Загружает шаблон письма с просьбой об отзыве."""
+    if os.path.exists(REVIEW_FILE):
+        with open(REVIEW_FILE, "r", encoding="utf-8") as f:
+            text = f.read()
+    else:
+        text = DEFAULT_REVIEW_TEMPLATE
+    return text.replace("{{ПРОМОКОД}}", promo_code).replace("{{ПРОЦЕНТ_СКИДКИ}}", str(discount_percent))
+
+def email_checkin_memo(guest_name, guest_email, booking_ref, check_in, door_code):
+    """Письмо гостю — полная оплата получена, памятка с кодом замка."""
+    memo_text = load_checkin_memo(door_code)
+    html = (
+        "<div style='font-family:Arial,sans-serif;max-width:600px;margin:0 auto;"
+        "background:#0A0A0A;color:#F0E6C8;padding:40px'>"
+        "<div style='text-align:center;margin-bottom:32px'>"
+        "<div style='font-size:28px;letter-spacing:4px;color:#C9A84C'>"
+        "\u0413\u041e\u0420\u041e\u0414\u0421\u041a\u0410\u042f \u041f\u0410\u0423\u0417\u0410</div>"
+        "</div>"
+        "<div style='background:#141414;border:1px solid #1E1E1E;padding:32px;margin-bottom:24px'>"
+        "<div style='font-size:13px;color:#C9A84C;margin-bottom:16px'>"
+        "\u041f\u0410\u041c\u042f\u0422\u041a\u0410 \u0413\u041e\u0421\u0422\u042e</div>"
+        "<div style='font-size:13px;color:#F0E6C8;margin-bottom:8px'>"
+        "\u0414\u043e\u0431\u0440\u043e \u043f\u043e\u0436\u0430\u043b\u043e\u0432\u0430\u0442\u044c, " + guest_name + "!</div>"
+        "<div style='font-size:12px;color:#A89060;margin-bottom:24px'>"
+        "\u0411\u0440\u043e\u043d\u044c: " + booking_ref + " | \u0417\u0430\u0435\u0437\u0434: " + check_in + "</div>"
+        "<pre style='font-size:12px;color:#F0E6C8;line-height:1.8;white-space:pre-wrap;"
+        "font-family:Arial,sans-serif;background:#0A0A0A;padding:20px;border:1px solid #1E1E1E'>"
+        + memo_text + "</pre>"
+        "</div>"
+        "<div style='text-align:center;font-size:10px;color:#5A4A30;margin-top:24px'>"
+        "citypause.ru \u2014 citypause@mail.ru</div>"
+        "</div>"
+    )
+    send_email(guest_email,
+               "\u041f\u0430\u043c\u044f\u0442\u043a\u0430 \u0433\u043e\u0441\u0442\u044e \u2014 " + booking_ref,
+               html)
+
+def email_checkout_checklist(guest_name, guest_email, booking_ref, check_out):
+    """Письмо гостю — чек-лист перед выездом."""
+    checklist_text = load_checkout_checklist()
+    html = (
+        "<div style='font-family:Arial,sans-serif;max-width:600px;margin:0 auto;"
+        "background:#0A0A0A;color:#F0E6C8;padding:40px'>"
+        "<div style='text-align:center;margin-bottom:32px'>"
+        "<div style='font-size:28px;letter-spacing:4px;color:#C9A84C'>"
+        "\u0413\u041e\u0420\u041e\u0414\u0421\u041a\u0410\u042f \u041f\u0410\u0423\u0417\u0410</div>"
+        "</div>"
+        "<div style='background:#141414;border:1px solid #1E1E1E;padding:32px;margin-bottom:24px'>"
+        "<div style='font-size:13px;color:#C9A84C;margin-bottom:16px'>"
+        "\u0427\u0415\u041a-\u041b\u0418\u0421\u0422 \u041f\u0415\u0420\u0415\u0414 \u0412\u042b\u0415\u0417\u0414\u041e\u041c</div>"
+        "<div style='font-size:13px;color:#F0E6C8;margin-bottom:8px'>"
+        "\u0423\u0432\u0430\u0436\u0430\u0435\u043c\u044b\u0439 " + guest_name + "!</div>"
+        "<div style='font-size:12px;color:#A89060;margin-bottom:24px'>"
+        "\u0411\u0440\u043e\u043d\u044c: " + booking_ref + " | \u0412\u044b\u0435\u0437\u0434: " + check_out + " \u0434\u043e 12:00</div>"
+        "<pre style='font-size:12px;color:#F0E6C8;line-height:1.8;white-space:pre-wrap;"
+        "font-family:Arial,sans-serif;background:#0A0A0A;padding:20px;border:1px solid #1E1E1E'>"
+        + checklist_text + "</pre>"
+        "</div>"
+        "<div style='text-align:center;font-size:10px;color:#5A4A30;margin-top:24px'>"
+        "citypause.ru \u2014 citypause@mail.ru</div>"
+        "</div>"
+    )
+    send_email(guest_email,
+               "\u0427\u0435\u043a-\u043b\u0438\u0441\u0442 \u043f\u0435\u0440\u0435\u0434 \u0432\u044b\u0435\u0437\u0434\u043e\u043c \u2014 " + booking_ref,
+               html)
+
+def email_review_request(guest_name, guest_email, booking_ref, promo_code, discount_percent):
+    """Письмо гостю — просьба об отзыве + промокод на следующий заезд."""
+    review_text = load_review_template(promo_code, discount_percent)
+    html = (
+        "<div style='font-family:Arial,sans-serif;max-width:600px;margin:0 auto;"
+        "background:#0A0A0A;color:#F0E6C8;padding:40px'>"
+        "<div style='text-align:center;margin-bottom:32px'>"
+        "<div style='font-size:28px;letter-spacing:4px;color:#C9A84C'>"
+        "\u0413\u041e\u0420\u041e\u0414\u0421\u041a\u0410\u042f \u041f\u0410\u0423\u0417\u0410</div>"
+        "</div>"
+        "<div style='background:#141414;border:1px solid #1E1E1E;padding:32px;margin-bottom:24px'>"
+        "<div style='font-size:13px;color:#C9A84C;margin-bottom:16px'>"
+        "\u0421\u041f\u0410\u0421\u0418\u0411\u041e \u0417\u0410 \u0412\u0418\u0417\u0418\u0422!</div>"
+        "<pre style='font-size:13px;color:#F0E6C8;line-height:1.8;white-space:pre-wrap;"
+        "font-family:Arial,sans-serif'>" + review_text + "</pre>"
+        "<div style='margin-top:24px;padding:16px;background:rgba(201,168,76,.06);"
+        "border:1px solid rgba(201,168,76,.3);text-align:center'>"
+        "<div style='font-size:10px;color:#5A4A30;margin-bottom:8px'>\u0412\u0410\u0428 \u041f\u0420\u041e\u041c\u041e\u041a\u041e\u0414</div>"
+        "<div style='font-size:24px;color:#C9A84C;letter-spacing:4px'>" + promo_code + "</div>"
+        "<div style='font-size:11px;color:#A89060;margin-top:8px'>"
+        "\u0421\u043a\u0438\u0434\u043a\u0430 " + str(discount_percent) + "% \u043d\u0430 \u0441\u043b\u0435\u0434\u0443\u044e\u0449\u0435\u0435 \u0431\u0440\u043e\u043d\u0438\u0440\u043e\u0432\u0430\u043d\u0438\u0435</div>"
+        "</div>"
+        "</div>"
+        "<div style='text-align:center;margin-top:24px'>"
+        "<a href='https://citypause.ru' style='color:#C9A84C;font-size:13px;"
+        "letter-spacing:2px'>CITYPAUSE.RU</a>"
+        "</div>"
+        "</div>"
+    )
+    send_email(guest_email,
+               "\u0421\u043f\u0430\u0441\u0438\u0431\u043e \u0437\u0430 \u0432\u0438\u0437\u0438\u0442 \u2014 \u043f\u043e\u0434\u0430\u0440\u043e\u043a \u0434\u043b\u044f \u0432\u0430\u0441",
+               html)
 
 def email_booking_created(booking_id, guest_name, guest_email, check_in, check_out, nights, total, prepay):
     """Письмо гостю — бронь создана, ожидаем оплату."""
@@ -368,13 +537,16 @@ def email_booking_created(booking_id, guest_name, guest_email, check_in, check_o
                "\u0411\u0440\u043e\u043d\u044c " + booking_id + " \u2014 \u0413\u043e\u0440\u043e\u0434\u0441\u043a\u0430\u044f \u041f\u0430\u0443\u0437\u0430",
                html)
 
-def email_booking_confirmed(booking, door_code):
-    """Письмо гостю — оплата подтверждена, договор + код замка."""
+def email_booking_confirmed(booking, door_code=None):
+    """Письмо гостю — предоплата подтверждена, договор + инструкция по остатку."""
     guest_email  = booking.get("guest_email", "")
     guest_name   = booking.get("guest_name", "")
     booking_ref  = str(booking.get("username") or booking.get("id", ""))
     check_in     = booking.get("check_in", "")
     check_out    = booking.get("check_out", "")
+    total_price  = booking.get("total_price", 0)
+    prepay       = round(total_price * 0.2)
+    remainder    = total_price - prepay
 
     contract_text = generate_contract(booking)
     save_contract(booking_ref, contract_text)
@@ -389,15 +561,9 @@ def email_booking_confirmed(booking, door_code):
         "</div>"
         "<div style='background:#141414;border:1px solid #1E1E1E;padding:32px;margin-bottom:24px'>"
         "<div style='font-size:16px;color:#C9A84C;margin-bottom:16px'>"
-        "\u2705 \u041e\u043f\u043b\u0430\u0442\u0430 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0430!</div>"
+        "\u2705 \u041f\u0440\u0435\u0434\u043e\u043f\u043b\u0430\u0442\u0430 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0430!</div>"
         "<div style='font-size:13px;color:#A89060;margin-bottom:24px'>"
         "\u0411\u0440\u043e\u043d\u044c " + booking_ref + "</div>"
-        "<div style='background:#0A0A0A;border:1px solid rgba(201,168,76,0.3);padding:20px;margin-bottom:16px;text-align:center'>"
-        "<div style='font-size:11px;color:#5A4A30;margin-bottom:8px'>"
-        "\u041a\u041e\u0414 \u0417\u0410\u041c\u041a\u0410</div>"
-        "<div style='font-size:36px;color:#C9A84C;letter-spacing:8px;font-weight:bold'>"
-        + str(door_code) + "</div>"
-        "</div>"
         "<table style='width:100%;border-collapse:collapse'>"
         "<tr><td style='padding:8px 0;color:#5A4A30;font-size:12px'>"
         "\u0417\u0430\u0435\u0437\u0434</td>"
@@ -410,11 +576,21 @@ def email_booking_confirmed(booking, door_code):
         "<td style='color:#F0E6C8;font-size:12px'>"
         "\u0443\u043b. \u0414\u0430\u0447\u043d\u0430\u044f, \u0434. 5, \u043a\u0432. 286, 22 \u044d\u0442\u0430\u0436</td></tr>"
         "</table></div>"
+        "<div style='background:#141414;border:1px solid rgba(201,168,76,0.3);padding:24px;margin-bottom:24px'>"
+        "<div style='font-size:13px;color:#C9A84C;margin-bottom:16px'>"
+        "\u0414\u041e\u041f\u041e\u041b\u041d\u0418\u0422\u0415\u041b\u042c\u041d\u0410\u042f \u041e\u041f\u041b\u0410\u0422\u0410</div>"
+        "<div style='font-size:12px;color:#A89060;line-height:1.9'>"
+        "\u0414\u043b\u044f \u0437\u0430\u0432\u0435\u0440\u0448\u0435\u043d\u0438\u044f \u0431\u0440\u043e\u043d\u0438\u0440\u043e\u0432\u0430\u043d\u0438\u044f \u043d\u0435\u043e\u0431\u0445\u043e\u0434\u0438\u043c\u043e:<br>"
+        "\u2022 \u041e\u0441\u0442\u0430\u0442\u043e\u043a \u0441\u0442\u043e\u0438\u043c\u043e\u0441\u0442\u0438: <b style='color:#F0E6C8'>" + str(remainder) + " \u20bd</b><br>"
+        "\u2022 \u0414\u0435\u043f\u043e\u0437\u0438\u0442: <b style='color:#F0E6C8'>6\u202f000 \u20bd</b> (\u0432\u043e\u0437\u0432\u0440\u0430\u0449\u0430\u0435\u0442\u0441\u044f \u043f\u0440\u0438 \u0432\u044b\u0435\u0437\u0434\u0435)<br>"
+        "\u041e\u043f\u043b\u0430\u0442\u0430 \u043d\u0430\u043b\u0438\u0447\u043d\u044b\u043c\u0438 \u0438\u043b\u0438 \u043f\u0435\u0440\u0435\u0432\u043e\u0434\u043e\u043c \u043f\u043e \u0440\u0435\u043a\u0432\u0438\u0437\u0438\u0442\u0430\u043c, \u043f\u0440\u0435\u0434\u043e\u0441\u0442\u0430\u0432\u043b\u0435\u043d\u043d\u044b\u043c \u043f\u0440\u0438 \u0437\u0430\u0441\u0435\u043b\u0435\u043d\u0438\u0438.<br>"
+        "\u041f\u043e\u0441\u043b\u0435 \u043f\u043e\u043b\u0443\u0447\u0435\u043d\u0438\u044f \u043e\u043f\u043b\u0430\u0442\u044b \u043c\u044b \u043e\u0442\u043f\u0440\u0430\u0432\u0438\u043c \u0432\u0430\u043c \u043f\u0430\u043c\u044f\u0442\u043a\u0443 \u0441 \u043a\u043e\u0434\u043e\u043c \u043e\u0442 \u0437\u0430\u043c\u043a\u0430."
+        "</div></div>"
         "<div style='background:#141414;border:1px solid #1E1E1E;padding:24px;margin-bottom:24px'>"
         "<div style='font-size:11px;color:#C9A84C;margin-bottom:12px'>"
         "\u0414\u041e\u0413\u041e\u0412\u041e\u0420 \u0410\u0420\u0415\u041d\u0414\u042b</div>"
         "<div style='font-size:12px;color:#A89060;line-height:1.7'>"
-        "\u041f\u043e\u043b\u043d\u044b\u0439 \u0442\u0435\u043a\u0441\u0442 \u0434\u043e\u0433\u043e\u0432\u043e\u0440\u0430 \u043f\u0440\u0438\u043b\u043e\u0436\u0435\u043d \u043a \u044d\u0442\u043e\u043c\u0443 \u043f\u0438\u0441\u044c\u043c\u0443 \u043e\u0442\u0434\u0435\u043b\u044c\u043d\u044b\u043c \u0444\u0430\u0439\u043b\u043e\u043c " + contract_filename + " \u2014 \u043e\u0442\u043a\u0440\u043e\u0439\u0442\u0435 \u0432\u043b\u043e\u0436\u0435\u043d\u0438\u0435, \u0447\u0442\u043e\u0431\u044b \u043f\u0440\u043e\u0447\u0438\u0442\u0430\u0442\u044c \u0438 \u0441\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c \u0434\u043e\u0433\u043e\u0432\u043e\u0440.</div>"
+        "\u041f\u043e\u043b\u043d\u044b\u0439 \u0442\u0435\u043a\u0441\u0442 \u0434\u043e\u0433\u043e\u0432\u043e\u0440\u0430 \u043f\u0440\u0438\u043b\u043e\u0436\u0435\u043d \u043a \u044d\u0442\u043e\u043c\u0443 \u043f\u0438\u0441\u044c\u043c\u0443 \u043e\u0442\u0434\u0435\u043b\u044c\u043d\u044b\u043c \u0444\u0430\u0439\u043b\u043e\u043c " + contract_filename + ".</div>"
         "</div>"
         "<div style='text-align:center;font-size:11px;color:#5A4A30'>"
         "citypause@mail.ru | citypause.ru</div></div>"
@@ -513,6 +689,9 @@ def get_db():
         "confirmed_at":   "TEXT DEFAULT ''",
         "promo_code":     "TEXT DEFAULT ''",
         "discount_percent": "INTEGER DEFAULT 0",
+        "fully_paid_at":  "TEXT DEFAULT ''",
+        "checklist_sent": "INTEGER DEFAULT 0",
+        "review_sent":    "INTEGER DEFAULT 0",
     }.items():
         try:
             conn.execute("ALTER TABLE bookings ADD COLUMN " + col + " " + col_type)
@@ -662,6 +841,45 @@ async def set_contract_template(c: ContractTemplate, _: bool = Depends(require_a
         f.write(c.text)
     return {"ok": True}
 
+@app.get("/api/checkin-memo")
+async def get_checkin_memo():
+    if os.path.exists(CHECKIN_FILE):
+        with open(CHECKIN_FILE, "r", encoding="utf-8") as f:
+            return PlainTextResponse(f.read())
+    return PlainTextResponse(DEFAULT_CHECKIN_MEMO)
+
+@app.post("/api/checkin-memo")
+async def set_checkin_memo(c: CheckinMemo, _: bool = Depends(require_admin)):
+    with open(CHECKIN_FILE, "w", encoding="utf-8") as f:
+        f.write(c.text)
+    return {"ok": True}
+
+@app.get("/api/checkout-checklist")
+async def get_checkout_checklist():
+    if os.path.exists(CHECKOUT_FILE):
+        with open(CHECKOUT_FILE, "r", encoding="utf-8") as f:
+            return PlainTextResponse(f.read())
+    return PlainTextResponse(DEFAULT_CHECKOUT_CHECKLIST)
+
+@app.post("/api/checkout-checklist")
+async def set_checkout_checklist(c: CheckinMemo, _: bool = Depends(require_admin)):
+    with open(CHECKOUT_FILE, "w", encoding="utf-8") as f:
+        f.write(c.text)
+    return {"ok": True}
+
+@app.get("/api/review-template")
+async def get_review_template():
+    if os.path.exists(REVIEW_FILE):
+        with open(REVIEW_FILE, "r", encoding="utf-8") as f:
+            return PlainTextResponse(f.read())
+    return PlainTextResponse(DEFAULT_REVIEW_TEMPLATE)
+
+@app.post("/api/review-template")
+async def set_review_template(c: CheckinMemo, _: bool = Depends(require_admin)):
+    with open(REVIEW_FILE, "w", encoding="utf-8") as f:
+        f.write(c.text)
+    return {"ok": True}
+
 # =====================================================
 # API — BOOKINGS
 # =====================================================
@@ -696,6 +914,16 @@ async def get_bookings(admin: Optional[str] = None, authorization: Optional[str]
 
 @app.post("/api/bookings")
 async def create_booking(b: BookingCreate):
+    # Проверка минимального срока бронирования
+    try:
+        d_in  = datetime.strptime(b.check_in,  "%Y-%m-%d").date()
+        d_out = datetime.strptime(b.check_out, "%Y-%m-%d").date()
+        nights_count = (d_out - d_in).days
+    except Exception:
+        raise HTTPException(status_code=400, detail="\u041d\u0435\u0432\u0435\u0440\u043d\u044b\u0439 \u0444\u043e\u0440\u043c\u0430\u0442 \u0434\u0430\u0442")
+    if nights_count < 2:
+        raise HTTPException(status_code=400, detail="\u041c\u0438\u043d\u0438\u043c\u0430\u043b\u044c\u043d\u044b\u0439 \u0441\u0440\u043e\u043a \u0431\u0440\u043e\u043d\u0438\u0440\u043e\u0432\u0430\u043d\u0438\u044f \u2014 2 \u043d\u043e\u0447\u0438")
+
     conn = get_db()
     booking_ref = "ГП-" + "".join(random.choices(string.ascii_uppercase + string.digits, k=6))
 
@@ -839,6 +1067,53 @@ async def confirm_booking(booking_ref: str, _: bool = Depends(require_admin)):
             pass
 
     return {"ok": True, "booking_id": booking.get("username"), "door_code": door_code}
+
+@app.post("/api/bookings/{booking_ref}/full-payment")
+async def full_payment(booking_ref: str, _: bool = Depends(require_admin)):
+    """Подтверждение полной оплаты — отправляет гостю памятку с кодом замка."""
+    conn = get_db()
+    row = conn.execute(
+        "SELECT * FROM bookings WHERE id=? OR username=?",
+        (booking_ref, booking_ref)
+    ).fetchone()
+    if not row:
+        conn.close()
+        raise HTTPException(status_code=404, detail="\u0411\u0440\u043e\u043d\u044c \u043d\u0435 \u043d\u0430\u0439\u0434\u0435\u043d\u0430")
+    booking = dict(row)
+    now_str = now_nsk().strftime("%Y-%m-%d %H:%M")
+    conn.execute(
+        "UPDATE bookings SET status='fully_paid', fully_paid_at=? WHERE id=? OR username=?",
+        (now_str, booking_ref, booking_ref)
+    )
+    conn.commit()
+    conn.close()
+
+    door_code = load_door_code()
+    guest_email = booking.get("guest_email", "")
+    guest_name  = booking.get("guest_name", "")
+    check_in    = booking.get("check_in", "")
+
+    import threading
+    if guest_email:
+        threading.Thread(target=email_checkin_memo, args=(
+            guest_name, guest_email, booking_ref, check_in, door_code
+        )).start()
+
+    for admin_id in ADMIN_IDS:
+        try:
+            import asyncio as _asyncio
+            await _asyncio.wait_for(
+                bot.send_message(admin_id,
+                    "\u2705 \u041f\u043e\u043b\u043d\u0430\u044f \u043e\u043f\u043b\u0430\u0442\u0430 \u043f\u043e\u043b\u0443\u0447\u0435\u043d\u0430\n"
+                    "\u0411\u0440\u043e\u043d\u044c: " + booking_ref + "\n"
+                    "\u0413\u043e\u0441\u0442\u044c: " + guest_name + "\n"
+                    "\u041f\u0430\u043c\u044f\u0442\u043a\u0430 \u0441 \u043a\u043e\u0434\u043e\u043c \u043e\u0442\u043f\u0440\u0430\u0432\u043b\u0435\u043d\u0430 \u0433\u043e\u0441\u0442\u044e"
+                ), timeout=3.0
+            )
+        except Exception:
+            pass
+
+    return {"ok": True, "status": "fully_paid"}
 
 @app.post("/api/bookings/{booking_ref}/cancel")
 async def cancel_booking_api(booking_ref: str, _: bool = Depends(require_admin)):
@@ -990,58 +1265,73 @@ async def send_notifications():
         hour   = now.hour
         minute = now.minute
         try:
+            # 10:00 НСК — чек-лист гостям кто выезжает сегодня
             if hour == 10 and minute < 30:
                 bookings = get_bookings_checkout_today()
                 for b in bookings:
+                    # Email — главный канал
+                    if b.get("guest_email") and not b.get("checklist_sent"):
+                        import threading
+                        threading.Thread(target=email_checkout_checklist, args=(
+                            b.get("guest_name",""),
+                            b["guest_email"],
+                            b.get("username") or b.get("id",""),
+                            b.get("check_out","")
+                        )).start()
+                        conn2 = get_db()
+                        conn2.execute("UPDATE bookings SET checklist_sent=1 WHERE id=? OR username=?",
+                                      (b.get("id"), b.get("username")))
+                        conn2.commit()
+                        conn2.close()
+                    # Telegram — best-effort
                     if b.get("user_id") and b["user_id"] != 0:
                         try:
                             await asyncio.wait_for(bot.send_message(
                                 b["user_id"],
-                                "\u041d\u0430\u043f\u043e\u043c\u0438\u043d\u0430\u043d\u0438\u0435 \u043e \u0432\u044b\u0435\u0437\u0434\u0435 \u2014 \u0441\u0435\u0433\u043e\u0434\u043d\u044f \u0434\u043e 12:00\n\n"
-                                "\u041f\u043e\u0436\u0430\u043b\u0443\u0439\u0441\u0442\u0430, \u043f\u0440\u043e\u0432\u0435\u0440\u044c\u0442\u0435 \u043f\u0435\u0440\u0435\u0434 \u0443\u0445\u043e\u0434\u043e\u043c:\n"
-                                "- \u041e\u0441\u0442\u0430\u0432\u044c\u0442\u0435 \u043a\u043b\u044e\u0447\u0438 \u0432 \u043f\u043e\u0447\u0442\u043e\u0432\u043e\u043c \u044f\u0449\u0438\u043a\u0435\n"
-                                "- \u0417\u0430\u043a\u0440\u043e\u0439\u0442\u0435 \u043e\u043a\u043d\u0430 \u0438 \u0431\u0430\u043b\u043a\u043e\u043d\n"
-                                "- \u0412\u044b\u043a\u043b\u044e\u0447\u0438\u0442\u0435 \u0441\u0432\u0435\u0442 \u0438 \u0442\u0435\u0445\u043d\u0438\u043a\u0443\n"
-                                "- \u0417\u0430\u0445\u043b\u043e\u043f\u043d\u0438\u0442\u0435 \u0434\u0432\u0435\u0440\u044c\n\n"
-                                "\u0421\u043f\u0430\u0441\u0438\u0431\u043e \u0447\u0442\u043e \u0432\u044b\u0431\u0440\u0430\u043b\u0438 \u043d\u0430\u0441! \ud83e\udd17"
+                                "\u0427\u0435\u043a-\u043b\u0438\u0441\u0442 \u043f\u0435\u0440\u0435\u0434 \u0432\u044b\u0435\u0437\u0434\u043e\u043c \u2014 \u0441\u0435\u0433\u043e\u0434\u043d\u044f \u0434\u043e 12:00\n\n"
+                                "\u2610 \u0412\u044b\u043d\u0435\u0441\u0442\u0438 \u043c\u0443\u0441\u043e\u0440\n"
+                                "\u2610 \u041f\u043e\u043c\u044b\u0442\u044c \u043f\u043e\u0441\u0443\u0434\u0443\n"
+                                "\u2610 \u0417\u0430\u043a\u0440\u044b\u0442\u044c \u043e\u043a\u043d\u0430\n"
+                                "\u2610 \u0412\u044b\u043a\u043b\u044e\u0447\u0438\u0442\u044c \u0441\u0432\u0435\u0442 \u0438 \u0442\u0435\u0445\u043d\u0438\u043a\u0443\n"
+                                "\u2610 \u0417\u0430\u043f\u0440\u0435\u0442\u044c \u0434\u0432\u0435\u0440\u044c"
                             ), timeout=5.0)
                         except Exception:
                             pass
 
-            if hour == 12 and minute < 30:
-                bookings  = get_bookings_checkin_tomorrow()
-                door_code = load_door_code()
-                for b in bookings:
-                    if b.get("user_id") and b["user_id"] != 0:
-                        try:
-                            await asyncio.wait_for(bot.send_message(
-                                b["user_id"],
-                                "\ud83c\udfe0 \u0417\u0430\u0432\u0442\u0440\u0430 \u0432\u0430\u0448 \u0437\u0430\u0435\u0437\u0434!\n\n"
-                                "\ud83d\udccd \u0443\u043b. \u0414\u0430\u0447\u043d\u0430\u044f, \u0434. 5, \u043a\u0432. 286\n"
-                                "\ud83d\udd10 \u041a\u043e\u0434 \u0437\u0430\u043c\u043a\u0430: " + str(door_code) + "\n"
-                                "\ud83d\udee7 \u041b\u0438\u0444\u0442: 22 \u044d\u0442\u0430\u0436\n"
-                                "\ud83d\udcb0 \u0414\u0435\u043f\u043e\u0437\u0438\u0442 6 000 \u20bd \u043f\u0440\u0438 \u0437\u0430\u0441\u0435\u043b\u0435\u043d\u0438\u0438"
-                            ), timeout=5.0)
-                        except Exception:
-                            pass
-
-            if hour == 15 and minute < 30:
-                bookings = get_bookings_checkin_today()
-                for b in bookings:
-                    if b.get("user_id") and b["user_id"] != 0:
-                        try:
-                            await asyncio.wait_for(bot.send_message(
-                                b["user_id"],
-                                "\ud83c\udf89 \u0414\u043e\u0431\u0440\u043e \u043f\u043e\u0436\u0430\u043b\u043e\u0432\u0430\u0442\u044c!\n\n"
-                                "\u0421\u0435\u0433\u043e\u0434\u043d\u044f \u0432\u0430\u0448 \u0437\u0430\u0435\u0437\u0434 \u0432 \u00ab\u0413\u043e\u0440\u043e\u0434\u0441\u043a\u0430\u044f \u041f\u0430\u0443\u0437\u0430\u00bb.\n"
-                                "\u0417\u0430\u0435\u0437\u0434 \u0441 15:00 \u2014 \u043a\u0432\u0430\u0440\u0442\u0438\u0440\u0430 \u0433\u043e\u0442\u043e\u0432\u0430. \ud83e\udd17"
-                            ), timeout=5.0)
-                        except Exception:
-                            pass
-
+            # 14:00 НСК — отзыв + промокод гостям кто выехал вчера
             if hour == 14 and minute < 30:
                 bookings = get_bookings_checkout_yesterday()
                 for b in bookings:
+                    if b.get("guest_email") and not b.get("review_sent"):
+                        # Генерируем персональный промокод для возврата гостя
+                        guest_ref = (b.get("username") or b.get("id") or "")
+                        promo_code = "RETURN" + str(guest_ref)[-4:].upper()
+                        discount_pct = 10
+                        # Сохраняем промокод в файл промокодов
+                        try:
+                            codes = {}
+                            if os.path.exists(PROMO_FILE):
+                                with open(PROMO_FILE, "r", encoding="utf-8") as pf:
+                                    codes = json.load(pf)
+                            codes[promo_code] = discount_pct
+                            with open(PROMO_FILE, "w", encoding="utf-8") as pf:
+                                json.dump(codes, pf, ensure_ascii=False)
+                        except Exception:
+                            pass
+                        import threading
+                        threading.Thread(target=email_review_request, args=(
+                            b.get("guest_name",""),
+                            b["guest_email"],
+                            b.get("username") or b.get("id",""),
+                            promo_code,
+                            discount_pct
+                        )).start()
+                        conn2 = get_db()
+                        conn2.execute("UPDATE bookings SET review_sent=1 WHERE id=? OR username=?",
+                                      (b.get("id"), b.get("username")))
+                        conn2.commit()
+                        conn2.close()
+                    # Telegram — best-effort
                     if b.get("user_id") and b["user_id"] != 0:
                         try:
                             await asyncio.wait_for(bot.send_message(
@@ -1051,6 +1341,7 @@ async def send_notifications():
                             ), timeout=5.0)
                         except Exception:
                             pass
+
         except Exception as e:
             print("Scheduler error: " + str(e))
         await asyncio.sleep(30 * 60)
