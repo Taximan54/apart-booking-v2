@@ -214,6 +214,7 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
       <a class="sb-item" onclick="showPanel('promo',this)"><span class="sb-icon">%</span>Промокоды</a>
       <a class="sb-item" onclick="showPanel('contract',this)"><span class="sb-icon">✎</span>Договор</a>
       <a class="sb-item" onclick="showPanel('settings',this)"><span class="sb-icon">⊛</span>Настройки</a>
+      <a class="sb-item" onclick="logout()"><span class="sb-icon">⏻</span>Выйти</a>
     </div>
   </nav>
   <div class="sb-footer">
@@ -479,6 +480,7 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
             </div>
             <div style="margin-top:20px;border-top:1px solid var(--black-border);padding-top:16px">
               <div class="info-label" style="margin-bottom:8px">Сменить пароль панели</div>
+              <input type="password" class="info-input" id="oldPwd" placeholder="Текущий пароль" style="margin-bottom:8px">
               <input type="password" class="info-input" id="newPwd" placeholder="Новый пароль" style="margin-bottom:8px">
               <button class="btn btn-ghost btn-sm" onclick="changePwd()">Изменить пароль</button>
             </div>
@@ -512,25 +514,45 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
 // CONFIG — same API base as index.html
 // ============================================================
 let API_BASE = localStorage.getItem('gorodskaya-pauza_api_base') || 'https://citypause.ru';
-let ADMIN_PWD = localStorage.getItem('gorodskaya-pauza_admin_pwd') || 'admin2024'; // Default pwd
+let ADMIN_TOKEN = localStorage.getItem('gorodskaya-pauza_token') || null;
 
 // ============================================================
 // AUTH
 // ============================================================
-function doLogin() {
+async function doLogin() {
   const pwd = document.getElementById('loginPwd').value;
-  if (pwd === ADMIN_PWD) {
+  const btn = document.querySelector('#loginScreen button');
+  if (btn) { btn.disabled = true; btn.textContent = '...'; }
+  try {
+    const r = await fetch(`${API_BASE}/api/admin/login`, {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({password: pwd}),
+      signal: AbortSignal.timeout(6000)
+    });
+    if (!r.ok) throw new Error('bad credentials');
+    const data = await r.json();
+    ADMIN_TOKEN = data.token;
+    localStorage.setItem('gorodskaya-pauza_token', ADMIN_TOKEN);
     document.getElementById('loginScreen').style.display = 'none';
-    localStorage.setItem('gorodskaya-pauza_authed', '1');
     initAdmin();
-  } else {
+  } catch(e) {
     document.getElementById('loginErr').style.display = 'block';
-    setTimeout(() => document.getElementById('loginErr').style.display = 'none', 2000);
+    setTimeout(() => document.getElementById('loginErr').style.display = 'none', 2500);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Войти'; }
   }
 }
 
-// Auto-login if already authed this session
-if (localStorage.getItem('gorodskaya-pauza_authed')) {
+function logout() {
+  ADMIN_TOKEN = null;
+  localStorage.removeItem('gorodskaya-pauza_token');
+  location.reload();
+}
+
+// Если уже есть сохранённый токен — пробуем зайти сразу.
+// Если он окажется просрочен/невалиден, первый же запрос к API вернёт 401
+// и forceRelogin() сам вернёт на экран входа.
+if (ADMIN_TOKEN) {
   document.getElementById('loginScreen').style.display = 'none';
   // init after DOM ready
   document.addEventListener('DOMContentLoaded', initAdmin);
@@ -625,26 +647,49 @@ async function loadAll() {
 // ============================================================
 // API CALLS with demo fallback
 // ============================================================
+function forceRelogin() {
+  ADMIN_TOKEN = null;
+  localStorage.removeItem('gorodskaya-pauza_token');
+  showToast('Сессия истекла — войдите снова', 'err');
+  document.getElementById('loginScreen').style.display = 'flex';
+}
+
 async function apiGet(path) {
-  const r = await fetch(`${API_BASE}${path}`, {signal: AbortSignal.timeout(4000)});
+  const r = await fetch(`${API_BASE}${path}`, {
+    headers: ADMIN_TOKEN ? {'Authorization': 'Bearer ' + ADMIN_TOKEN} : {},
+    signal: AbortSignal.timeout(4000)
+  });
+  if (r.status === 401) { forceRelogin(); throw new Error('401'); }
   if (!r.ok) throw new Error(r.status);
   return r.json();
 }
 
 async function apiPost(path, data) {
   const r = await fetch(`${API_BASE}${path}`, {
-    method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data),
+    method:'POST',
+    headers:{
+      'Content-Type':'application/json',
+      ...(ADMIN_TOKEN ? {'Authorization': 'Bearer ' + ADMIN_TOKEN} : {})
+    },
+    body:JSON.stringify(data),
     signal: AbortSignal.timeout(4000)
   });
+  if (r.status === 401) { forceRelogin(); throw new Error('401'); }
   if (!r.ok) throw new Error(r.status);
   return r.json();
 }
 
 async function apiPut(path, data) {
   const r = await fetch(`${API_BASE}${path}`, {
-    method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data),
+    method:'PUT',
+    headers:{
+      'Content-Type':'application/json',
+      ...(ADMIN_TOKEN ? {'Authorization': 'Bearer ' + ADMIN_TOKEN} : {})
+    },
+    body:JSON.stringify(data),
     signal: AbortSignal.timeout(4000)
   });
+  if (r.status === 401) { forceRelogin(); throw new Error('401'); }
   if (!r.ok) throw new Error(r.status);
   return r.json();
 }
@@ -978,10 +1023,7 @@ async function confirmBooking() {
     // selectedBookingId может быть числовым id или строкой username (GP-XXXXXX)
     const b = allBookings.find(x => x.id == selectedBookingId || x.username == selectedBookingId);
     const ref = b ? (b.username || b.id) : selectedBookingId;
-    const result = await fetch(API_BASE + '/api/bookings/' + ref + '/confirm', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'}
-    }).then(r => r.json());
+    const result = await apiPost('/api/bookings/' + ref + '/confirm', {});
     if (b) b.status = 'confirmed';
     closeModal();
     renderBookingsTable(allBookings);
@@ -1000,10 +1042,7 @@ async function cancelBooking() {
   try {
     const b = allBookings.find(x => x.id == selectedBookingId || x.username == selectedBookingId);
     const ref = b ? (b.username || b.id) : selectedBookingId;
-    await fetch(API_BASE + '/api/bookings/' + ref + '/cancel', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'}
-    });
+    await apiPost('/api/bookings/' + ref + '/cancel', {});
     if (b) b.status = 'cancelled';
     closeModal();
     renderBookingsTable(allBookings);
@@ -1102,13 +1141,19 @@ async function testApi() {
   showToast(ok ? '✓ API доступен' : '✗ API недоступен', ok ? 'gold' : 'err');
 }
 
-function changePwd() {
-  const pwd = document.getElementById('newPwd').value;
-  if(pwd.length < 4) return showToast('Минимум 4 символа', 'err');
-  ADMIN_PWD = pwd;
-  localStorage.setItem('gorodskaya-pauza_admin_pwd', pwd);
-  document.getElementById('newPwd').value = '';
-  showToast('Пароль изменён', 'gold');
+async function changePwd() {
+  const oldPwd = document.getElementById('oldPwd').value;
+  const newPwd = document.getElementById('newPwd').value;
+  if (newPwd.length < 4) return showToast('Минимум 4 символа', 'err');
+  if (!oldPwd) return showToast('Введите текущий пароль', 'err');
+  try {
+    await apiPost('/api/admin/change-password', {old_password: oldPwd, new_password: newPwd});
+    document.getElementById('oldPwd').value = '';
+    document.getElementById('newPwd').value = '';
+    showToast('Пароль изменён', 'gold');
+  } catch(e) {
+    showToast('Не удалось сменить пароль — проверьте текущий пароль', 'err');
+  }
 }
 
 // ============================================================
@@ -1199,7 +1244,7 @@ document.addEventListener('keydown', e => {
 });
 
 // Check if login needed
-if(!localStorage.getItem('gorodskaya-pauza_authed')) {
+if(!ADMIN_TOKEN) {
   document.getElementById('loginPwd').focus();
 } else {
   initAdmin();
