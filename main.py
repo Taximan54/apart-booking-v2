@@ -68,7 +68,13 @@ class PromoCodes(BaseModel):
 class PromoValidate(BaseModel):
     code: str
 
-class AdminLogin(BaseModel):
+class Review(BaseModel):
+    id: Optional[str] = None
+    author: str
+    text: str
+    rating: int = 5
+    date: str = ""
+    visible: bool = True
     password: str
 
 class ChangePassword(BaseModel):
@@ -180,6 +186,7 @@ CONTRACT_STATIC  = "static/contract_template.txt"
 CHECKIN_FILE     = f"{DATA_DIR}/checkin_memo.txt"
 CHECKOUT_FILE    = f"{DATA_DIR}/checkout_checklist.txt"
 REVIEW_FILE      = f"{DATA_DIR}/review_template.txt"
+REVIEWS_FILE     = f"{DATA_DIR}/reviews.json"
 CONTRACTS_DIR    = f"{DATA_DIR}/contracts"
 AUTH_FILE        = f"{DATA_DIR}/admin_auth.json"
 DEFAULT_PRICES   = {"weekday": 3500, "weekend": 4500, "cleaning": 1500}
@@ -786,6 +793,71 @@ async def validate_promo_code(v: PromoValidate):
     if code_norm in codes:
         return {"valid": True, "code": code_norm, "percent": codes[code_norm]}
     return {"valid": False, "percent": 0}
+
+# =====================================================
+# API — REVIEWS
+# =====================================================
+
+@app.get("/api/reviews")
+async def get_reviews():
+    """Публичный эндпоинт — возвращает только видимые отзывы."""
+    if os.path.exists(REVIEWS_FILE):
+        with open(REVIEWS_FILE, "r", encoding="utf-8") as f:
+            reviews = json.load(f)
+        return [r for r in reviews if r.get("visible", True)]
+    return []
+
+@app.get("/api/reviews/all")
+async def get_all_reviews(_: bool = Depends(require_admin)):
+    """Админский эндпоинт — возвращает все отзывы включая скрытые."""
+    if os.path.exists(REVIEWS_FILE):
+        with open(REVIEWS_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return []
+
+@app.post("/api/reviews")
+async def add_review(r: Review, _: bool = Depends(require_admin)):
+    """Добавить отзыв."""
+    reviews = []
+    if os.path.exists(REVIEWS_FILE):
+        with open(REVIEWS_FILE, "r", encoding="utf-8") as f:
+            reviews = json.load(f)
+    new_id = secrets.token_hex(6)
+    review_dict = r.dict()
+    review_dict["id"] = new_id
+    reviews.append(review_dict)
+    with open(REVIEWS_FILE, "w", encoding="utf-8") as f:
+        json.dump(reviews, f, ensure_ascii=False, indent=2)
+    return {"ok": True, "id": new_id}
+
+@app.put("/api/reviews/{review_id}")
+async def update_review(review_id: str, r: Review, _: bool = Depends(require_admin)):
+    """Обновить или скрыть/показать отзыв."""
+    if not os.path.exists(REVIEWS_FILE):
+        raise HTTPException(status_code=404, detail="Нет отзывов")
+    with open(REVIEWS_FILE, "r", encoding="utf-8") as f:
+        reviews = json.load(f)
+    for i, rv in enumerate(reviews):
+        if rv.get("id") == review_id:
+            reviews[i] = {**r.dict(), "id": review_id}
+            break
+    else:
+        raise HTTPException(status_code=404, detail="Отзыв не найден")
+    with open(REVIEWS_FILE, "w", encoding="utf-8") as f:
+        json.dump(reviews, f, ensure_ascii=False, indent=2)
+    return {"ok": True}
+
+@app.delete("/api/reviews/{review_id}")
+async def delete_review(review_id: str, _: bool = Depends(require_admin)):
+    """Удалить отзыв."""
+    if not os.path.exists(REVIEWS_FILE):
+        raise HTTPException(status_code=404, detail="Нет отзывов")
+    with open(REVIEWS_FILE, "r", encoding="utf-8") as f:
+        reviews = json.load(f)
+    reviews = [r for r in reviews if r.get("id") != review_id]
+    with open(REVIEWS_FILE, "w", encoding="utf-8") as f:
+        json.dump(reviews, f, ensure_ascii=False, indent=2)
+    return {"ok": True}
 
 # =====================================================
 # API — DOOR CODE

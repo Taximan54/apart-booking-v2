@@ -226,7 +226,15 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
 .reveal{opacity:0;transform:translateY(30px);transition:opacity .7s ease,transform .7s ease}
 .reveal.visible{opacity:1;transform:translateY(0)}
 
-/* RESPONSIVE */
+/* REVIEWS */
+#reviews{padding:100px 0}
+.reviews-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:24px}
+.review-card{background:var(--black-card);border:1px solid var(--black-border);padding:28px 24px;transition:border-color .3s}
+.review-card:hover{border-color:rgba(201,168,76,.3)}
+.review-stars{color:var(--gold);font-size:14px;letter-spacing:2px;margin-bottom:16px}
+.review-text{font-size:13px;color:var(--text-secondary);line-height:1.8;margin-bottom:20px;font-weight:300}
+.review-author{font-size:11px;color:var(--text-muted);letter-spacing:.15em;text-transform:uppercase}
+.review-date{font-size:10px;color:var(--text-muted);margin-top:4px}
 @media(max-width:1024px){
   header{padding:16px 24px !important}
   nav{display:none}
@@ -393,6 +401,19 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
         <div class="price-divider"></div>
         <div class="price-includes">Профессиональная уборка после выезда</div>
       </div>
+    </div>
+  </div>
+</section>
+
+<!-- REVIEWS -->
+<section id="reviews">
+  <div class="sec-inner">
+    <div class="sec-header reveal">
+      <div class="sec-eyebrow">Отзывы гостей</div>
+      <h2 class="sec-title">Что говорят наши гости</h2>
+    </div>
+    <div class="reviews-grid" id="reviewsGrid">
+      <!-- Загружается через JS -->
     </div>
   </div>
 </section>
@@ -684,6 +705,43 @@ async function init() {
     const desc = await Promise.race([API.description(), timeout(5000)]);
     if(desc && desc.length > 5) document.getElementById('aboutText').textContent = desc;
   } catch(e) {}
+
+  // Отзывы
+  loadReviews();
+}
+
+// ============================================================
+// REVIEWS
+// ============================================================
+async function loadReviews() {
+  try {
+    const r = await fetch(`${API.BASE}/api/reviews`);
+    const reviews = await r.json();
+    renderReviews(reviews);
+  } catch(e) {
+    document.getElementById('reviewsGrid').innerHTML = '';
+  }
+}
+
+function renderReviews(reviews) {
+  const grid = document.getElementById('reviewsGrid');
+  if (!reviews || reviews.length === 0) {
+    grid.innerHTML = '';
+    return;
+  }
+  const stars = n => '★'.repeat(n) + '☆'.repeat(5 - n);
+  grid.innerHTML = reviews.map(r => `
+    <div class="review-card reveal">
+      <div class="review-stars">${stars(r.rating || 5)}</div>
+      <div class="review-text">${r.text.replace(/\n/g, '<br>')}</div>
+      <div class="review-author">${r.author}</div>
+      ${r.date ? `<div class="review-date">${r.date}</div>` : ''}
+    </div>
+  `).join('');
+  // Запускаем reveal-анимацию для новых карточек
+  grid.querySelectorAll('.reveal').forEach(el => {
+    observer.observe(el);
+  });
 }
 
 // ============================================================
