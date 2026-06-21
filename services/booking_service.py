@@ -321,13 +321,13 @@ def get_bookings_checkin_today():
 
 
 def get_bookings_checkout_today():
-    """Брони с выездом сегодня — чек-лист в 09:00."""
+    """Брони с выездом сегодня — чек-лист в 10:00."""
     today = date.today().strftime("%Y-%m-%d")
     with get_connection() as conn:
         cursor = conn.cursor()
         cursor.execute("""
         SELECT * FROM bookings
-        WHERE status = 'confirmed'
+        WHERE status IN ('confirmed', 'fully_paid')
         AND check_out = ?
         """, (today,))
         return [dict(row) for row in cursor.fetchall()]
@@ -340,7 +340,7 @@ def get_bookings_checkout_yesterday():
         cursor = conn.cursor()
         cursor.execute("""
         SELECT * FROM bookings
-        WHERE status = 'confirmed'
+        WHERE status IN ('confirmed', 'fully_paid')
         AND check_out = ?
         """, (yesterday,))
         return [dict(row) for row in cursor.fetchall()]
