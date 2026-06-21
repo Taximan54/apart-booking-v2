@@ -68,6 +68,9 @@ class PromoCodes(BaseModel):
 class PromoValidate(BaseModel):
     code: str
 
+class AdminLogin(BaseModel):
+    password: str
+
 class Review(BaseModel):
     id: Optional[str] = None
     author: str
@@ -75,7 +78,6 @@ class Review(BaseModel):
     rating: int = 5
     date: str = ""
     visible: bool = True
-    password: str
 
 class ChangePassword(BaseModel):
     old_password: str
