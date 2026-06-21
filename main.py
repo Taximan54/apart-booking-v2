@@ -805,7 +805,8 @@ async def get_reviews():
     """Публичный эндпоинт — возвращает только видимые отзывы."""
     if os.path.exists(REVIEWS_FILE):
         with open(REVIEWS_FILE, "r", encoding="utf-8") as f:
-            reviews = json.load(f)
+            data = json.load(f)
+            reviews = data if isinstance(data, list) else [data]
         return [r for r in reviews if r.get("visible", True)]
     return []
 
@@ -814,7 +815,8 @@ async def get_all_reviews(_: bool = Depends(require_admin)):
     """Админский эндпоинт — возвращает все отзывы включая скрытые."""
     if os.path.exists(REVIEWS_FILE):
         with open(REVIEWS_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
+            data = json.load(f)
+            return data if isinstance(data, list) else [data]
     return []
 
 @app.post("/api/reviews")
@@ -823,7 +825,8 @@ async def add_review(r: Review, _: bool = Depends(require_admin)):
     reviews = []
     if os.path.exists(REVIEWS_FILE):
         with open(REVIEWS_FILE, "r", encoding="utf-8") as f:
-            reviews = json.load(f)
+            data = json.load(f)
+            reviews = data if isinstance(data, list) else [data]
     new_id = secrets.token_hex(6)
     review_dict = r.dict()
     review_dict["id"] = new_id
@@ -838,7 +841,8 @@ async def update_review(review_id: str, r: Review, _: bool = Depends(require_adm
     if not os.path.exists(REVIEWS_FILE):
         raise HTTPException(status_code=404, detail="Нет отзывов")
     with open(REVIEWS_FILE, "r", encoding="utf-8") as f:
-        reviews = json.load(f)
+        data = json.load(f)
+        reviews = data if isinstance(data, list) else [data]
     for i, rv in enumerate(reviews):
         if rv.get("id") == review_id:
             reviews[i] = {**r.dict(), "id": review_id}
@@ -855,7 +859,8 @@ async def delete_review(review_id: str, _: bool = Depends(require_admin)):
     if not os.path.exists(REVIEWS_FILE):
         raise HTTPException(status_code=404, detail="Нет отзывов")
     with open(REVIEWS_FILE, "r", encoding="utf-8") as f:
-        reviews = json.load(f)
+        data = json.load(f)
+        reviews = data if isinstance(data, list) else [data]
     reviews = [r for r in reviews if r.get("id") != review_id]
     with open(REVIEWS_FILE, "w", encoding="utf-8") as f:
         json.dump(reviews, f, ensure_ascii=False, indent=2)
