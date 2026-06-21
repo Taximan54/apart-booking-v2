@@ -731,17 +731,13 @@ function renderReviews(reviews) {
   }
   const stars = n => '★'.repeat(n) + '☆'.repeat(5 - n);
   grid.innerHTML = reviews.map(r => `
-    <div class="review-card reveal">
+    <div class="review-card">
       <div class="review-stars">${stars(r.rating || 5)}</div>
       <div class="review-text">${r.text.replace(/\n/g, '<br>')}</div>
       <div class="review-author">${r.author}</div>
       ${r.date ? `<div class="review-date">${r.date}</div>` : ''}
     </div>
   `).join('');
-  // Запускаем reveal-анимацию для новых карточек
-  grid.querySelectorAll('.reveal').forEach(el => {
-    observer.observe(el);
-  });
 }
 
 // ============================================================
