@@ -228,6 +228,9 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
 
 /* REVIEWS */
 #reviews{padding:100px 0}
+
+/* CONTACTS */
+#contacts{padding:100px 0}
 .reviews-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:24px}
 .review-card{background:var(--black-card);border:1px solid var(--black-border);padding:28px 24px;transition:border-color .3s}
 .review-card:hover{border-color:rgba(201,168,76,.3)}
@@ -577,6 +580,33 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
 </section>
 
 <!-- FOOTER -->
+<!-- CONTACTS -->
+<section id="contacts">
+  <div class="sec-inner">
+    <div class="sec-header reveal">
+      <div class="sec-eyebrow">Связаться с нами</div>
+      <h2 class="sec-title">Контакты</h2>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:24px;max-width:700px;margin:0 auto">
+      <a id="contactPhone" href="#" style="display:flex;flex-direction:column;align-items:center;padding:32px 24px;background:var(--black-card);border:1px solid var(--black-border);text-decoration:none;transition:border-color .3s" onmouseover="this.style.borderColor='rgba(201,168,76,.4)'" onmouseout="this.style.borderColor='var(--black-border)'">
+        <div style="font-size:28px;margin-bottom:12px">📞</div>
+        <div style="font-size:10px;color:var(--gold);letter-spacing:.2em;text-transform:uppercase;margin-bottom:8px">Телефон</div>
+        <div id="contactPhoneText" style="font-size:14px;color:var(--text-secondary)">—</div>
+      </a>
+      <a id="contactEmail" href="#" style="display:flex;flex-direction:column;align-items:center;padding:32px 24px;background:var(--black-card);border:1px solid var(--black-border);text-decoration:none;transition:border-color .3s" onmouseover="this.style.borderColor='rgba(201,168,76,.4)'" onmouseout="this.style.borderColor='var(--black-border)'">
+        <div style="font-size:28px;margin-bottom:12px">✉️</div>
+        <div style="font-size:10px;color:var(--gold);letter-spacing:.2em;text-transform:uppercase;margin-bottom:8px">Email</div>
+        <div id="contactEmailText" style="font-size:14px;color:var(--text-secondary)">—</div>
+      </a>
+      <a id="contactTelegram" href="#" target="_blank" style="display:flex;flex-direction:column;align-items:center;padding:32px 24px;background:var(--black-card);border:1px solid var(--black-border);text-decoration:none;transition:border-color .3s" onmouseover="this.style.borderColor='rgba(201,168,76,.4)'" onmouseout="this.style.borderColor='var(--black-border)'">
+        <div style="font-size:28px;margin-bottom:12px">✈️</div>
+        <div style="font-size:10px;color:var(--gold);letter-spacing:.2em;text-transform:uppercase;margin-bottom:8px">Telegram</div>
+        <div id="contactTelegramText" style="font-size:14px;color:var(--text-secondary)">—</div>
+      </a>
+    </div>
+  </div>
+</section>
+
 <footer>
   <div>
     <div class="footer-brand">Городская Пауза</div>
@@ -584,8 +614,9 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
   </div>
   <div class="footer-c">
     <div style="color:var(--gold);font-size:11px;letter-spacing:.2em;margin-bottom:8px">КОНТАКТЫ</div>
-    <div id="footerEmail">citypause@mail.ru</div>
-    <div id="footerPhone">+7 (495) 000-00-00</div>
+    <div><a id="footerEmail" href="mailto:citypause@mail.ru" style="color:var(--text-muted);text-decoration:none">citypause@mail.ru</a></div>
+    <div><a id="footerPhone" href="tel:+74950000000" style="color:var(--text-muted);text-decoration:none">+7 (495) 000-00-00</a></div>
+    <div><a id="footerTelegram" href="#" style="color:var(--text-muted);text-decoration:none" target="_blank"></a></div>
     <div style="margin-top:12px"><a href="/static/privacy.html" style="font-size:10px;color:var(--text-muted);text-decoration:none;letter-spacing:.1em;transition:color .3s" onmouseover="this.style.color='var(--gold)'" onmouseout="this.style.color='var(--text-muted)'">Политика конфиденциальности</a></div>
   </div>
   <div class="footer-r">
@@ -708,6 +739,9 @@ async function init() {
 
   // Отзывы
   loadReviews();
+
+  // Контакты
+  loadContacts();
 }
 
 // ============================================================
@@ -738,6 +772,39 @@ function renderReviews(reviews) {
       ${r.date ? `<div class="review-date">${r.date}</div>` : ''}
     </div>
   `).join('');
+}
+
+// ============================================================
+// CONTACTS
+// ============================================================
+async function loadContacts() {
+  try {
+    const r = await fetch(`${API.BASE}/api/contacts`);
+    const c = await r.json();
+    const phone    = c.phone    || '';
+    const email    = c.email    || '';
+    const telegram = c.telegram || '';
+
+    // Футер
+    const fEmail = document.getElementById('footerEmail');
+    const fPhone = document.getElementById('footerPhone');
+    const fTg    = document.getElementById('footerTelegram');
+    if(fEmail && email)    { fEmail.textContent = email; fEmail.href = 'mailto:' + email; }
+    if(fPhone && phone)    { fPhone.textContent = phone; fPhone.href = 'tel:' + phone.replace(/\D/g,''); }
+    if(fTg && telegram)    { fTg.textContent = telegram; fTg.href = 'https://t.me/' + telegram.replace(/^@/,''); fTg.style.display = ''; }
+    else if(fTg)           { fTg.style.display = 'none'; }
+
+    // Секция контактов
+    const cPhone = document.getElementById('contactPhone');
+    const cEmail = document.getElementById('contactEmail');
+    const cTg    = document.getElementById('contactTelegram');
+    if(cPhone && phone) { cPhone.href = 'tel:' + phone.replace(/\D/g,''); document.getElementById('contactPhoneText').textContent = phone; }
+    if(cEmail && email) { cEmail.href = 'mailto:' + email; document.getElementById('contactEmailText').textContent = email; }
+    if(cTg && telegram) {
+      cTg.href = 'https://t.me/' + telegram.replace(/^@/,'');
+      document.getElementById('contactTelegramText').textContent = telegram;
+    }
+  } catch(e) {}
 }
 
 // ============================================================

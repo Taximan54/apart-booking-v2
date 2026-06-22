@@ -216,6 +216,7 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
       <a class="sb-item" onclick="showPanel('checkin',this)"><span class="sb-icon">🔑</span>Памятка гостю</a>
       <a class="sb-item" onclick="showPanel('checkout',this)"><span class="sb-icon">✓</span>Чек-лист выезда</a>
       <a class="sb-item" onclick="showPanel('reviews',this)"><span class="sb-icon">★</span>Отзывы</a>
+      <a class="sb-item" onclick="showPanel('contacts',this)"><span class="sb-icon">☎</span>Контакты</a>
       <a class="sb-item" onclick="showPanel('settings',this)"><span class="sb-icon">⊛</span>Настройки</a>
       <a class="sb-item" onclick="logout()"><span class="sb-icon">⏻</span>Выйти</a>
     </div>
@@ -427,6 +428,33 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
             <button class="btn btn-primary" onclick="saveContract()">Сохранить договор</button>
             <button class="btn btn-ghost" onclick="previewContract()">Предпросмотр</button>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CONTACTS -->
+    <div class="panel" id="panel-contacts">
+      <div class="card" style="max-width:600px">
+        <div class="card-header">
+          <span class="card-title">Контактные данные</span>
+        </div>
+        <div class="card-body">
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:20px;padding:12px 16px;background:rgba(201,168,76,.04);border:1px solid rgba(201,168,76,.1)">
+            Отображаются в футере и секции «Контакты» на сайте. Сохраняется без перезапуска сервера.
+          </div>
+          <div class="info-field" style="margin-bottom:16px">
+            <div class="info-label">Телефон</div>
+            <input type="text" class="info-input" id="contactsPhone" placeholder="+7 (383) 000-00-00">
+          </div>
+          <div class="info-field" style="margin-bottom:16px">
+            <div class="info-label">Email</div>
+            <input type="text" class="info-input" id="contactsEmail" placeholder="citypause@mail.ru">
+          </div>
+          <div class="info-field" style="margin-bottom:24px">
+            <div class="info-label">Telegram (username без @, например: citypause)</div>
+            <input type="text" class="info-input" id="contactsTelegram" placeholder="citypause">
+          </div>
+          <button class="btn btn-primary" onclick="saveContacts()">Сохранить контакты</button>
         </div>
       </div>
     </div>
@@ -1282,13 +1310,14 @@ function showPanel(id, el) {
   if(panel) panel.classList.add('active');
   document.querySelectorAll('.sb-item').forEach(i=>i.classList.remove('active'));
   if(el) el.classList.add('active');
-  const titles = {dashboard:'Дашборд',bookings:'Все брони',calendar:'Управление календарём',prices:'Цены',promo:'Промокоды',settings:'Настройки',contract:'Договор',checkin:'Памятка гостю',checkout:'Чек-лист выезда',reviews:'Отзывы'};
+  const titles = {dashboard:'Дашборд',bookings:'Все брони',calendar:'Управление календарём',prices:'Цены',promo:'Промокоды',settings:'Настройки',contract:'Договор',checkin:'Памятка гостю',checkout:'Чек-лист выезда',reviews:'Отзывы',contacts:'Контакты'};
   document.getElementById('topbarTitle').textContent = titles[id]||id;
   if(id==='settings') { loadDesc(); }
   if(id==='contract') { if(typeof loadContractForEditor==='function') loadContractForEditor(); }
   if(id==='checkin')  { if(typeof loadCheckinMemo==='function') loadCheckinMemo(); }
   if(id==='checkout') { if(typeof loadCheckoutChecklist==='function') loadCheckoutChecklist(); }
   if(id==='reviews')  { if(typeof loadReviewsAdmin==='function') loadReviewsAdmin(); }
+  if(id==='contacts') { if(typeof loadContacts==='function') loadContacts(); }
 }
 
 function statusBadge(s) {
@@ -1358,6 +1387,30 @@ function previewContract() {
 }
 
 // Загрузка договора встроена в основной showPanel
+
+// CONTACTS ADMIN
+async function loadContacts() {
+  try {
+    const c = await apiGet('/api/contacts');
+    document.getElementById('contactsPhone').value    = c.phone    || '';
+    document.getElementById('contactsEmail').value    = c.email    || '';
+    document.getElementById('contactsTelegram').value = c.telegram || '';
+  } catch(e) {}
+}
+
+async function saveContacts() {
+  const payload = {
+    phone:    document.getElementById('contactsPhone').value.trim(),
+    email:    document.getElementById('contactsEmail').value.trim(),
+    telegram: document.getElementById('contactsTelegram').value.trim().replace(/^@/, ''),
+  };
+  try {
+    await apiPost('/api/contacts', payload);
+    showToast('Контакты сохранены', 'gold');
+  } catch(e) {
+    showToast('Ошибка сохранения', 'err');
+  }
+}
 
 // REVIEWS ADMIN
 let allReviewsAdmin = [];

@@ -79,6 +79,11 @@ class Review(BaseModel):
     date: str = ""
     visible: bool = True
 
+class Contacts(BaseModel):
+    phone: str = ""
+    email: str = ""
+    telegram: str = ""
+
 class ChangePassword(BaseModel):
     old_password: str
     new_password: str
@@ -189,6 +194,7 @@ CHECKIN_FILE     = f"{DATA_DIR}/checkin_memo.txt"
 CHECKOUT_FILE    = f"{DATA_DIR}/checkout_checklist.txt"
 REVIEW_FILE      = f"{DATA_DIR}/review_template.txt"
 REVIEWS_FILE     = f"{DATA_DIR}/reviews.json"
+CONTACTS_FILE    = f"{DATA_DIR}/contacts.json"
 CONTRACTS_DIR    = f"{DATA_DIR}/contracts"
 AUTH_FILE        = f"{DATA_DIR}/admin_auth.json"
 DEFAULT_PRICES   = {"weekday": 3500, "weekend": 4500, "cleaning": 1500}
@@ -864,6 +870,26 @@ async def delete_review(review_id: str, _: bool = Depends(require_admin)):
     reviews = [r for r in reviews if r.get("id") != review_id]
     with open(REVIEWS_FILE, "w", encoding="utf-8") as f:
         json.dump(reviews, f, ensure_ascii=False, indent=2)
+    return {"ok": True}
+
+# =====================================================
+# API — CONTACTS
+# =====================================================
+
+DEFAULT_CONTACTS = {"phone": "", "email": "", "telegram": ""}
+
+@app.get("/api/contacts")
+async def get_contacts():
+    """Публичный — возвращает контактные данные."""
+    if os.path.exists(CONTACTS_FILE):
+        with open(CONTACTS_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return DEFAULT_CONTACTS
+
+@app.post("/api/contacts")
+async def set_contacts(c: Contacts, _: bool = Depends(require_admin)):
+    with open(CONTACTS_FILE, "w", encoding="utf-8") as f:
+        json.dump(c.dict(), f, ensure_ascii=False)
     return {"ok": True}
 
 # =====================================================
