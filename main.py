@@ -721,7 +721,8 @@ def get_db():
 
 @app.get("/", response_class=HTMLResponse)
 async def home():
-    return "<html><body><h1>Gorodskaya Pauza — Online</h1></body></html>"
+    with open("static/index.html", encoding="utf-8") as f:
+        return f.read()
 
 @app.get("/health")
 async def health():
