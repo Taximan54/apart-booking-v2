@@ -329,7 +329,7 @@ def fill_contract(template, data):
 
 def generate_contract(booking):
     """Генерирует текст договора из шаблона и данных брони."""
-    today        = date.today().strftime("%d.%m.%Y")
+    today        = now_nsk().strftime("%d.%m.%Y")
     checkin_fmt  = datetime.strptime(booking["check_in"],  "%Y-%m-%d").strftime("%d.%m.%Y")
     checkout_fmt = datetime.strptime(booking["check_out"], "%Y-%m-%d").strftime("%d.%m.%Y")
     nights       = booking.get("nights") or booking.get("guests", 1)
