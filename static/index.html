@@ -842,7 +842,7 @@ function loadGallery() {
 
 // LIGHTBOX
 function openLB(idx) {
-  if(galleryImages.length===0) return;
+  if(PHOTOS.length===0) return;
   lbIdx=idx;
   updateLB();
   document.getElementById('lightbox').classList.add('open');
@@ -853,12 +853,13 @@ function closeLB(){
   document.body.style.overflow='';
 }
 function lbNav(dir){
-  lbIdx=(lbIdx+dir+galleryImages.length)%galleryImages.length;
+  lbIdx=(lbIdx+dir+PHOTOS.length)%PHOTOS.length;
   updateLB();
 }
 function updateLB(){
-  document.getElementById('lbImg').src=galleryImages[lbIdx];
-  document.getElementById('lbCaption').textContent=`${lbIdx+1} / ${galleryImages.length}`;
+  const p = PHOTOS[lbIdx];
+  document.getElementById('lbImg').src = p.src;
+  document.getElementById('lbCaption').textContent = (p.label ? p.label + ' — ' : '') + `${lbIdx+1} / ${PHOTOS.length}`;
 }
 document.getElementById('lightbox').addEventListener('click',function(e){
   if(e.target===this) closeLB();
