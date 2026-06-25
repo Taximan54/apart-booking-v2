@@ -643,7 +643,7 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
 <div class="toast" id="toast"></div>
 
 <script>
-const PHOTOS = [
+let PHOTOS = [
   {label:"Спальня — общий вид",src:"/data/photos/photo_01.jpg"},
   {label:"Спальня — кровать крупно",src:"/data/photos/photo_02.jpg"},
   {label:"Кухня с островом",src:"/data/photos/photo_03.jpg"},
@@ -742,6 +742,15 @@ async function init() {
 
   // Контакты
   loadContacts();
+
+  // Фото галереи
+  try {
+    const photos = await fetch(`${API.BASE}/api/photos`).then(r=>r.json());
+    if(Array.isArray(photos) && photos.length > 0) {
+      PHOTOS = photos.map(p => ({label: p.label, src: p.url}));
+    }
+  } catch(e) {}
+  initGallery();
 }
 
 // ============================================================
