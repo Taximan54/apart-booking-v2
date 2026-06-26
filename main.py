@@ -1145,7 +1145,7 @@ async def create_booking(b: BookingCreate):
         raise HTTPException(status_code=400, detail="\u041c\u0438\u043d\u0438\u043c\u0430\u043b\u044c\u043d\u044b\u0439 \u0441\u0440\u043e\u043a \u0431\u0440\u043e\u043d\u0438\u0440\u043e\u0432\u0430\u043d\u0438\u044f \u2014 2 \u043d\u043e\u0447\u0438")
 
     conn = get_db()
-    booking_ref = "ГП-" + "".join(random.choices(string.ascii_uppercase + string.digits, k=6))
+    booking_ref = "GP-" + "".join(random.choices(string.ascii_uppercase + string.digits, k=6))
 
     # Промокод проверяем на сервере — не доверяем процентам от клиента
     promo_code_clean = ""
