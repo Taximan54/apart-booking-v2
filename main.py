@@ -1409,7 +1409,43 @@ async def payment_notify(p: PaymentNotify):
 # API — CONTRACTS
 # =====================================================
 
-@app.get("/api/contracts/{booking_ref}")
+@app.get("/api/contracts")
+async def list_contracts(_: bool = Depends(require_admin)):
+    """Список всех сохранённых договоров."""
+    os.makedirs(CONTRACTS_DIR, exist_ok=True)
+    files = sorted(
+        [f for f in os.listdir(CONTRACTS_DIR) if f.endswith(".txt")],
+        reverse=True
+    )
+    # Дополняем информацией из БД
+    conn = get_db()
+    result = []
+    for f in files:
+        ref = f.replace(".txt", "")
+        row = conn.execute(
+            "SELECT guest_name, guest_email, check_in, check_out, total_price, status "
+            "FROM bookings WHERE username=? OR CAST(id AS TEXT)=? LIMIT 1",
+            (ref, ref)
+        ).fetchone()
+        stat = os.stat(os.path.join(CONTRACTS_DIR, f))
+        entry = {
+            "ref": ref,
+            "filename": f,
+            "size": stat.st_size,
+            "created": datetime.fromtimestamp(stat.st_mtime, tz=NSK).strftime("%d.%m.%Y %H:%M"),
+        }
+        if row:
+            entry.update({
+                "guest_name":  row["guest_name"] or "—",
+                "guest_email": row["guest_email"] or "—",
+                "check_in":    row["check_in"] or "—",
+                "check_out":   row["check_out"] or "—",
+                "total_price": row["total_price"] or 0,
+                "status":      row["status"] or "—",
+            })
+        result.append(entry)
+    conn.close()
+    return result
 async def get_contract(booking_ref: str, _: bool = Depends(require_admin)):
     """Получить сохранённый договор."""
     path = os.path.join(CONTRACTS_DIR, booking_ref + ".txt")
