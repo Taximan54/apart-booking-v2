@@ -1422,10 +1422,11 @@ async def list_contracts(_: bool = Depends(require_admin)):
     result = []
     for f in files:
         ref = f.replace(".txt", "")
+        ref_alt = ref.replace("GP-", "\u0413\u041f-")  # GP- → ГП- для старых броней
         row = conn.execute(
             "SELECT guest_name, guest_email, check_in, check_out, total_price, status "
-            "FROM bookings WHERE username=? OR CAST(id AS TEXT)=? LIMIT 1",
-            (ref, ref)
+            "FROM bookings WHERE username=? OR username=? OR CAST(id AS TEXT)=? LIMIT 1",
+            (ref, ref_alt, ref)
         ).fetchone()
         stat = os.stat(os.path.join(CONTRACTS_DIR, f))
         entry = {
