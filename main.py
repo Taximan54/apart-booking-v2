@@ -1453,11 +1453,12 @@ async def get_contract(booking_ref: str, _: bool = Depends(require_admin)):
     if os.path.exists(path):
         with open(path, "r", encoding="utf-8") as f:
             return PlainTextResponse(f.read())
-    # Генерируем на лету
+    # Генерируем на лету — ищем по обоим вариантам префикса
+    ref_alt = booking_ref.replace("GP-", "\u0413\u041f-")
     conn = get_db()
     row = conn.execute(
-        "SELECT * FROM bookings WHERE username=? OR CAST(id AS TEXT)=? LIMIT 1",
-        (booking_ref, booking_ref)
+        "SELECT * FROM bookings WHERE username=? OR username=? OR CAST(id AS TEXT)=? LIMIT 1",
+        (booking_ref, ref_alt, booking_ref)
     ).fetchone()
     conn.close()
     if not row:
