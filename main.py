@@ -1447,6 +1447,8 @@ async def list_contracts(_: bool = Depends(require_admin)):
         result.append(entry)
     conn.close()
     return result
+
+@app.get("/api/contracts/{booking_ref}")
 async def get_contract(booking_ref: str, _: bool = Depends(require_admin)):
     """Получить сохранённый договор."""
     path = os.path.join(CONTRACTS_DIR, booking_ref + ".txt")
