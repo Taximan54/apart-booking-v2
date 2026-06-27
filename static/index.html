@@ -9,7 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 :root {
-  --gold:#C9A84C;--gold-light:#E8C97A;--gold-dark:#8B6914;--gold-muted:#6B5420;
+  --gold:#D4A017;--gold-light:#F0C040;--gold-dark:#8B6914;--gold-muted:#6B5420;
   --black:#0A0A0A;--black-card:#141414;--black-border:#1E1E1E;
   --text-primary:#F0E6C8;--text-secondary:#A89060;--text-muted:#5A4A30;--white:#FAF6EE;
 }
@@ -29,8 +29,9 @@ nav a:hover{color:var(--gold)}
 
 /* HERO */
 .hero{position:relative;height:100vh;display:flex;align-items:center;justify-content:center;overflow:hidden}
-.hero-bg{position:absolute;inset:0;background:radial-gradient(ellipse at 30% 60%,rgba(201,168,76,.08) 0,transparent 50%),radial-gradient(ellipse at 70% 30%,rgba(201,168,76,.05) 0,transparent 50%),linear-gradient(135deg,#0A0A0A 0,#141414 50%,#0A0A0A 100%)}
-.hero-lines{position:absolute;inset:0;background-image:linear-gradient(rgba(201,168,76,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(201,168,76,.04) 1px,transparent 1px);background-size:80px 80px;mask-image:radial-gradient(ellipse at center,black 20%,transparent 80%)}
+.hero-bg{position:absolute;inset:0;background-image:url('/data/photos/photo_08.jpg');background-size:cover;background-position:center 60%;transform:scale(1.1);transition:transform .1s linear;will-change:transform}
+.hero-overlay{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.55) 0%,rgba(0,0,0,.3) 50%,rgba(0,0,0,.7) 100%)}
+.hero-lines{position:absolute;inset:0;background-image:linear-gradient(rgba(212,160,23,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(212,160,23,.03) 1px,transparent 1px);background-size:80px 80px;mask-image:radial-gradient(ellipse at center,black 20%,transparent 80%)}
 .hero-content{position:relative;z-index:10;text-align:center;max-width:900px;padding:0 40px}
 .eyebrow{font-size:11px;letter-spacing:.5em;color:var(--gold);text-transform:uppercase;margin-bottom:28px;font-weight:400;display:flex;align-items:center;justify-content:center;gap:16px}
 .eyebrow::before,.eyebrow::after{content:'';width:40px;height:1px;background:var(--gold);opacity:.5}
@@ -226,6 +227,21 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
 .reveal{opacity:0;transform:translateY(30px);transition:opacity .7s ease,transform .7s ease}
 .reveal.visible{opacity:1;transform:translateY(0)}
 
+/* LOCATION */
+#location{padding:100px 0}
+.location-grid{display:grid;grid-template-columns:1fr 1fr;gap:48px;margin-top:64px;align-items:start}
+.location-map{border:1px solid var(--black-border)}
+.location-points{display:flex;flex-direction:column;gap:32px}
+.loc-point{display:flex;gap:20px;align-items:flex-start}
+.loc-icon{font-size:28px;flex-shrink:0;width:48px;height:48px;display:flex;align-items:center;justify-content:center;background:var(--black-card);border:1px solid var(--black-border)}
+.loc-name{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:400;color:var(--text-primary);margin-bottom:4px}
+.loc-dist{font-size:11px;letter-spacing:.15em;color:var(--gold);text-transform:uppercase;margin-bottom:6px}
+.loc-desc{font-size:12px;color:var(--text-muted);line-height:1.6;font-weight:300}
+@media(max-width:1024px){
+  .location-grid{grid-template-columns:1fr}
+  .location-map iframe{height:280px}
+}
+
 /* REVIEWS */
 #reviews{padding:100px 0}
 
@@ -264,6 +280,7 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
     <a href="#about">Апартаменты</a>
     <a href="#gallery">Галерея</a>
     <a href="#amenities">Удобства</a>
+    <a href="#location">Расположение</a>
     <a href="#prices">Цены</a>
     <a href="#booking" class="nav-btn">Забронировать</a>
   </nav>
@@ -271,11 +288,12 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
 
 <!-- HERO -->
 <div class="hero">
-  <div class="hero-bg"></div>
+  <div class="hero-bg" id="heroBg"></div>
+  <div class="hero-overlay"></div>
   <div class="hero-lines"></div>
   <div class="hero-content">
     <div class="eyebrow">Апартаменты в городе</div>
-    <h1>Искусство<br><em>комфортного</em><br>проживания</h1>
+    <h1>Искусство<br><span style="color:var(--gold)">комфортного</span><br>проживания</h1>
     <p class="hero-sub">Апартаменты премиум-класса &nbsp;·&nbsp; Посуточная аренда</p>
     <div class="hero-cta">
       <a href="#booking" class="btn-gold">Забронировать</a>
@@ -290,8 +308,8 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
 
 <!-- FEATURES STRIP -->
 <div class="features-strip">
-  <div class="feature-item"><div class="feature-icon">⊞</div><div class="feature-title">Площадь</div><div class="feature-desc">65 м² апартаменты<br>с видом на город</div></div>
-  <div class="feature-item"><div class="feature-icon">◈</div><div class="feature-title">Локация</div><div class="feature-desc">Центр города,<br>5 мин от метро</div></div>
+  <div class="feature-item"><div class="feature-icon">⊞</div><div class="feature-title">Площадь</div><div class="feature-desc">43 м² апартаменты<br>с видом на город</div></div>
+  <div class="feature-item"><div class="feature-icon">◈</div><div class="feature-title">Локация</div><div class="feature-desc">Рядом зоопарк,<br>8 мин до метро</div></div>
   <div class="feature-item"><div class="feature-icon">⊛</div><div class="feature-title">Wi-Fi</div><div class="feature-desc">Высокоскоростной<br>интернет 300 Мбит/с</div></div>
   <div class="feature-item"><div class="feature-icon">⊕</div><div class="feature-title">Заезд 24/7</div><div class="feature-desc">Умный замок,<br>самостоятельный заезд</div></div>
 </div>
@@ -330,10 +348,10 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
         <p class="about-desc" id="aboutText">Изысканные апартаменты в центре города с панорамным остеклением, дизайнерским ремонтом и всей необходимой инфраструктурой для комфортного проживания.</p>
       </div>
       <div class="about-stats reveal">
-        <div class="stat-box"><div class="stat-num">65</div><div class="stat-label">м² площадь</div></div>
+        <div class="stat-box"><div class="stat-num">43</div><div class="stat-label">м² площадь</div></div>
         <div class="stat-box"><div class="stat-num">2</div><div class="stat-label">спальных места</div></div>
-        <div class="stat-box"><div class="stat-num">4</div><div class="stat-label">гостя максимум</div></div>
-        <div class="stat-box"><div class="stat-num">4.9</div><div class="stat-label">рейтинг гостей</div></div>
+        <div class="stat-box"><div class="stat-num">2</div><div class="stat-label">гостя максимум</div></div>
+        <div class="stat-box"><div class="stat-num">5.0</div><div class="stat-label">рейтинг гостей</div></div>
       </div>
     </div>
   </div>
@@ -351,14 +369,56 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
       <div class="amenity-item"><div class="amenity-icon">❄️</div><div class="amenity-name">Кондиционер</div></div>
       <div class="amenity-item"><div class="amenity-icon">🍳</div><div class="amenity-name">Полная кухня</div></div>
       <div class="amenity-item"><div class="amenity-icon">🧺</div><div class="amenity-name">Стиральная машина</div></div>
-      <div class="amenity-item"><div class="amenity-icon">📺</div><div class="amenity-name">Smart TV 55"</div></div>
+      <div class="amenity-item"><div class="amenity-icon">📺</div><div class="amenity-name">Smart TV 43"</div></div>
       <div class="amenity-item"><div class="amenity-icon">🚿</div><div class="amenity-name">Душевая кабина</div></div>
       <div class="amenity-item"><div class="amenity-icon">🅿️</div><div class="amenity-name">Парковка</div></div>
       <div class="amenity-item"><div class="amenity-icon">🔑</div><div class="amenity-name">Умный замок</div></div>
-      <div class="amenity-item"><div class="amenity-icon">☕</div><div class="amenity-name">Кофемашина</div></div>
       <div class="amenity-item"><div class="amenity-icon">🛁</div><div class="amenity-name">Банные принадлежности</div></div>
-      <div class="amenity-item"><div class="amenity-icon">🏋️</div><div class="amenity-name">Тренажёрный зал</div></div>
       <div class="amenity-item"><div class="amenity-icon">🔒</div><div class="amenity-name">Видеонаблюдение</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- LOCATION -->
+<section id="location">
+  <div class="sec-inner">
+    <div class="sec-header reveal">
+      <div class="sec-eyebrow">Где мы находимся</div>
+      <h2 class="sec-title">Расположение</h2>
+    </div>
+    <div class="location-grid reveal">
+      <div class="location-map">
+        <iframe
+          src="https://www.google.com/maps/embed/v1/place?key=AIzaSyD-9tSrke72PouQMnMX-a7eZSW0jkFMBWY&q=Улица+Дачная+5,Новосибирск&zoom=15&language=ru"
+          width="100%" height="420" style="border:0;display:block" allowfullscreen loading="lazy"
+          referrerpolicy="no-referrer-when-downgrade"></iframe>
+      </div>
+      <div class="location-points">
+        <div class="loc-point reveal">
+          <div class="loc-icon">🦁</div>
+          <div class="loc-info">
+            <div class="loc-name">Новосибирский зоопарк</div>
+            <div class="loc-dist">1.2 км · 15 мин пешком</div>
+            <div class="loc-desc">Один из крупнейших зоопарков России — 770 видов животных</div>
+          </div>
+        </div>
+        <div class="loc-point reveal">
+          <div class="loc-icon">🚇</div>
+          <div class="loc-info">
+            <div class="loc-name">Метро Заельцовская</div>
+            <div class="loc-dist">700 м · 8 мин пешком</div>
+            <div class="loc-desc">Площадь Калинина — прямое сообщение с центром города</div>
+          </div>
+        </div>
+        <div class="loc-point reveal">
+          <div class="loc-icon">🛍</div>
+          <div class="loc-info">
+            <div class="loc-name">ТЦ Роял Парк</div>
+            <div class="loc-dist">700 м · 8 мин пешком</div>
+            <div class="loc-desc">Крупный торгово-развлекательный центр на Красном проспекте</div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </section>
@@ -752,6 +812,29 @@ async function init() {
   } catch(e) {}
   loadGallery();
 }
+
+// ============================================================
+// PARALLAX HERO
+// ============================================================
+(function(){
+  const bg = document.getElementById('heroBg');
+  if(!bg) return;
+  let ticking = false;
+  window.addEventListener('scroll', function(){
+    if(!ticking){
+      requestAnimationFrame(function(){
+        const scrolled = window.pageYOffset;
+        const limit = window.innerHeight;
+        if(scrolled <= limit){
+          const pct = scrolled / limit;
+          bg.style.transform = 'scale(1.1) translateY(' + (pct * 15) + '%)';
+        }
+        ticking = false;
+      });
+      ticking = true;
+    }
+  }, {passive: true});
+})();
 
 // ============================================================
 // REVIEWS
