@@ -293,8 +293,8 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
   <div class="hero-lines"></div>
   <div class="hero-content">
     <div class="eyebrow">Апартаменты в городе</div>
-    <h1>Искусство<br><span style="color:var(--gold)">комфортного</span><br>проживания</h1>
-    <p class="hero-sub">Апартаменты премиум-класса &nbsp;·&nbsp; Посуточная аренда</p>
+    <h1 style="color:var(--gold)">Искусство<br><span style="color:var(--gold)">комфортного</span><br>проживания</h1>
+    <p class="hero-sub" style="color:var(--gold);opacity:.85">Апартаменты премиум-класса &nbsp;·&nbsp; Посуточная аренда</p>
     <div class="hero-cta">
       <a href="#booking" class="btn-gold">Забронировать</a>
       <a href="#about" class="btn-outline">Узнать больше</a>
@@ -370,11 +370,9 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
       <div class="amenity-item"><div class="amenity-icon">🍳</div><div class="amenity-name">Полная кухня</div></div>
       <div class="amenity-item"><div class="amenity-icon">🧺</div><div class="amenity-name">Стиральная машина</div></div>
       <div class="amenity-item"><div class="amenity-icon">📺</div><div class="amenity-name">Smart TV 43"</div></div>
-      <div class="amenity-item"><div class="amenity-icon">🚿</div><div class="amenity-name">Душевая кабина</div></div>
       <div class="amenity-item"><div class="amenity-icon">🅿️</div><div class="amenity-name">Парковка</div></div>
       <div class="amenity-item"><div class="amenity-icon">🔑</div><div class="amenity-name">Умный замок</div></div>
       <div class="amenity-item"><div class="amenity-icon">🛁</div><div class="amenity-name">Банные принадлежности</div></div>
-      <div class="amenity-item"><div class="amenity-icon">🔒</div><div class="amenity-name">Видеонаблюдение</div></div>
     </div>
   </div>
 </section>
@@ -388,10 +386,20 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
     </div>
     <div class="location-grid reveal">
       <div class="location-map">
-        <iframe
-          src="https://www.google.com/maps/embed/v1/place?key=AIzaSyD-9tSrke72PouQMnMX-a7eZSW0jkFMBWY&q=Улица+Дачная+5,Новосибирск&zoom=15&language=ru"
-          width="100%" height="420" style="border:0;display:block" allowfullscreen loading="lazy"
-          referrerpolicy="no-referrer-when-downgrade"></iframe>
+        <a href="https://yandex.ru/maps/?text=Новосибирск%2C+ул.+Дачная+5&z=16" target="_blank" style="display:block;position:relative;text-decoration:none">
+          <img src="https://static-maps.yandex.ru/1.x/?ll=82.9043,55.0546&z=15&l=map&size=650,420&pt=82.9043,55.0546,pm2rdm" width="100%" height="420" style="display:block;object-fit:cover;border:0" alt="Карта расположения" onerror="this.parentElement.style.background='#141414';this.style.display='none'">
+          <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,.4);opacity:0;transition:opacity .3s" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0">
+            <div style="font-family:'Cormorant Garamond',serif;font-size:18px;color:var(--gold);letter-spacing:.2em">Открыть карту</div>
+          </div>
+        </a>
+        <div style="padding:20px 24px;background:var(--black-card);border:1px solid var(--black-border);border-top:none;display:flex;align-items:center;justify-content:space-between">
+          <div>
+            <div style="font-size:10px;letter-spacing:.2em;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px">Адрес</div>
+            <div style="font-family:'Cormorant Garamond',serif;font-size:18px;color:var(--text-primary)">г. Новосибирск, ул. Дачная, д. 5</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:2px">22 этаж · Панорамный вид на город</div>
+          </div>
+          <a href="https://yandex.ru/maps/?text=Новосибирск%2C+ул.+Дачная+5&z=16" target="_blank" style="font-family:'Cormorant Garamond',serif;font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);text-decoration:none;border:1px solid rgba(212,160,23,.4);padding:10px 20px;white-space:nowrap;transition:all .3s" onmouseover="this.style.borderColor='var(--gold)'" onmouseout="this.style.borderColor='rgba(212,160,23,.4)'">На карте →</a>
+        </div>
       </div>
       <div class="location-points">
         <div class="loc-point reveal">
