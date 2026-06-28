@@ -20,8 +20,8 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 
 /* HEADER */
 header{position:fixed;top:0;left:0;right:0;z-index:1000;display:flex;align-items:center;justify-content:space-between;padding:20px 60px;background:linear-gradient(to bottom,rgba(10,10,10,.98),rgba(10,10,10,.85));backdrop-filter:blur(20px);border-bottom:1px solid rgba(201,168,76,.15);transition:padding .4s}
-.logo{font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:300;letter-spacing:.3em;color:var(--gold);text-decoration:none;text-transform:uppercase}
-.logo span{font-weight:600;color:var(--white)}
+.logo{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:300;letter-spacing:.4em;color:var(--gold);text-decoration:none;text-transform:uppercase}
+.logo span{font-weight:600;color:var(--gold);letter-spacing:.5em}
 nav a{color:var(--text-secondary);text-decoration:none;font-size:11px;letter-spacing:.2em;text-transform:uppercase;margin-left:36px;transition:color .3s}
 nav a:hover{color:var(--gold)}
 .nav-btn{margin-left:36px;padding:10px 28px;background:transparent;border:1px solid var(--gold);color:var(--gold);font-size:10px;letter-spacing:.25em;text-transform:uppercase;cursor:pointer;transition:all .3s;font-family:'Montserrat',sans-serif;text-decoration:none;display:inline-block}
@@ -33,11 +33,11 @@ nav a:hover{color:var(--gold)}
 .hero-overlay{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.55) 0%,rgba(0,0,0,.3) 50%,rgba(0,0,0,.7) 100%)}
 .hero-lines{position:absolute;inset:0;background-image:linear-gradient(rgba(212,160,23,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(212,160,23,.03) 1px,transparent 1px);background-size:80px 80px;mask-image:radial-gradient(ellipse at center,black 20%,transparent 80%)}
 .hero-content{position:relative;z-index:10;text-align:center;max-width:900px;padding:0 40px}
-.eyebrow{font-size:11px;letter-spacing:.5em;color:var(--gold);text-transform:uppercase;margin-bottom:28px;font-weight:400;display:flex;align-items:center;justify-content:center;gap:16px}
+.eyebrow{font-size:11px;letter-spacing:.5em;color:var(--gold);text-transform:uppercase;margin-bottom:28px;font-weight:400;display:flex;align-items:center;justify-content:center;gap:16px;text-shadow:0 1px 10px rgba(0,0,0,.9)}
 .eyebrow::before,.eyebrow::after{content:'';width:40px;height:1px;background:var(--gold);opacity:.5}
-.hero h1{font-family:'Cormorant Garamond',serif;font-size:clamp(52px,7vw,96px);font-weight:300;line-height:1.05;color:var(--white);margin-bottom:12px}
+.hero h1{font-family:'Cormorant Garamond',serif;font-size:clamp(52px,7vw,96px);font-weight:400;line-height:1.05;color:var(--gold);margin-bottom:12px;text-shadow:0 2px 20px rgba(0,0,0,.8),0 0 60px rgba(0,0,0,.5)}
 .hero h1 em{font-style:italic;color:var(--gold)}
-.hero-sub{font-size:13px;letter-spacing:.15em;color:var(--text-secondary);text-transform:uppercase;margin-bottom:56px;font-weight:300}
+.hero-sub{font-size:13px;letter-spacing:.15em;color:var(--gold);text-transform:uppercase;margin-bottom:56px;font-weight:400;text-shadow:0 1px 10px rgba(0,0,0,.9)}
 .hero-cta{display:flex;gap:20px;justify-content:center;align-items:center}
 .btn-gold{padding:16px 48px;background:var(--gold);color:var(--black);border:none;font-family:'Montserrat',sans-serif;font-size:11px;letter-spacing:.25em;text-transform:uppercase;font-weight:500;cursor:pointer;transition:all .3s;text-decoration:none;display:inline-block}
 .btn-gold:hover{background:var(--gold-light);transform:translateY(-1px)}
@@ -98,8 +98,8 @@ section{position:relative;z-index:1}
 .about-eyebrow{font-size:10px;letter-spacing:.5em;color:var(--gold);text-transform:uppercase;margin-bottom:24px;display:flex;align-items:center;gap:12px}
 .about-eyebrow::before{content:'';width:30px;height:1px;background:var(--gold);opacity:.4}
 .about-desc{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:300;color:var(--text-secondary);line-height:1.7;font-style:italic}
-.about-stats{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--black-border)}
-.stat-box{background:var(--black-card);padding:36px 32px;display:flex;flex-direction:column;gap:6px}
+.about-stats{display:grid;grid-template-columns:1fr 1fr;gap:32px}
+.stat-box{background:transparent;padding:24px 0;display:flex;flex-direction:column;gap:6px;border-bottom:1px solid var(--black-border)}
 .stat-num{font-family:'Cormorant Garamond',serif;font-size:48px;font-weight:300;color:var(--gold);line-height:1}
 .stat-label{font-size:10px;letter-spacing:.2em;color:var(--text-muted);text-transform:uppercase}
 
@@ -275,9 +275,8 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
 
 <!-- HEADER -->
 <header id="mainHeader">
-  <a href="#" class="logo">Городская <em style="font-style:italic;color:var(--white)">Пауза</em></a>
+  <a href="#" class="logo">Городская <span>·</span> Пауза</a>
   <nav>
-    <a href="#about">Апартаменты</a>
     <a href="#gallery">Галерея</a>
     <a href="#amenities">Удобства</a>
     <a href="#location">Расположение</a>
@@ -294,7 +293,7 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
   <div class="hero-content">
     <div class="eyebrow">Апартаменты в городе</div>
     <h1 style="color:var(--gold)">Искусство<br><span style="color:var(--gold)">комфортного</span><br>проживания</h1>
-    <p class="hero-sub" style="color:var(--gold);opacity:.85">Апартаменты премиум-класса &nbsp;·&nbsp; Посуточная аренда</p>
+    <p class="hero-sub">Апартаменты премиум-класса &nbsp;·&nbsp; Посуточная аренда</p>
     <div class="hero-cta">
       <a href="#booking" class="btn-gold">Забронировать</a>
       <a href="#about" class="btn-outline">Узнать больше</a>
@@ -387,7 +386,7 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
     <div class="location-grid reveal">
       <div class="location-map">
         <a href="https://yandex.ru/maps/?text=Новосибирск%2C+ул.+Дачная+5&z=16" target="_blank" style="display:block;position:relative;text-decoration:none">
-          <img src="https://static-maps.yandex.ru/1.x/?ll=82.9043,55.0546&z=15&l=map&size=650,420&pt=82.9043,55.0546,pm2rdm" width="100%" height="420" style="display:block;object-fit:cover;border:0" alt="Карта расположения" onerror="this.parentElement.style.background='#141414';this.style.display='none'">
+          <img src="https://static-maps.yandex.ru/1.x/?ll=82.9043,55.0546&z=14&l=map&size=650,420&pt=82.9043,55.0546,pm2rdm~82.8890,55.0566,pm2blm~82.9125,55.0595,pm2grm~82.9118,55.0557,pm2gnm~82.9050,55.0540,pm2ylm" width="100%" height="420" style="display:block;object-fit:cover;border:0" alt="Карта расположения" onerror="this.parentElement.style.background='#141414';this.style.display='none'">
           <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,.4);opacity:0;transition:opacity .3s" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0">
             <div style="font-family:'Cormorant Garamond',serif;font-size:18px;color:var(--gold);letter-spacing:.2em">Открыть карту</div>
           </div>
@@ -424,6 +423,14 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
             <div class="loc-name">ТЦ Роял Парк</div>
             <div class="loc-dist">700 м · 8 мин пешком</div>
             <div class="loc-desc">Крупный торгово-развлекательный центр на Красном проспекте</div>
+          </div>
+        </div>
+        <div class="loc-point reveal">
+          <div class="loc-icon">🍎</div>
+          <div class="loc-info">
+            <div class="loc-name">Золотое Яблоко</div>
+            <div class="loc-dist">5 мин пешком</div>
+            <div class="loc-desc">Магазин косметики и парфюмерии премиум-класса</div>
           </div>
         </div>
       </div>
