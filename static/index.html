@@ -93,7 +93,7 @@ section{position:relative;z-index:1}
 .lb-caption{position:absolute;bottom:24px;left:50%;transform:translateX(-50%);font-size:11px;letter-spacing:.2em;color:var(--text-muted);text-transform:uppercase}
 
 /* ABOUT */
-#about{padding:100px 0;background:var(--black-card);border-top:1px solid var(--black-border);border-bottom:1px solid var(--black-border)}
+#about{padding:100px 0;border-top:1px solid var(--black-border);border-bottom:1px solid var(--black-border)}
 .about-grid{display:grid;grid-template-columns:1fr 1fr;gap:100px;align-items:center}
 .about-eyebrow{font-size:10px;letter-spacing:.5em;color:var(--gold);text-transform:uppercase;margin-bottom:24px;display:flex;align-items:center;gap:12px}
 .about-eyebrow::before{content:'';width:30px;height:1px;background:var(--gold);opacity:.4}
@@ -114,7 +114,7 @@ section{position:relative;z-index:1}
 .amenity-name{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-primary);font-weight:500}
 
 /* PRICES */
-#prices{padding:100px 0;background:var(--black-card);border-top:1px solid var(--black-border);border-bottom:1px solid var(--black-border)}
+#prices{padding:100px 0;border-top:1px solid var(--black-border);border-bottom:1px solid var(--black-border)}
 .price-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--black-border);margin-top:64px}
 .price-card{background:var(--black);padding:48px 36px;display:flex;flex-direction:column;gap:16px;position:relative}
 .price-card.featured{background:rgba(201,168,76,.05)}
@@ -385,11 +385,9 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
     </div>
     <div class="location-grid reveal">
       <div class="location-map">
-        <a href="https://yandex.ru/maps/?text=Новосибирск%2C+ул.+Дачная+5&z=16" target="_blank" style="display:block;position:relative;text-decoration:none">
-          <img src="https://static-maps.yandex.ru/1.x/?ll=82.9043,55.0546&z=14&l=map&size=650,420&pt=82.9043,55.0546,pm2rdm~82.8890,55.0566,pm2blm~82.9125,55.0595,pm2grm~82.9118,55.0557,pm2gnm~82.9050,55.0540,pm2ylm" width="100%" height="420" style="display:block;object-fit:cover;border:0" alt="Карта расположения" onerror="this.parentElement.style.background='#141414';this.style.display='none'">
-          <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,.4);opacity:0;transition:opacity .3s" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0">
-            <div style="font-family:'Cormorant Garamond',serif;font-size:18px;color:var(--gold);letter-spacing:.2em">Открыть карту</div>
-          </div>
+        <a href="https://yandex.ru/maps/?text=Новосибирск%2C+ул.+Дачная+5&z=14" target="_blank" style="display:block;position:relative;text-decoration:none">
+          <iframe src="https://yandex.ru/map-widget/v1/?ll=82.9000%2C55.0560&z=14&pt=82.9043%2C55.0546&text=Городская+Пауза%2C+ул.+Дачная+5&lang=ru_RU" width="100%" height="420" style="border:0;display:block;pointer-events:none" frameborder="0" allowfullscreen></iframe>
+          <div style="position:absolute;inset:0;cursor:pointer"></div>
         </a>
         <div style="padding:20px 24px;background:var(--black-card);border:1px solid var(--black-border);border-top:none;display:flex;align-items:center;justify-content:space-between">
           <div>
@@ -663,17 +661,17 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
       <h2 class="sec-title">Контакты</h2>
     </div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:24px;max-width:700px;margin:0 auto">
-      <a id="contactPhone" href="#" style="display:flex;flex-direction:column;align-items:center;padding:32px 24px;background:var(--black-card);border:1px solid var(--black-border);text-decoration:none;transition:border-color .3s" onmouseover="this.style.borderColor='rgba(201,168,76,.4)'" onmouseout="this.style.borderColor='var(--black-border)'">
+      <a id="contactPhone" href="#" style="display:flex;flex-direction:column;align-items:center;padding:32px 24px;background:transparent;border:1px solid var(--black-border);text-decoration:none;transition:border-color .3s" onmouseover="this.style.borderColor='var(--gold)'" onmouseout="this.style.borderColor='var(--black-border)'">
         <div style="font-size:28px;margin-bottom:12px">📞</div>
         <div style="font-size:10px;color:var(--gold);letter-spacing:.2em;text-transform:uppercase;margin-bottom:8px">Телефон</div>
         <div id="contactPhoneText" style="font-size:14px;color:var(--text-secondary)">—</div>
       </a>
-      <a id="contactEmail" href="#" style="display:flex;flex-direction:column;align-items:center;padding:32px 24px;background:var(--black-card);border:1px solid var(--black-border);text-decoration:none;transition:border-color .3s" onmouseover="this.style.borderColor='rgba(201,168,76,.4)'" onmouseout="this.style.borderColor='var(--black-border)'">
+      <a id="contactEmail" href="#" style="display:flex;flex-direction:column;align-items:center;padding:32px 24px;background:transparent;border:1px solid var(--black-border);text-decoration:none;transition:border-color .3s" onmouseover="this.style.borderColor='var(--gold)'" onmouseout="this.style.borderColor='var(--black-border)'">
         <div style="font-size:28px;margin-bottom:12px">✉️</div>
         <div style="font-size:10px;color:var(--gold);letter-spacing:.2em;text-transform:uppercase;margin-bottom:8px">Email</div>
         <div id="contactEmailText" style="font-size:14px;color:var(--text-secondary)">—</div>
       </a>
-      <a id="contactTelegram" href="#" target="_blank" style="display:flex;flex-direction:column;align-items:center;padding:32px 24px;background:var(--black-card);border:1px solid var(--black-border);text-decoration:none;transition:border-color .3s" onmouseover="this.style.borderColor='rgba(201,168,76,.4)'" onmouseout="this.style.borderColor='var(--black-border)'">
+      <a id="contactTelegram" href="#" target="_blank" style="display:flex;flex-direction:column;align-items:center;padding:32px 24px;background:transparent;border:1px solid var(--black-border);text-decoration:none;transition:border-color .3s" onmouseover="this.style.borderColor='var(--gold)'" onmouseout="this.style.borderColor='var(--black-border)'">
         <div style="font-size:28px;margin-bottom:12px">✈️</div>
         <div style="font-size:10px;color:var(--gold);letter-spacing:.2em;text-transform:uppercase;margin-bottom:8px">Telegram</div>
         <div id="contactTelegramText" style="font-size:14px;color:var(--text-secondary)">—</div>
