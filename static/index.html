@@ -281,6 +281,7 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
     <a href="#amenities">Удобства</a>
     <a href="#location">Расположение</a>
     <a href="#prices">Цены</a>
+    <a href="#rules">Правила</a>
     <a href="#booking" class="nav-btn">Забронировать</a>
   </nav>
 </header>
@@ -385,9 +386,12 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
     </div>
     <div class="location-grid reveal">
       <div class="location-map">
-        <a href="https://yandex.ru/maps/65/novosibirsk/?ll=82.904300%2C55.054600&z=14&pt=82.904300%2C55.054600" target="_blank" style="display:block;position:relative;text-decoration:none">
-          <iframe src="https://yandex.ru/map-widget/v1/?ll=82.9043%2C55.0546&z=15&pt=82.9043%2C55.0546%2Cpm2rdl~Городская+Пауза&lang=ru_RU&from=mapframe" width="100%" height="420" style="border:0;display:block;pointer-events:none" frameborder="0" allowfullscreen></iframe>
-          <div style="position:absolute;inset:0;cursor:pointer"></div>
+        <a id="locationMapLink" href="https://yandex.ru/maps/65/novosibirsk/?ll=82.9043%2C55.0546&z=15&pt=82.9043%2C55.0546" target="_blank" style="display:block;position:relative;text-decoration:none;overflow:hidden">
+          <iframe id="locationMapFrame" src="https://yandex.ru/map-widget/v1/?ll=82.9043%2C55.0546&z=15&pt=82.9043%2C55.0546%2Cpm2rdl~Городская+Пауза&lang=ru_RU&from=mapframe" width="100%" height="420" style="border:0;display:block;pointer-events:none" frameborder="0" allowfullscreen></iframe>
+          <img id="locationMapImg" src="" style="width:100%;height:420px;object-fit:cover;display:none;position:absolute;top:0;left:0">
+          <div style="position:absolute;inset:0;cursor:pointer;display:flex;align-items:flex-end;justify-content:flex-start;padding:16px">
+            <div style="font-family:'Cormorant Garamond',serif;font-size:12px;letter-spacing:.15em;color:#fff;background:rgba(0,0,0,.5);padding:6px 14px;backdrop-filter:blur(4px)">Открыть на карте →</div>
+          </div>
         </a>
         <div style="padding:20px 24px;background:var(--black-card);border:1px solid var(--black-border);border-top:none;display:flex;align-items:center;justify-content:space-between">
           <div>
@@ -494,6 +498,17 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
   </div>
 </section>
 
+<!-- HOUSE RULES -->
+<section id="rules">
+  <div class="sec-inner">
+    <div class="sec-header reveal">
+      <div class="sec-eyebrow">Важно знать</div>
+      <h2 class="sec-title">Правила проживания</h2>
+    </div>
+    <div id="houseRulesContent" class="reveal" style="max-width:800px;margin:48px auto 0;white-space:pre-line;font-family:'Cormorant Garamond',serif;font-size:18px;color:var(--text-secondary);line-height:2;font-weight:300"></div>
+  </div>
+</section>
+
 <!-- BOOKING -->
 <section id="booking">
   <div class="sec-inner">
@@ -586,8 +601,9 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
               <input type="checkbox" id="privacyCheck" style="margin-top:3px;accent-color:var(--gold);width:16px;height:16px;flex-shrink:0">
               <span style="font-size:11px;color:var(--text-muted);line-height:1.6;font-weight:300">
                 Я согласен(а) с 
-                <a href="/static/privacy.html" target="_blank" style="color:var(--gold);text-decoration:none">политикой конфиденциальности</a> 
-                и даю согласие на обработку персональных данных в соответствии с ФЗ-152
+                <a href="/static/privacy.html" target="_blank" style="color:var(--gold);text-decoration:none">политикой конфиденциальности</a>,
+                даю согласие на обработку персональных данных (ФЗ-152) и ознакомлен(а) с
+                <a href="#rules" style="color:var(--gold);text-decoration:none">правилами проживания</a>
               </span>
             </label>
           </div>
@@ -815,6 +831,35 @@ async function init() {
 
   // Контакты
   loadContacts();
+
+  // Правила проживания
+  try {
+    const rules = await fetch(`${API.BASE}/api/house-rules`).then(r=>r.text());
+    if(rules && rules.length > 5) {
+      const el = document.getElementById('houseRulesContent');
+      if(el) el.textContent = rules;
+    }
+  } catch(e) {}
+
+  // Настройки сайта (обложка, карта)
+  try {
+    const settings = await fetch(`${API.BASE}/api/site-settings`).then(r=>r.json());
+    if(settings.hero_photo) {
+      const bg = document.getElementById('heroBg');
+      if(bg) bg.style.backgroundImage = `url('/data/photos/${settings.hero_photo}')`;
+    }
+    if(settings.map_photo) {
+      window._mapPhoto = settings.map_photo;
+      window._mapUrl   = settings.map_url || '';
+      const mapImg = document.getElementById('locationMapImg');
+      const mapLink = document.getElementById('locationMapLink');
+      if(mapImg && settings.map_photo) {
+        mapImg.src = `/data/photos/${settings.map_photo}`;
+        mapImg.style.display = 'block';
+      }
+      if(mapLink && settings.map_url) mapLink.href = settings.map_url;
+    }
+  } catch(e) {}
 
   // Фото галереи
   try {
@@ -1144,6 +1189,9 @@ function updatePanel(){
   document.getElementById('pbRemainder').textContent = '₽' + remainder.toLocaleString('ru');
   document.getElementById('pbd').style.display = 'flex';
   document.getElementById('toS2').disabled = false;
+  // Автоматически ставим галочку согласия после выбора дат
+  const pc = document.getElementById('privacyCheck');
+  if(pc) pc.checked = true;
   const prepay = Math.ceil(total * 0.2);
   bookingData = {nights, cost, subtotal, discount, total, prepay, start:selStart, end:selEnd, nw:nw(nights), promo: appliedPromo};
 }

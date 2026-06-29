@@ -84,6 +84,15 @@ class Contacts(BaseModel):
     email: str = ""
     telegram: str = ""
 
+class SiteSettings(BaseModel):
+    hero_photo: str = ""        # имя файла из /data/photos/
+    map_photo: str = ""         # имя файла из /data/photos/
+    map_url: str = ""           # ссылка на карту (Яндекс/2ГИС/Google)
+    map_service: str = "yandex" # yandex / 2gis / google
+
+class HouseRulesText(BaseModel):
+    text: str = ""
+
 class PhotoOrder(BaseModel):
     order: list   # список имён файлов в нужном порядке
 
@@ -198,6 +207,8 @@ CONTRACT_FILE    = f"{DATA_DIR}/contract_template.txt"
 CONTRACT_STATIC  = "static/contract_template.txt"
 CHECKIN_FILE     = f"{DATA_DIR}/checkin_memo.txt"
 CHECKOUT_FILE    = f"{DATA_DIR}/checkout_checklist.txt"
+HOUSE_RULES_FILE = f"{DATA_DIR}/house_rules.txt"
+SETTINGS_FILE    = f"{DATA_DIR}/settings.json"
 REVIEW_FILE      = f"{DATA_DIR}/review_template.txt"
 REVIEWS_FILE     = f"{DATA_DIR}/reviews.json"
 CONTACTS_FILE    = f"{DATA_DIR}/contacts.json"
@@ -879,6 +890,52 @@ async def delete_review(review_id: str, _: bool = Depends(require_admin)):
     reviews = [r for r in reviews if r.get("id") != review_id]
     with open(REVIEWS_FILE, "w", encoding="utf-8") as f:
         json.dump(reviews, f, ensure_ascii=False, indent=2)
+    return {"ok": True}
+
+# =====================================================
+# API — HOUSE RULES
+# =====================================================
+
+DEFAULT_HOUSE_RULES = """ПРАВИЛА ПРОЖИВАНИЯ
+
+1. Заезд с 15:00, выезд до 12:00.
+2. Максимум 2 гостя.
+3. Запрещено курение в квартире, на лоджии и в подъезде.
+4. Запрещено проживание с животными.
+5. Запрещено проведение шумных мероприятий.
+6. Запрещено зажигать ароматические свечи.
+7. Запрещено двигать мебель.
+8. При выезде квартира сдаётся в чистом виде."""
+
+@app.get("/api/house-rules")
+async def get_house_rules():
+    if os.path.exists(HOUSE_RULES_FILE):
+        with open(HOUSE_RULES_FILE, "r", encoding="utf-8") as f:
+            return f.read()
+    return DEFAULT_HOUSE_RULES
+
+@app.post("/api/house-rules")
+async def set_house_rules(r: HouseRulesText, _: bool = Depends(require_admin)):
+    with open(HOUSE_RULES_FILE, "w", encoding="utf-8") as f:
+        f.write(r.text)
+    return {"ok": True}
+
+# API — SITE SETTINGS (обложка, карта)
+# =====================================================
+
+DEFAULT_SETTINGS = {"hero_photo": "", "map_photo": "", "map_url": "", "map_service": "yandex"}
+
+@app.get("/api/site-settings")
+async def get_site_settings():
+    if os.path.exists(SETTINGS_FILE):
+        with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return DEFAULT_SETTINGS
+
+@app.post("/api/site-settings")
+async def set_site_settings(s: SiteSettings, _: bool = Depends(require_admin)):
+    with open(SETTINGS_FILE, "w", encoding="utf-8") as f:
+        json.dump(s.dict(), f, ensure_ascii=False)
     return {"ok": True}
 
 # =====================================================
