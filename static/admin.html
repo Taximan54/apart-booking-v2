@@ -585,12 +585,16 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
           <div class="info-field" style="margin-bottom:20px">
             <div class="info-label">Обложка сайта (Hero-фото)</div>
             <div style="display:flex;gap:12px;align-items:center">
-              <input type="text" class="info-input" id="settingsHeroPhoto" placeholder="photo_ec777cb650cf.jpg" style="flex:1">
-              <div id="heroPhotoPreview" style="width:80px;height:50px;background:var(--black-card);border:1px solid var(--black-border);overflow:hidden;flex-shrink:0">
+              <div id="heroPhotoPreview" style="width:120px;height:70px;background:var(--black-card);border:1px solid var(--black-border);overflow:hidden;flex-shrink:0;position:relative">
                 <img id="heroPhotoImg" src="" style="width:100%;height:100%;object-fit:cover;display:none">
+                <div id="heroPhotoEmpty" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:24px">🖼</div>
+              </div>
+              <div style="flex:1">
+                <input type="file" id="heroPhotoFile" accept="image/jpeg,image/png,image/webp" style="display:none" onchange="uploadSettingsPhoto('hero')">
+                <button class="btn btn-primary btn-sm" onclick="document.getElementById('heroPhotoFile').click()" style="margin-bottom:6px;display:block">Загрузить фото обложки</button>
+                <div style="font-size:10px;color:var(--text-muted)">Текущий файл: <span id="heroPhotoName">не выбрано</span></div>
               </div>
             </div>
-            <div style="font-size:10px;color:var(--text-muted);margin-top:6px">Это фото будет показываться на главной странице как фон hero-секции</div>
           </div>
 
           <div style="border-top:1px solid var(--black-border);margin:24px 0"></div>
@@ -598,9 +602,14 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
           <div class="info-field" style="margin-bottom:16px">
             <div class="info-label">Фото локации (карта)</div>
             <div style="display:flex;gap:12px;align-items:center">
-              <input type="text" class="info-input" id="settingsMapPhoto" placeholder="photo_map.jpg" style="flex:1">
-              <div style="width:80px;height:50px;background:var(--black-card);border:1px solid var(--black-border);overflow:hidden;flex-shrink:0">
+              <div style="width:120px;height:70px;background:var(--black-card);border:1px solid var(--black-border);overflow:hidden;flex-shrink:0;position:relative">
                 <img id="mapPhotoImg" src="" style="width:100%;height:100%;object-fit:cover;display:none">
+                <div id="mapPhotoEmpty" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:24px">🗺</div>
+              </div>
+              <div style="flex:1">
+                <input type="file" id="mapPhotoFile" accept="image/jpeg,image/png,image/webp" style="display:none" onchange="uploadSettingsPhoto('map')">
+                <button class="btn btn-primary btn-sm" onclick="document.getElementById('mapPhotoFile').click()" style="margin-bottom:6px;display:block">Загрузить фото карты</button>
+                <div style="font-size:10px;color:var(--text-muted)">Текущий файл: <span id="mapPhotoName">не выбрано</span></div>
               </div>
             </div>
           </div>
@@ -1834,42 +1843,75 @@ async function saveHouseRules() {
 async function loadSiteSettings() {
   try {
     const s = await apiGet('/api/site-settings');
-    document.getElementById('settingsHeroPhoto').value  = s.hero_photo  || '';
-    document.getElementById('settingsMapPhoto').value   = s.map_photo   || '';
     document.getElementById('settingsMapUrl').value     = s.map_url     || '';
     document.getElementById('settingsMapService').value = s.map_service || 'yandex';
     if(s.hero_photo) {
       const img = document.getElementById('heroPhotoImg');
       img.src = `${API_BASE}/data/photos/${s.hero_photo}`;
       img.style.display = 'block';
+      document.getElementById('heroPhotoEmpty').style.display = 'none';
+      document.getElementById('heroPhotoName').textContent = s.hero_photo;
     }
     if(s.map_photo) {
       const img = document.getElementById('mapPhotoImg');
       img.src = `${API_BASE}/data/photos/${s.map_photo}`;
       img.style.display = 'block';
+      document.getElementById('mapPhotoEmpty').style.display = 'none';
+      document.getElementById('mapPhotoName').textContent = s.map_photo;
     }
   } catch(e) {}
 }
+
+async function uploadSettingsPhoto(type) {
+  const fileInput = document.getElementById(type === 'hero' ? 'heroPhotoFile' : 'mapPhotoFile');
+  const file = fileInput.files[0];
+  if(!file) return;
+  if(file.size > 10 * 1024 * 1024) { showToast('Файл слишком большой (макс. 10 МБ)', 'err'); return; }
+  const label = type === 'hero' ? 'Обложка сайта' : 'Фото карты';
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('label', label);
+  try {
+    showToast('Загружаю фото...', 'gold');
+    const resp = await fetch(`${API_BASE}/api/photos/upload`, {
+      method: 'POST',
+      headers: ADMIN_TOKEN ? {'Authorization': 'Bearer ' + ADMIN_TOKEN} : {},
+      body: formData
+    });
+    if(!resp.ok) throw new Error(await resp.text());
+    const data = await resp.json();
+    const filename = data.filename;
+    // Сохраняем в настройки
+    const current = await apiGet('/api/site-settings');
+    const payload = {...current};
+    if(type === 'hero') payload.hero_photo = filename;
+    else payload.map_photo = filename;
+    await apiPost('/api/site-settings', payload);
+    // Обновляем превью
+    const imgId = type === 'hero' ? 'heroPhotoImg' : 'mapPhotoImg';
+    const emptyId = type === 'hero' ? 'heroPhotoEmpty' : 'mapPhotoEmpty';
+    const nameId = type === 'hero' ? 'heroPhotoName' : 'mapPhotoName';
+    const img = document.getElementById(imgId);
+    img.src = `${API_BASE}/data/photos/${filename}`;
+    img.style.display = 'block';
+    document.getElementById(emptyId).style.display = 'none';
+    document.getElementById(nameId).textContent = filename;
+    showToast('Фото загружено и сохранено', 'gold');
+  } catch(e) {
+    showToast('Ошибка: ' + e.message, 'err');
+  }
+}
+
 async function saveSiteSettings() {
   const payload = {
-    hero_photo:  document.getElementById('settingsHeroPhoto').value.trim(),
-    map_photo:   document.getElementById('settingsMapPhoto').value.trim(),
     map_url:     document.getElementById('settingsMapUrl').value.trim(),
     map_service: document.getElementById('settingsMapService').value,
   };
   try {
-    await apiPost('/api/site-settings', payload);
-    showToast('Настройки сайта сохранены', 'gold');
-    if(payload.hero_photo) {
-      const img = document.getElementById('heroPhotoImg');
-      img.src = `${API_BASE}/data/photos/${payload.hero_photo}`;
-      img.style.display = 'block';
-    }
-    if(payload.map_photo) {
-      const img = document.getElementById('mapPhotoImg');
-      img.src = `${API_BASE}/data/photos/${payload.map_photo}`;
-      img.style.display = 'block';
-    }
+    // Сохраняем только URL и сервис — фото уже сохраняются при загрузке
+    const current = await apiGet('/api/site-settings');
+    await apiPost('/api/site-settings', {...current, ...payload});
+    showToast('Настройки сохранены', 'gold');
   } catch(e) { showToast('Ошибка сохранения', 'err'); }
 }
 

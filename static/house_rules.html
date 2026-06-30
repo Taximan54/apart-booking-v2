@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Правила проживания — Городская Пауза</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400&family=Montserrat:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{--gold:#D4A017;--black:#0A0A0A;--black-card:#141414;--black-border:#1E1E1E;--text-primary:#F0E6C8;--text-secondary:#A89060;--text-muted:#5A4A30;}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--text-primary);line-height:1.8;min-height:100vh}
+header{padding:24px 60px;border-bottom:1px solid var(--black-border);display:flex;align-items:center;justify-content:space-between}
+.logo{font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:300;color:var(--gold);letter-spacing:.3em;text-decoration:none}
+.back{font-size:11px;letter-spacing:.2em;color:var(--text-muted);text-decoration:none;text-transform:uppercase;transition:color .3s}
+.back:hover{color:var(--gold)}
+.container{max-width:800px;margin:0 auto;padding:60px 40px}
+h1{font-family:'Cormorant Garamond',serif;font-size:42px;font-weight:300;color:var(--text-primary);margin-bottom:48px}
+.rules-text{font-family:'Cormorant Garamond',serif;font-size:18px;color:var(--text-secondary);line-height:2;font-weight:300;white-space:pre-line}
+footer{padding:40px 60px;border-top:1px solid var(--black-border);text-align:center;font-size:11px;color:var(--text-muted);letter-spacing:.1em;margin-top:60px}
+@media(max-width:768px){header{padding:20px 24px}.container{padding:40px 24px}h1{font-size:28px}footer{padding:24px}}
+</style>
+</head>
+<body>
+
+<header>
+  <a href="/" class="logo">Городская Пауза</a>
+  <a href="/" class="back">← На главную</a>
+</header>
+
+<div class="container">
+  <h1>Правила проживания</h1>
+  <div class="rules-text" id="rulesContent">Загрузка...</div>
+</div>
+
+<footer>citypause.ru &nbsp;·&nbsp; citypause@mail.ru</footer>
+
+<script>
+fetch('/api/house-rules')
+  .then(r => r.text())
+  .then(text => {
+    document.getElementById('rulesContent').textContent = text;
+  })
+  .catch(() => {
+    document.getElementById('rulesContent').textContent = 'Правила временно недоступны. Пожалуйста, свяжитесь с нами.';
+  });
+</script>
+</body>
+</html>
