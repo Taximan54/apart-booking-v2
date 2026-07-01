@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Куда сходить — Городская Пауза</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Montserrat:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{--gold:#D4A017;--gold-light:#F0C040;--black:#0A0A0A;--black-card:#141414;--black-border:#1E1E1E;--text-primary:#F0E6C8;--text-secondary:#A89060;--text-muted:#5A4A30;}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--text-primary);min-height:100vh}
+
+/* HEADER */
+header{padding:24px 60px;border-bottom:1px solid var(--black-border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:rgba(10,10,10,.95);backdrop-filter:blur(10px);z-index:100}
+.logo{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:300;color:var(--gold);letter-spacing:.4em;text-decoration:none;text-transform:uppercase}
+.back{font-size:10px;letter-spacing:.25em;color:var(--text-muted);text-decoration:none;text-transform:uppercase;transition:color .3s;border:1px solid var(--black-border);padding:8px 20px}
+.back:hover{color:var(--gold);border-color:var(--gold)}
+
+/* HERO */
+.page-hero{padding:80px 60px 60px;text-align:center}
+.page-eyebrow{font-family:'Cormorant Garamond',serif;font-size:12px;letter-spacing:.4em;color:var(--gold);text-transform:uppercase;margin-bottom:20px;display:flex;align-items:center;justify-content:center;gap:16px}
+.page-eyebrow::before,.page-eyebrow::after{content:'';width:40px;height:1px;background:var(--gold);opacity:.4}
+.page-title{font-family:'Cormorant Garamond',serif;font-size:clamp(42px,6vw,72px);font-weight:300;color:var(--text-primary);margin-bottom:16px;line-height:1.1}
+.page-subtitle{font-family:'Cormorant Garamond',serif;font-size:18px;color:var(--text-muted);font-weight:300;font-style:italic}
+
+/* CATEGORIES */
+.categories{padding:0 60px 48px;display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+.cat-btn{padding:8px 20px;background:transparent;border:1px solid var(--black-border);color:var(--text-muted);font-family:'Montserrat',sans-serif;font-size:10px;letter-spacing:.2em;text-transform:uppercase;cursor:pointer;transition:all .3s}
+.cat-btn:hover,.cat-btn.active{border-color:var(--gold);color:var(--gold);background:rgba(212,160,23,.05)}
+
+/* PLACES LIST */
+.places-list{max-width:1100px;margin:0 auto;padding:0 60px 100px}
+.place-item{display:grid;grid-template-columns:420px 1fr;gap:0;margin-bottom:1px;border:1px solid var(--black-border);transition:border-color .3s;opacity:0;transform:translateY(20px);transition:opacity .5s,transform .5s,border-color .3s}
+.place-item.visible{opacity:1;transform:none}
+.place-item:hover{border-color:rgba(212,160,23,.3)}
+.place-photo{position:relative;height:300px;overflow:hidden}
+.place-photo img{width:100%;height:100%;object-fit:cover;transition:transform .6s}
+.place-item:hover .place-photo img{transform:scale(1.03)}
+.place-photo-empty{width:100%;height:100%;background:var(--black-card);display:flex;align-items:center;justify-content:center;font-size:48px;color:var(--black-border)}
+.place-info{padding:40px 48px;display:flex;flex-direction:column;justify-content:center;background:var(--black-card)}
+.place-category{font-size:10px;letter-spacing:.25em;color:var(--gold);text-transform:uppercase;margin-bottom:12px}
+.place-name{font-family:'Cormorant Garamond',serif;font-size:32px;font-weight:400;color:var(--text-primary);margin-bottom:8px;line-height:1.2}
+.place-distance{font-size:11px;letter-spacing:.15em;color:var(--gold);text-transform:uppercase;margin-bottom:20px;opacity:.8}
+.place-desc{font-family:'Cormorant Garamond',serif;font-size:17px;color:var(--text-secondary);line-height:1.8;font-weight:300;font-style:italic}
+
+/* EMPTY */
+.empty-state{text-align:center;padding:80px 40px;color:var(--text-muted)}
+.empty-state .icon{font-size:48px;margin-bottom:16px}
+.empty-state p{font-family:'Cormorant Garamond',serif;font-size:20px}
+
+/* FOOTER */
+footer{padding:40px 60px;border-top:1px solid var(--black-border);text-align:center;font-size:11px;color:var(--text-muted);letter-spacing:.1em}
+footer a{color:var(--gold);text-decoration:none}
+
+/* RESPONSIVE */
+@media(max-width:900px){
+  header{padding:20px 24px}
+  .page-hero{padding:60px 24px 40px}
+  .categories{padding:0 24px 32px}
+  .places-list{padding:0 24px 60px}
+  .place-item{grid-template-columns:1fr}
+  .place-photo{height:220px}
+  .place-info{padding:28px 24px}
+  .place-name{font-size:24px}
+  footer{padding:24px}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <a href="/" class="logo">Городская <span style="font-weight:600">·</span> Пауза</a>
+  <a href="/" class="back">← На главную</a>
+</header>
+
+<div class="page-hero">
+  <div class="page-eyebrow">Рядом с апартаментами</div>
+  <h1 class="page-title">Куда сходить?</h1>
+  <p class="page-subtitle">Лучшие места вблизи — зоопарк, рестораны, кофейни и шопинг</p>
+</div>
+
+<div class="categories" id="categoriesBar">
+  <button class="cat-btn active" onclick="filterPlaces(this, '')">Все</button>
+</div>
+
+<div class="places-list" id="placesList">
+  <div class="empty-state"><div class="icon">🗺</div><p>Загрузка...</p></div>
+</div>
+
+<footer>
+  <a href="/">citypause.ru</a> &nbsp;·&nbsp; Новосибирск, ул. Дачная, д. 5, 22 этаж
+</footer>
+
+<script>
+const API_BASE = '';
+let allPlaces = [];
+let activeCategory = '';
+
+async function loadPlaces() {
+  try {
+    const resp = await fetch(`${API_BASE}/api/places`);
+    allPlaces = await resp.json();
+    buildCategories();
+    renderPlaces(allPlaces);
+  } catch(e) {
+    document.getElementById('placesList').innerHTML =
+      '<div class="empty-state"><div class="icon">😔</div><p>Не удалось загрузить список мест</p></div>';
+  }
+}
+
+function buildCategories() {
+  const cats = [...new Set(allPlaces.map(p => p.category).filter(Boolean))];
+  const bar = document.getElementById('categoriesBar');
+  cats.forEach(cat => {
+    const btn = document.createElement('button');
+    btn.className = 'cat-btn';
+    btn.textContent = cat;
+    btn.onclick = () => filterPlaces(btn, cat);
+    bar.appendChild(btn);
+  });
+}
+
+function filterPlaces(btn, cat) {
+  document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  activeCategory = cat;
+  const filtered = cat ? allPlaces.filter(p => p.category === cat) : allPlaces;
+  renderPlaces(filtered);
+}
+
+function renderPlaces(places) {
+  const list = document.getElementById('placesList');
+  if(!places || places.length === 0) {
+    list.innerHTML = '<div class="empty-state"><div class="icon">🗺</div><p>Места ещё не добавлены</p></div>';
+    return;
+  }
+  list.innerHTML = places.map((p, i) => `
+    <div class="place-item" style="transition-delay:${i * 0.08}s">
+      <div class="place-photo">
+        ${p.photo
+          ? `<img src="/data/photos/${p.photo}" alt="${p.name}" loading="lazy">`
+          : `<div class="place-photo-empty">📍</div>`}
+      </div>
+      <div class="place-info">
+        ${p.category ? `<div class="place-category">${p.category}</div>` : ''}
+        <div class="place-name">${p.name}</div>
+        ${p.distance ? `<div class="place-distance">${p.distance}</div>` : ''}
+        ${p.description ? `<div class="place-desc">${p.description}</div>` : ''}
+      </div>
+    </div>
+  `).join('');
+
+  // Анимация появления
+  requestAnimationFrame(() => {
+    document.querySelectorAll('.place-item').forEach(el => {
+      setTimeout(() => el.classList.add('visible'), 50);
+    });
+  });
+}
+
+loadPlaces();
+</script>
+</body>
+</html>

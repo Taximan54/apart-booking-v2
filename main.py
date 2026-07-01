@@ -93,6 +93,15 @@ class SiteSettings(BaseModel):
 class HouseRulesText(BaseModel):
     text: str = ""
 
+class Place(BaseModel):
+    id: Optional[str] = None
+    name: str
+    category: str = ""
+    photo: str = ""
+    description: str = ""
+    distance: str = ""
+    visible: bool = True
+
 class PhotoOrder(BaseModel):
     order: list   # список имён файлов в нужном порядке
 
@@ -212,6 +221,7 @@ SETTINGS_FILE    = f"{DATA_DIR}/settings.json"
 REVIEW_FILE      = f"{DATA_DIR}/review_template.txt"
 REVIEWS_FILE     = f"{DATA_DIR}/reviews.json"
 CONTACTS_FILE    = f"{DATA_DIR}/contacts.json"
+PLACES_FILE      = f"{DATA_DIR}/places.json"
 PHOTOS_DIR       = f"{DATA_DIR}/photos"
 PHOTOS_ORDER_FILE = f"{DATA_DIR}/photos_order.json"
 CONTRACTS_DIR    = f"{DATA_DIR}/contracts"
@@ -936,6 +946,58 @@ async def get_site_settings():
 async def set_site_settings(s: SiteSettings, _: bool = Depends(require_admin)):
     with open(SETTINGS_FILE, "w", encoding="utf-8") as f:
         json.dump(s.dict(), f, ensure_ascii=False)
+    return {"ok": True}
+
+# =====================================================
+# API — PLACES (Куда сходить)
+# =====================================================
+
+def load_places():
+    if os.path.exists(PLACES_FILE):
+        with open(PLACES_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            return data if isinstance(data, list) else []
+    return []
+
+def save_places(places):
+    with open(PLACES_FILE, "w", encoding="utf-8") as f:
+        json.dump(places, f, ensure_ascii=False, indent=2)
+
+@app.get("/api/places")
+async def get_places():
+    """Публичный — только видимые места."""
+    return [p for p in load_places() if p.get("visible", True)]
+
+@app.get("/api/places/all")
+async def get_all_places(_: bool = Depends(require_admin)):
+    return load_places()
+
+@app.post("/api/places")
+async def add_place(p: Place, _: bool = Depends(require_admin)):
+    places = load_places()
+    if len(places) >= 10:
+        raise HTTPException(status_code=400, detail="Максимум 10 мест")
+    d = p.dict()
+    d["id"] = secrets.token_hex(6)
+    places.append(d)
+    save_places(places)
+    return {"ok": True, "id": d["id"]}
+
+@app.put("/api/places/{place_id}")
+async def update_place(place_id: str, p: Place, _: bool = Depends(require_admin)):
+    places = load_places()
+    for i, pl in enumerate(places):
+        if pl.get("id") == place_id:
+            places[i] = {**p.dict(), "id": place_id}
+            save_places(places)
+            return {"ok": True}
+    raise HTTPException(status_code=404, detail="Место не найдено")
+
+@app.delete("/api/places/{place_id}")
+async def delete_place(place_id: str, _: bool = Depends(require_admin)):
+    places = load_places()
+    places = [p for p in places if p.get("id") != place_id]
+    save_places(places)
     return {"ok": True}
 
 # =====================================================
