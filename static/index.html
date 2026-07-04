@@ -22,10 +22,11 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 header{position:fixed;top:0;left:0;right:0;z-index:1000;display:flex;align-items:center;justify-content:space-between;padding:20px 60px;background:linear-gradient(to bottom,rgba(10,10,10,.98),rgba(10,10,10,.85));backdrop-filter:blur(20px);border-bottom:1px solid rgba(201,168,76,.15);transition:padding .4s}
 .logo{font-family:'IM Fell English',serif;font-size:32px;font-weight:400;letter-spacing:.08em;text-decoration:none;background:linear-gradient(180deg,#FFD060 0%,#D4920A 28%,#8B5E00 50%,#D4920A 72%,#FFD060 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;filter:drop-shadow(0 2px 8px rgba(80,40,0,.8))}
 .logo span{font-weight:400}
-nav a{color:var(--text-secondary);text-decoration:none;font-size:11px;letter-spacing:.2em;text-transform:uppercase;margin-left:36px;transition:color .3s}
+nav a{font-family:'IM Fell English',serif;text-decoration:none;font-size:20px;letter-spacing:.05em;margin-left:32px;transition:opacity .3s;background:linear-gradient(180deg,#FFD060 0%,#D4920A 28%,#8B5E00 50%,#D4920A 72%,#FFD060 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;filter:drop-shadow(0 1px 4px rgba(80,40,0,.6))}
+nav a:hover{opacity:.7}
 nav a:hover{color:var(--gold)}
-.nav-btn{margin-left:36px;padding:10px 28px;background:transparent;border:1px solid var(--gold);color:var(--gold);font-size:10px;letter-spacing:.25em;text-transform:uppercase;cursor:pointer;transition:all .3s;font-family:'Montserrat',sans-serif;text-decoration:none;display:inline-block}
-.nav-btn:hover{background:var(--gold);color:var(--black)}
+.nav-btn{margin-left:32px;padding:10px 28px;background:transparent;border:1px solid #D4920A;font-size:20px;font-family:'IM Fell English',serif;letter-spacing:.05em;cursor:pointer;transition:all .3s;text-decoration:none;display:inline-block;background-clip:text;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-image:linear-gradient(180deg,#FFD060 0%,#D4920A 28%,#8B5E00 50%,#D4920A 72%,#FFD060 100%);filter:drop-shadow(0 1px 4px rgba(80,40,0,.6))}
+.nav-btn:hover{border-color:#FFD060;opacity:.8}
 
 /* HERO */
 .hero{position:relative;height:100vh;display:flex;align-items:center;justify-content:center;overflow:hidden}
