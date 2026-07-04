@@ -1,156 +1,124 @@
 # Городская Пауза — статус проекта и roadmap
 
-> Обновлено: 27 июня 2026. Используй этот файл чтобы быстро ввести нового Claude в контекст в новом чате — просто прикрепи его в начале разговора.
+> Обновлено: 4 июля 2026. Используй этот файл чтобы быстро ввести нового Claude в контекст — просто прикрепи его в начале разговора.
 
 ## Что это
-Полноценная система бронирования квартиры посуточно: сайт с календарём и онлайн-договором, Telegram-бот, веб-админка, email-уведомления, T-Bank оплата, промокоды, отзывы, архив договоров.
+Полноценная система бронирования квартиры посуточно: сайт с календарём и онлайн-договором, веб-админка, email-уведомления, T-Bank оплата, промокоды, отзывы, архив договоров, фотогалерея, правила проживания, страница «Куда сходить?».
 
 ## Инфраструктура
 
 - **Сервер:** AdminVPS, IP `138.16.227.241`, Ubuntu 24.04, hostname Taximan54.com
-- **Домен:** citypause.ru (+ www), SSL через certbot, истекает 2026-09-06 (автообновление настроено)
+- **Домен:** citypause.ru (+ www), SSL через certbot, истекает 2026-09-06
 - **Проект на сервере:** `/app`, виртуальное окружение `/app/.venv`
-- **Персистентные данные:** `/data/` (bookings.db, prices.json, promo_codes.json, door_code.json, description.txt, contract_template.txt, checkin_memo.txt, checkout_checklist.txt, review_template.txt, contacts.json, reviews.json, photos_order.json, admin_auth.json, contracts/, photos/)
-- **GitHub:** `https://github.com/Taximan54/apart-booking-v2.git` — единственный источник правды. Правим локально → git add/commit/push → на сервере `cd /app && git pull && systemctl restart apart`
-- **Systemd:** сервис `apart.service`, автозапуск включён, автоперезапуск при крахе
-- **Nginx:** reverse proxy 80/443 → 127.0.0.1:8080, статика `/data/photos/` отдаётся напрямую через nginx (location /data/photos/ → alias /data/photos/, expires 30d)
-- **Email:** mail.ru SMTP, `citypause@mail.ru`, пароль приложения в `.env` (`MAIL_PASSWORD`)
-- **Бот:** Telegram токен и admin ID в `.env` + `config.py` (`BOT_TOKEN`, `ADMIN_IDS`, `BASE_URL=https://citypause.ru`)
+- **Персистентные данные:** `/data/` (bookings.db, prices.json, promo_codes.json, door_code.json, description.txt, contract_template.txt, checkin_memo.txt, checkout_checklist.txt, review_template.txt, house_rules.txt, contacts.json, reviews.json, photos_order.json, places.json, settings.json, admin_auth.json, contracts/, photos/)
+- **GitHub:** `https://github.com/Taximan54/apart-booking-v2.git`
+- **Деплой:** локально правим → git add/commit/push → на сервере `cd /app && git pull && systemctl restart apart`
+- **Systemd:** сервис `apart.service`
+- **Nginx:** reverse proxy 80/443 → 127.0.0.1:8080, статика `/data/photos/` → nginx напрямую (expires 30d), client_max_body_size 10m
 
-### Команды для деплоя
-```bash
-# Локально
-git add <файлы>
-git commit -m "описание"
-git push
+## КРИТИЧЕСКИ ВАЖНО: Telegram заблокирован (РКН)
+Все Telegram-вызовы обёрнуты в `asyncio.wait_for(timeout=3-5s)` + try/except.
 
-# На сервере
-cd /app && git pull && systemctl restart apart
-systemctl status apart
-journalctl -u apart -f
+## Статусы броней
 ```
-
-### Синтаксис перед деплоем (обязательно)
-```bash
-python3 -c "import ast; ast.parse(open('main.py').read()); print('OK')"
+waiting_payment → payment_pending → confirmed → fully_paid → cancelled
 ```
+- `confirmed` — гость получает договор + инструкцию по оплате остатка
+- `fully_paid` — гость получает памятку + код замка
 
-## КРИТИЧЕСКИ ВАЖНО: Telegram заблокирован на сервере (РКН)
+## Оплата
+- Предоплата 20% онлайн (T-Bank)
+- Остаток + депозит 6000₽ наличными или переводом при заселении
 
-`api.telegram.org` недоступен с VPS — ни polling, ни webhook. Telegram = best-effort уведомления, обёрнуты в `asyncio.wait_for(timeout=3-5s)` + try/except. Падение бота не блокирует сайт/email/БД.
-
-## Статусы броней (полный флоу)
-
-```
-waiting_payment  → бронь создана, ждём предоплату 20%
-payment_pending  → гость нажал "Я оплатил" предоплату
-confirmed        → админ подтвердил предоплату → гость получает договор + инструкцию по остатку
-fully_paid       → админ подтвердил полную оплату → гость получает памятку + код замка
-cancelled        → отменена
-```
-
-**Оплата:** предоплата 20% онлайн (T-Bank), остаток + депозит 6000₽ наличными или переводом при заселении.
-
-## Автоматические письма (планировщик, UTC+7 Новосибирск)
-
-- **10:00** в день выезда → чек-лист выезда (`/data/checkout_checklist.txt`)
-- **14:00** на следующий день после выезда → просьба об отзыве + промокод `RETURN****` на 10% (автоматически добавляется в `/data/promo_codes.json`)
+## Автоматические письма (планировщик UTC+7)
+- 10:00 в день выезда → чек-лист
+- 14:00 на следующий день → отзыв + промокод RETURN**** на 10%
 
 ## Номера броней
+Формат: `GP-XXXXXX` (латиница). Старые: `ГП-XXXXXX` — код поддерживает оба варианта.
 
-Формат: `GP-XXXXXX` (латиница). Старые тестовые брони имеют префикс `ГП-` (кириллица) — код поддерживает оба варианта при поиске в БД.
-
-## Структура файлов проекта
-
-- **main.py** (~1630 строк) — FastAPI приложение, все API-эндпоинты, email-функции, планировщик
-- **config.py** — BOT_TOKEN, ADMIN_IDS, BASE_URL, load_dotenv()
-- **services/booking_service.py** — функции работы с БД броней, get_bookings_checkout_today/yesterday
-- **static/index.html** (~1450 строк, ~75KB) — публичный сайт. Фото вынесены из base64 в `/data/photos/`, загружаются через `/api/photos`
-- **static/admin.html** (~1800 строк) — веб-админка с Bearer-токен авторизацией
-- **static/privacy.html** — политика конфиденциальности (152-ФЗ)
-- **static/contract_template.txt** — шаблон договора (копия `/data/contract_template.txt`)
-
-## Плейсхолдеры в договоре
-
-`{{ФИО}}`, `{{ПАСПОРТ}}`, `{{ДАТА_ДОГОВОРА}}`, `{{ДАТА_ЗАЕЗДА}}`, `{{ДАТА_ВЫЕЗДА}}`, `{{НОЧЕЙ}}`, `{{ГОСТЕЙ}}`, `{{ЦЕНА_В_СУТКИ}}`, `{{ИТОГО}}`, `{{ДЕПОЗИТ}}`, `{{EMAIL}}`, `{{САЙТ}}`, `{{НОМЕР_БРОНИ}}`
-
-Дата договора — по часовому поясу Новосибирска (UTC+7). Депозит фиксирован — 6000₽.
+## Структура файлов
+- `main.py` (~1700+ строк) — FastAPI, все API, email, планировщик
+- `config.py` — BOT_TOKEN, ADMIN_IDS, BASE_URL=https://citypause.ru, load_dotenv()
+- `services/booking_service.py` — работа с БД броней
+- `static/index.html` (~1600 строк, ~82KB) — публичный сайт
+- `static/admin.html` (~2000+ строк) — веб-админка
+- `static/privacy.html` — политика конфиденциальности
+- `static/house_rules.html` — правила проживания (отдельная страница)
+- `static/places.html` — страница «Куда сходить?»
 
 ## Вкладки админки
+Дашборд, Все брони, Календарь, Цены, Промокоды, Договор, Архив договоров, Памятка гостю, Чек-лист выезда, Правила проживания, Настройки сайта, Отзывы, Куда сходить, Контакты, Фотографии, Настройки
 
-Дашборд, Все брони, Календарь, Цены, Промокоды, Договор, **Архив договоров**, Памятка гостю, Чек-лист выезда, Отзывы, Контакты, Фотографии, Настройки
+## Дизайн сайта (актуальный)
+- Цвет золота: `#D4A017` (CSS переменная `--gold`)
+- Логотип: шрифт **IM Fell English**, размер 32px, царский золотой градиент `linear-gradient(180deg,#FFD060 0%,#D4920A 28%,#8B5E00 50%,#D4920A 72%,#FFD060 100%)`
+- Навигация: тот же шрифт IM Fell English, размер 20px, тот же градиент — **последнее изменение ещё не задеплоено**, файл готов в outputs
+- Заголовки: Cormorant Garamond
+- Основной текст: Montserrat
+- Hero-секция: фото `photo_ec777cb650cf.jpg` (вид из панорамного окна с двумя креслами) на весь экран с параллаксом
+- Фон: `#0A0A0A` (чёрный)
 
-## API-эндпоинты (ключевые)
+## ЧТО СДЕЛАНО В ЭТОЙ СЕССИИ (хронология)
+1. Поле «Отчество» в форме бронирования
+2. Промокоды — процентная скидка, управление в админке
+3. Договор приходит целиком как .txt вложение
+4. Серверная авторизация в админке (Bearer-токен)
+5. Минимум 2 ночи при выборе дат
+6. Разделение подтверждения и кода замка (статус fully_paid)
+7. Памятка и чек-лист — файлы в /data/, редактирование в админке
+8. Три суммы на сайте — предоплата/остаток/депозит
+9. Отзывы — блок на сайте + управление в админке
+10. Автописьмо через день после выезда (отзыв + промокод)
+11. Архив договоров в админке со скачиванием
+12. Фото вынесены из base64 в /data/photos/ (сайт похудел с 2.3MB до 82KB)
+13. Контакты — секция на сайте + вкладка в админке
+14. Загрузка фото через админку с управлением порядком и подписями
+15. Правила проживания — отдельная страница /static/house_rules.html
+16. Страница «Куда сходить?» — /static/places.html с управлением в админке
+17. Настройки сайта — обложка и фото карты загружаются через кнопку
+18. Редизайн: золото #D4A017, hero-фото с параллаксом, секция Расположение
+19. Карта Яндекс iframe в секции расположения
+20. Логотип: IM Fell English + царский золотой градиент
+21. **ПОСЛЕДНЕЕ (НЕ ЗАДЕПЛОЕНО):** навигация — IM Fell English + тот же градиент, размер 20px
 
-**Публичные:**
-- `GET /api/bookings` — занятые даты для календаря
-- `GET /api/prices` — цены
-- `GET /api/photos` — список фото галереи
-- `GET /api/reviews` — отзывы (только visible:true)
-- `GET /api/contacts` — контакты
-- `GET /api/description` — описание квартиры
-- `POST /api/bookings` — создать бронь
-- `POST /api/payment-notify` — гость нажал "Я оплатил"
-- `POST /api/promo-codes/validate` — проверить промокод
+## ЧТО НУЖНО ЗАДЕПЛОИТЬ ПРЯМО СЕЙЧАС
+Файл `static/index.html` готов в папке outputs — нужно:
+```bash
+git add static/index.html
+git commit -m "nav: IM Fell English + царское золото, размер 20px"
+git push
+# на сервере:
+cd /app && git pull && systemctl restart apart
+```
 
-**Админские (Bearer-токен):**
-- `POST /api/admin/login` — вход
-- `POST /api/admin/change-password` — смена пароля
-- `GET /api/bookings?admin=1` — все брони
-- `POST /api/bookings/{ref}/confirm` — подтвердить предоплату
-- `POST /api/bookings/{ref}/full-payment` — подтвердить полную оплату
-- `POST /api/bookings/{ref}/cancel` — отменить
-- `GET/POST /api/prices`, `/api/promo-codes`, `/api/door-code`, `/api/description`
-- `GET/POST /api/contract-template`, `/api/checkin-memo`, `/api/checkout-checklist`, `/api/review-template`
-- `GET /api/contracts` — список договоров
-- `GET /api/contracts/{ref}` — скачать договор
-- `GET /api/reviews/all`, `POST /api/reviews`, `PUT /api/reviews/{id}`, `DELETE /api/reviews/{id}`
-- `GET /api/contacts`, `POST /api/contacts`
-- `GET /api/photos`, `POST /api/photos/upload`, `DELETE /api/photos/{filename}`, `POST /api/photos/reorder`, `POST /api/photos/{filename}/label`
-
-## Решённые проблемы (хронология)
-
-1. Railway не принимал российские карты → переехали на AdminVPS
-2. Telegram заблокирован РКН → best-effort уведомления с таймаутом
-3. Бесконечный календарь → event delegation через grid.onmouseover
-4. CORS, старый Railway URL → исправлено
-5. SQLite автомиграция колонок через PRAGMA table_info + ALTER TABLE
-6. Договор обрезался в письме → .txt вложение через MIMEBase
-7. Сайт весил 2.3MB из-за base64-фото → фото вынесены в `/data/photos/`, nginx отдаёт статически
-8. Главная страница отдавала заглушку → `GET /` читает реальный index.html
-9. Кириллица `ГП-` в именах файлов ломала URL → переименованы в `GP-`, код поддерживает оба варианта
-10. SESSION_SECRET рандомизировался при каждом перезапуске → зафиксирован в `.env`
-11. Авторизация в admin.html была JS-паролем → переделана на Bearer-токен с сервером
-12. Расхождение GitHub ↔ сервер из-за прямых SSH-правок → всегда правим локально и пушим
+## Известные нерешённые задачи
+- [ ] Настройки сайта: при загрузке обложки через кнопку — нужно проверить что hero-фото действительно меняется на сайте динамически
+- [ ] Карта в секции расположения показывает iframe Яндекс — если загружено фото карты через «Настройки сайта», показывается оно (кликабельно → ссылка на карту)
+- [ ] Страница places.html: картинки должны быть 4:3 (800×600px), последняя правка стилей — фото 400px ширина, высота 300px, object-fit:cover
 
 ## Roadmap (приоритеты)
 
-### Этап 1 — Полировка (текущий фокус)
-- [ ] Доработка внешнего вида сайта
-- [ ] Мелкие баги и UX-улучшения
+### Этап 1 — Полировка (сейчас)
+- [ ] Продолжить доработку внешнего вида
+- [ ] Возможно: анимации, переходы, мобильная адаптация деталей
 
 ### Этап 2 — Интеграции
-- [ ] SMS-подписание договора (кандидаты: СМSC.ru, СМС.ру, Exolve)
-- [ ] Telegram-бот как дополнительный канал броней (бот вызывает те же API-эндпоинты что и сайт, не работает с БД напрямую)
+- [ ] SMS-подписание договора (СМSC.ru / СМС.ру / Exolve)
+- [ ] Telegram-бот как дополнительный канал броней (через те же API-эндпоинты)
 
 ### Этап 3 — Внешние площадки
-- [ ] Avito и Суточно.ру через iCal-синхронизацию (экспорт/импорт календаря)
-- [ ] Channel Manager для синхронизации между площадками
+- [ ] Avito, Суточно.ру через iCal-синхронизацию
 
-### Этап 4 — White-label SaaS (мультитенантность)
-Концепция: один FastAPI, одна БД, каждый арендодатель на своём поддомене `{name}.citypause.ru`.
-- [ ] Добавить `owner_id` / `property_id` в структуру данных
-- [ ] Данные каждого объекта в `/data/properties/{id}/`
-- [ ] Поддомены через nginx + wildcard SSL
-- [ ] Суперадминка для управления всеми объектами
-- [ ] Биллинг для арендодателей
+### Этап 4 — White-label SaaS
+- [ ] Мультитенантность: один FastAPI, поддомены {name}.citypause.ru
+- [ ] owner_id / property_id в БД
+- [ ] Данные в /data/properties/{id}/
+- [ ] Суперадминка, биллинг
 
-Текущая квартира становится `property_id=1`, ничего не ломается.
-
-## Общие договорённости по стилю работы
-
-- Макс — самостоятельно работает в SSH-терминале (PowerShell/CMD на Windows), нужны точные команды для copy-paste
+## Общие договорённости
+- Макс работает в SSH (PowerShell/CMD на Windows), нужны точные команды
 - Перед деплоем: `python3 -c "import ast; ast.parse(open('main.py').read()); print('OK')"`
-- Макс не светит ФИО/самозанятость публично — только email citypause@mail.ru
-- Бюджет: VPS Promo на AdminVPS ~386₽/мес, домен ~203₽/год
+- Email: citypause@mail.ru
+- VPS ~386₽/мес, домен ~203₽/год
 - requirements.txt: fastapi, uvicorn, aiogram, python-multipart, python-dotenv
