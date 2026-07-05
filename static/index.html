@@ -6,12 +6,13 @@
 <title>Городская Пауза — Апартаменты посуточно</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Montserrat:wght@300;400;500;600&family=IM+Fell+English&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Montserrat:wght@300;400;500;600&family=IM+Fell+English&family=Playfair+Display:wght@700&family=UnifrakturMaguntia&family=Tangerine:wght@700&family=Pacifico&family=Bebas+Neue&display=swap" rel="stylesheet">
 <style>
 :root {
   --gold:#D4A017;--gold-light:#F0C040;--gold-dark:#8B6914;--gold-muted:#6B5420;
   --black:#0A0A0A;--black-card:#141414;--black-border:#1E1E1E;
   --text-primary:#F0E6C8;--text-secondary:#A89060;--text-muted:#5A4A30;--white:#FAF6EE;
+  --logo-font:'IM Fell English',serif;--logo-weight:400;
 }
 *{margin:0;padding:0;box-sizing:border-box}
 html{scroll-behavior:smooth}
@@ -20,12 +21,12 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 
 /* HEADER */
 header{position:fixed;top:0;left:0;right:0;z-index:1000;display:flex;align-items:center;justify-content:space-between;padding:20px 60px;background:linear-gradient(to bottom,rgba(10,10,10,.98),rgba(10,10,10,.85));backdrop-filter:blur(20px);border-bottom:1px solid rgba(201,168,76,.15);transition:padding .4s}
-.logo{font-family:'IM Fell English',serif;font-size:32px;font-weight:400;letter-spacing:.08em;text-decoration:none;background:linear-gradient(180deg,#FFD060 0%,#D4920A 28%,#8B5E00 50%,#D4920A 72%,#FFD060 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;filter:drop-shadow(0 2px 8px rgba(80,40,0,.8))}
-.logo span{font-weight:400}
-nav a{font-family:'IM Fell English',serif;text-decoration:none;font-size:20px;letter-spacing:.05em;margin-left:32px;transition:opacity .3s;background:linear-gradient(180deg,#FFD060 0%,#D4920A 28%,#8B5E00 50%,#D4920A 72%,#FFD060 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;filter:drop-shadow(0 1px 4px rgba(80,40,0,.6))}
+.logo{font-family:var(--logo-font);font-size:32px;font-weight:var(--logo-weight);letter-spacing:.08em;text-decoration:none;background:linear-gradient(180deg,#FFD060 0%,#D4920A 28%,#8B5E00 50%,#D4920A 72%,#FFD060 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;filter:drop-shadow(0 2px 8px rgba(80,40,0,.8))}
+.logo span{font-weight:inherit}
+nav a{font-family:var(--logo-font);font-weight:var(--logo-weight);text-decoration:none;font-size:20px;letter-spacing:.05em;margin-left:32px;transition:opacity .3s;background:linear-gradient(180deg,#FFD060 0%,#D4920A 28%,#8B5E00 50%,#D4920A 72%,#FFD060 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;filter:drop-shadow(0 1px 4px rgba(80,40,0,.6))}
 nav a:hover{opacity:.7}
 nav a:hover{color:var(--gold)}
-.nav-btn{margin-left:32px;padding:10px 28px;background:transparent;border:1px solid #D4920A;font-size:20px;font-family:'IM Fell English',serif;letter-spacing:.05em;cursor:pointer;transition:all .3s;text-decoration:none;display:inline-block;background-clip:text;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-image:linear-gradient(180deg,#FFD060 0%,#D4920A 28%,#8B5E00 50%,#D4920A 72%,#FFD060 100%);filter:drop-shadow(0 1px 4px rgba(80,40,0,.6))}
+.nav-btn{margin-left:32px;padding:10px 28px;background:transparent;border:1px solid #D4920A;font-size:20px;font-family:var(--logo-font);font-weight:var(--logo-weight);letter-spacing:.05em;cursor:pointer;transition:all .3s;text-decoration:none;display:inline-block;background-clip:text;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-image:linear-gradient(180deg,#FFD060 0%,#D4920A 28%,#8B5E00 50%,#D4920A 72%,#FFD060 100%);filter:drop-shadow(0 1px 4px rgba(80,40,0,.6))}
 .nav-btn:hover{border-color:#FFD060;opacity:.8}
 
 /* HERO */
@@ -667,22 +668,32 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
       <div class="sec-eyebrow">Связаться с нами</div>
       <h2 class="sec-title">Контакты</h2>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:24px;max-width:700px;margin:0 auto">
-      <a id="contactPhone" href="#" style="display:flex;flex-direction:column;align-items:center;padding:32px 24px;background:transparent;border:1px solid var(--black-border);text-decoration:none;transition:border-color .3s" onmouseover="this.style.borderColor='var(--gold)'" onmouseout="this.style.borderColor='var(--black-border)'">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:24px;max-width:900px;margin:0 auto">
+      <a id="contactPhone" href="#" style="display:none;flex-direction:column;align-items:center;padding:32px 24px;background:transparent;border:1px solid var(--black-border);text-decoration:none;transition:border-color .3s" onmouseover="this.style.borderColor='var(--gold)'" onmouseout="this.style.borderColor='var(--black-border)'">
         <div style="font-size:28px;margin-bottom:12px">📞</div>
         <div style="font-size:10px;color:var(--gold);letter-spacing:.2em;text-transform:uppercase;margin-bottom:8px">Телефон</div>
         <div id="contactPhoneText" style="font-size:14px;color:var(--text-secondary)">—</div>
       </a>
-      <a id="contactEmail" href="#" style="display:flex;flex-direction:column;align-items:center;padding:32px 24px;background:transparent;border:1px solid var(--black-border);text-decoration:none;transition:border-color .3s" onmouseover="this.style.borderColor='var(--gold)'" onmouseout="this.style.borderColor='var(--black-border)'">
+      <a id="contactEmail" href="#" style="display:none;flex-direction:column;align-items:center;padding:32px 24px;background:transparent;border:1px solid var(--black-border);text-decoration:none;transition:border-color .3s" onmouseover="this.style.borderColor='var(--gold)'" onmouseout="this.style.borderColor='var(--black-border)'">
         <div style="font-size:28px;margin-bottom:12px">✉️</div>
         <div style="font-size:10px;color:var(--gold);letter-spacing:.2em;text-transform:uppercase;margin-bottom:8px">Email</div>
         <div id="contactEmailText" style="font-size:14px;color:var(--text-secondary)">—</div>
       </a>
-      <a id="contactTelegram" href="#" target="_blank" style="display:flex;flex-direction:column;align-items:center;padding:32px 24px;background:transparent;border:1px solid var(--black-border);text-decoration:none;transition:border-color .3s" onmouseover="this.style.borderColor='var(--gold)'" onmouseout="this.style.borderColor='var(--black-border)'">
+      <a id="contactTelegram" href="#" target="_blank" style="display:none;flex-direction:column;align-items:center;padding:32px 24px;background:transparent;border:1px solid var(--black-border);text-decoration:none;transition:border-color .3s" onmouseover="this.style.borderColor='var(--gold)'" onmouseout="this.style.borderColor='var(--black-border)'">
         <div style="font-size:28px;margin-bottom:12px">✈️</div>
         <div style="font-size:10px;color:var(--gold);letter-spacing:.2em;text-transform:uppercase;margin-bottom:8px">Telegram</div>
         <div id="contactTelegramText" style="font-size:14px;color:var(--text-secondary)">—</div>
       </a>
+      <a id="contactWhatsapp" href="#" target="_blank" style="display:none;flex-direction:column;align-items:center;padding:32px 24px;background:transparent;border:1px solid var(--black-border);text-decoration:none;transition:border-color .3s" onmouseover="this.style.borderColor='var(--gold)'" onmouseout="this.style.borderColor='var(--black-border)'">
+        <div style="font-size:28px;margin-bottom:12px">💬</div>
+        <div style="font-size:10px;color:var(--gold);letter-spacing:.2em;text-transform:uppercase;margin-bottom:8px">WhatsApp</div>
+        <div id="contactWhatsappText" style="font-size:14px;color:var(--text-secondary)">—</div>
+      </a>
+      <div id="contactMax" style="display:none;flex-direction:column;align-items:center;padding:32px 24px;background:transparent;border:1px solid var(--black-border)">
+        <div style="font-size:28px;margin-bottom:12px">📨</div>
+        <div style="font-size:10px;color:var(--gold);letter-spacing:.2em;text-transform:uppercase;margin-bottom:8px">MAX</div>
+        <div id="contactMaxText" style="font-size:14px;color:var(--text-secondary)">—</div>
+      </div>
     </div>
   </div>
 </section>
@@ -700,7 +711,7 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
     <div style="margin-top:12px"><a href="/static/privacy.html" style="font-size:10px;color:var(--text-muted);text-decoration:none;letter-spacing:.1em;transition:color .3s" onmouseover="this.style.color='var(--gold)'" onmouseout="this.style.color='var(--text-muted)'">Политика конфиденциальности</a></div>
   </div>
   <div class="footer-r">
-    <div>© 2026 Городская Пауза</div>
+    <div id="footerCopy">© 2026 Городская Пауза</div>
     <div style="margin-top:8px"><a href="admin.html" style="color:var(--text-muted);text-decoration:none;font-size:10px;letter-spacing:.1em;opacity:.4;transition:opacity .3s" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=.4">Панель управления</a></div>
   </div>
 </footer>
@@ -832,9 +843,38 @@ async function init() {
     }
   } catch(e) {}
 
-  // Настройки сайта (обложка, карта)
+  // Настройки сайта (название, тексты, шрифт, обложка, карта)
   try {
     const settings = await fetch(`${API.BASE}/api/site-settings`).then(r=>r.json());
+
+    const FONT_MAP = {
+      im_fell:    {family:"'IM Fell English',serif",    weight:400},
+      playfair:   {family:"'Playfair Display',serif",   weight:700},
+      unifraktur: {family:"'UnifrakturMaguntia',serif",  weight:400},
+      tangerine:  {family:"'Tangerine',cursive",         weight:700},
+      pacifico:   {family:"'Pacifico',cursive",          weight:400},
+      bebas:      {family:"'Bebas Neue',sans-serif",     weight:400},
+    };
+    const font = FONT_MAP[settings.logo_font] || FONT_MAP.im_fell;
+    document.documentElement.style.setProperty('--logo-font', font.family);
+    document.documentElement.style.setProperty('--logo-weight', font.weight);
+
+    const siteName = settings.site_name || 'Городская Пауза';
+    document.title = `${siteName} — Апартаменты посуточно`;
+    document.querySelectorAll('.logo').forEach(el => el.textContent = siteName);
+    document.querySelectorAll('.footer-brand').forEach(el => el.textContent = siteName);
+    const copy = document.getElementById('footerCopy');
+    if(copy) copy.textContent = `© 2026 ${siteName}`;
+
+    if(settings.hero_title) {
+      const h1 = document.querySelector('.hero h1');
+      if(h1) h1.textContent = settings.hero_title;
+    }
+    if(settings.hero_subtitle) {
+      const sub = document.querySelector('.hero-sub');
+      if(sub) sub.textContent = settings.hero_subtitle;
+    }
+
     if(settings.hero_photo) {
       const bg = document.getElementById('heroBg');
       if(bg) bg.style.backgroundImage = `url('/data/photos/${settings.hero_photo}')`;
@@ -918,6 +958,19 @@ function renderReviews(reviews) {
 // ============================================================
 // CONTACTS
 // ============================================================
+function showContactBox(id, textId, value, hrefFn) {
+  const el = document.getElementById(id);
+  if(!el) return;
+  if(value) {
+    el.style.display = 'flex';
+    if(hrefFn) el.href = hrefFn(value);
+    const t = document.getElementById(textId);
+    if(t) t.textContent = value;
+  } else {
+    el.style.display = 'none';
+  }
+}
+
 async function loadContacts() {
   try {
     const r = await fetch(`${API.BASE}/api/contacts`);
@@ -925,25 +978,27 @@ async function loadContacts() {
     const phone    = c.phone    || '';
     const email    = c.email    || '';
     const telegram = c.telegram || '';
+    const whatsapp = c.whatsapp || '';
+    const maxMsg   = c.max      || '';
 
     // Футер
     const fEmail = document.getElementById('footerEmail');
     const fPhone = document.getElementById('footerPhone');
     const fTg    = document.getElementById('footerTelegram');
-    if(fEmail && email)    { fEmail.textContent = email; fEmail.href = 'mailto:' + email; }
-    if(fPhone && phone)    { fPhone.textContent = phone; fPhone.href = 'tel:' + phone.replace(/\D/g,''); }
-    if(fTg && telegram)    { fTg.textContent = telegram; fTg.href = 'https://t.me/' + telegram.replace(/^@/,''); fTg.style.display = ''; }
-    else if(fTg)           { fTg.style.display = 'none'; }
+    if(fEmail) { if(email) { fEmail.textContent = email; fEmail.href = 'mailto:' + email; fEmail.parentElement.style.display = ''; } else { fEmail.parentElement.style.display = 'none'; } }
+    if(fPhone) { if(phone) { fPhone.textContent = phone; fPhone.href = 'tel:' + phone.replace(/\D/g,''); fPhone.parentElement.style.display = ''; } else { fPhone.parentElement.style.display = 'none'; } }
+    if(fTg)    { if(telegram) { fTg.textContent = telegram; fTg.href = 'https://t.me/' + telegram.replace(/^@/,''); fTg.style.display = ''; } else { fTg.style.display = 'none'; } }
 
-    // Секция контактов
-    const cPhone = document.getElementById('contactPhone');
-    const cEmail = document.getElementById('contactEmail');
-    const cTg    = document.getElementById('contactTelegram');
-    if(cPhone && phone) { cPhone.href = 'tel:' + phone.replace(/\D/g,''); document.getElementById('contactPhoneText').textContent = phone; }
-    if(cEmail && email) { cEmail.href = 'mailto:' + email; document.getElementById('contactEmailText').textContent = email; }
-    if(cTg && telegram) {
-      cTg.href = 'https://t.me/' + telegram.replace(/^@/,'');
-      document.getElementById('contactTelegramText').textContent = telegram;
+    // Секция контактов — скрываем блок, если поле не заполнено
+    showContactBox('contactPhone',    'contactPhoneText',    phone,    v => 'tel:' + v.replace(/\D/g,''));
+    showContactBox('contactEmail',    'contactEmailText',    email,    v => 'mailto:' + v);
+    showContactBox('contactTelegram', 'contactTelegramText', telegram, v => 'https://t.me/' + v.replace(/^@/,''));
+    showContactBox('contactWhatsapp', 'contactWhatsappText', whatsapp, v => 'https://wa.me/' + v.replace(/\D/g,''));
+    // MAX — ссылка-формат мессенджера пока не стандартизирована, показываем как информацию без клика
+    const maxEl = document.getElementById('contactMax');
+    if(maxEl) {
+      if(maxMsg) { maxEl.style.display = 'flex'; document.getElementById('contactMaxText').textContent = maxMsg; }
+      else       { maxEl.style.display = 'none'; }
     }
   } catch(e) {}
 }

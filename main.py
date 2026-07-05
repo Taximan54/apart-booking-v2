@@ -83,12 +83,18 @@ class Contacts(BaseModel):
     phone: str = ""
     email: str = ""
     telegram: str = ""
+    whatsapp: str = ""
+    max: str = ""
 
 class SiteSettings(BaseModel):
     hero_photo: str = ""        # имя файла из /data/photos/
     map_photo: str = ""         # имя файла из /data/photos/
     map_url: str = ""           # ссылка на карту (Яндекс/2ГИС/Google)
     map_service: str = "yandex" # yandex / 2gis / google
+    site_name: str = "Городская Пауза"
+    hero_title: str = "Искусство комфортного проживания"
+    hero_subtitle: str = "Апартаменты премиум-класса · Посуточная аренда"
+    logo_font: str = "im_fell"  # im_fell / playfair / unifraktur / tangerine / pacifico / bebas
 
 class HouseRulesText(BaseModel):
     text: str = ""
@@ -933,13 +939,22 @@ async def set_house_rules(r: HouseRulesText, _: bool = Depends(require_admin)):
 # API — SITE SETTINGS (обложка, карта)
 # =====================================================
 
-DEFAULT_SETTINGS = {"hero_photo": "", "map_photo": "", "map_url": "", "map_service": "yandex"}
+DEFAULT_SETTINGS = {
+    "hero_photo": "", "map_photo": "", "map_url": "", "map_service": "yandex",
+    "site_name": "Городская Пауза",
+    "hero_title": "Искусство комфортного проживания",
+    "hero_subtitle": "Апартаменты премиум-класса · Посуточная аренда",
+    "logo_font": "im_fell",
+}
 
 @app.get("/api/site-settings")
 async def get_site_settings():
     if os.path.exists(SETTINGS_FILE):
         with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
+            saved = json.load(f)
+        # Мержим с дефолтами — если settings.json был создан до появления
+        # новых полей (site_name, hero_title и т.д.), они всё равно будут в ответе
+        return {**DEFAULT_SETTINGS, **saved}
     return DEFAULT_SETTINGS
 
 @app.post("/api/site-settings")
@@ -1004,14 +1019,15 @@ async def delete_place(place_id: str, _: bool = Depends(require_admin)):
 # API — CONTACTS
 # =====================================================
 
-DEFAULT_CONTACTS = {"phone": "", "email": "", "telegram": ""}
+DEFAULT_CONTACTS = {"phone": "", "email": "", "telegram": "", "whatsapp": "", "max": ""}
 
 @app.get("/api/contacts")
 async def get_contacts():
     """Публичный — возвращает контактные данные."""
     if os.path.exists(CONTACTS_FILE):
         with open(CONTACTS_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
+            saved = json.load(f)
+        return {**DEFAULT_CONTACTS, **saved}
     return DEFAULT_CONTACTS
 
 @app.post("/api/contacts")
@@ -1024,27 +1040,36 @@ async def set_contacts(c: Contacts, _: bool = Depends(require_admin)):
 # API — PHOTOS
 # =====================================================
 
+def load_photos_order_data():
+    """Читает photos_order.json, гарантируя наличие всех ключей."""
+    order_data = {"order": [], "labels": {}, "purpose": {}}
+    if os.path.exists(PHOTOS_ORDER_FILE):
+        with open(PHOTOS_ORDER_FILE, "r", encoding="utf-8") as f:
+            saved = json.load(f)
+        order_data["order"] = saved.get("order", [])
+        order_data["labels"] = saved.get("labels", {})
+        order_data["purpose"] = saved.get("purpose", {})
+    return order_data
+
 def get_photos_list():
-    """Возвращает список фото в правильном порядке."""
+    """Возвращает список фото ГАЛЕРЕИ КВАРТИРЫ в правильном порядке.
+
+    Фото, загруженные с purpose != "gallery" (обложка сайта, фото карты,
+    фото мест «Куда сходить») сюда не попадают.
+    """
     os.makedirs(PHOTOS_DIR, exist_ok=True)
-    # Все файлы в папке
     all_files = sorted([
         f for f in os.listdir(PHOTOS_DIR)
         if f.lower().endswith(('.jpg', '.jpeg', '.png', '.webp'))
     ])
-    # Порядок из файла
-    order = all_files
-    if os.path.exists(PHOTOS_ORDER_FILE):
-        with open(PHOTOS_ORDER_FILE, "r", encoding="utf-8") as f:
-            saved = json.load(f)
-        # Берём сохранённый порядок, добавляем новые файлы в конец
-        order = [f for f in saved.get("order", []) if f in all_files]
-        order += [f for f in all_files if f not in order]
-    # Метки
-    labels = {}
-    if os.path.exists(PHOTOS_ORDER_FILE):
-        with open(PHOTOS_ORDER_FILE, "r", encoding="utf-8") as f:
-            labels = json.load(f).get("labels", {})
+    order_data = load_photos_order_data()
+    purpose = order_data["purpose"]
+    # Старые фото без метки purpose (загружены до этого изменения) по
+    # умолчанию считаются галерейными — почистить можно вручную
+    gallery_files = [f for f in all_files if purpose.get(f, "gallery") == "gallery"]
+    saved_order = [f for f in order_data["order"] if f in gallery_files]
+    order = saved_order + [f for f in gallery_files if f not in saved_order]
+    labels = order_data["labels"]
     return [
         {"filename": f, "url": f"/data/photos/{f}", "label": labels.get(f, f)}
         for f in order
@@ -1052,32 +1077,32 @@ def get_photos_list():
 
 @app.get("/api/photos")
 async def list_photos():
-    """Публичный — список фото для галереи."""
+    """Публичный — список фото для галереи квартиры."""
     return get_photos_list()
 
 @app.post("/api/photos/upload")
 async def upload_photo(
     file: UploadFile = File(...),
     label: str = Form(""),
+    purpose: str = Form("gallery"),
     _: bool = Depends(require_admin)
 ):
-    """Загрузка нового фото."""
+    """Загрузка нового фото. purpose: gallery / site / place."""
     os.makedirs(PHOTOS_DIR, exist_ok=True)
     ext = os.path.splitext(file.filename or "photo.jpg")[1].lower() or ".jpg"
     if ext not in (".jpg", ".jpeg", ".png", ".webp"):
         raise HTTPException(status_code=400, detail="Поддерживаются только jpg, png, webp")
-    # Генерируем уникальное имя
+    if purpose not in ("gallery", "site", "place"):
+        purpose = "gallery"
     filename = f"photo_{secrets.token_hex(6)}{ext}"
     filepath = os.path.join(PHOTOS_DIR, filename)
     content = await file.read()
     with open(filepath, "wb") as f:
         f.write(content)
-    # Добавляем в порядок
-    order_data = {"order": [], "labels": {}}
-    if os.path.exists(PHOTOS_ORDER_FILE):
-        with open(PHOTOS_ORDER_FILE, "r", encoding="utf-8") as f:
-            order_data = json.load(f)
-    order_data["order"].append(filename)
+    order_data = load_photos_order_data()
+    order_data["purpose"][filename] = purpose
+    if purpose == "gallery":
+        order_data["order"].append(filename)
     if label:
         order_data["labels"][filename] = label
     with open(PHOTOS_ORDER_FILE, "w", encoding="utf-8") as f:
@@ -1091,24 +1116,18 @@ async def delete_photo(filename: str, _: bool = Depends(require_admin)):
     if not os.path.exists(filepath):
         raise HTTPException(status_code=404, detail="Файл не найден")
     os.remove(filepath)
-    # Убираем из порядка
-    if os.path.exists(PHOTOS_ORDER_FILE):
-        with open(PHOTOS_ORDER_FILE, "r", encoding="utf-8") as f:
-            order_data = json.load(f)
-        order_data["order"] = [f for f in order_data.get("order", []) if f != filename]
-        order_data.get("labels", {}).pop(filename, None)
-        with open(PHOTOS_ORDER_FILE, "w", encoding="utf-8") as f:
-            json.dump(order_data, f, ensure_ascii=False)
+    order_data = load_photos_order_data()
+    order_data["order"] = [f for f in order_data["order"] if f != filename]
+    order_data["labels"].pop(filename, None)
+    order_data["purpose"].pop(filename, None)
+    with open(PHOTOS_ORDER_FILE, "w", encoding="utf-8") as f:
+        json.dump(order_data, f, ensure_ascii=False)
     return {"ok": True}
 
 @app.post("/api/photos/reorder")
 async def reorder_photos(p: PhotoOrder, _: bool = Depends(require_admin)):
-    """Изменение порядка фото."""
-    order_data = {"order": p.order, "labels": {}}
-    if os.path.exists(PHOTOS_ORDER_FILE):
-        with open(PHOTOS_ORDER_FILE, "r", encoding="utf-8") as f:
-            existing = json.load(f)
-        order_data["labels"] = existing.get("labels", {})
+    """Изменение порядка фото галереи."""
+    order_data = load_photos_order_data()
     order_data["order"] = p.order
     with open(PHOTOS_ORDER_FILE, "w", encoding="utf-8") as f:
         json.dump(order_data, f, ensure_ascii=False)
@@ -1117,11 +1136,8 @@ async def reorder_photos(p: PhotoOrder, _: bool = Depends(require_admin)):
 @app.post("/api/photos/{filename}/label")
 async def set_photo_label(filename: str, lb: PhotoLabel, _: bool = Depends(require_admin)):
     """Установить подпись к фото."""
-    order_data = {"order": [], "labels": {}}
-    if os.path.exists(PHOTOS_ORDER_FILE):
-        with open(PHOTOS_ORDER_FILE, "r", encoding="utf-8") as f:
-            order_data = json.load(f)
-    order_data.setdefault("labels", {})[filename] = lb.label
+    order_data = load_photos_order_data()
+    order_data["labels"][filename] = lb.label
     with open(PHOTOS_ORDER_FILE, "w", encoding="utf-8") as f:
         json.dump(order_data, f, ensure_ascii=False)
     return {"ok": True}

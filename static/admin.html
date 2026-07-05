@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Панель управления — Городская Пауза</title>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Montserrat:wght@300;400;500;600&family=IM+Fell+English&family=Playfair+Display:wght@700&family=UnifrakturMaguntia&family=Tangerine:wght@700&family=Pacifico&family=Bebas+Neue&display=swap" rel="stylesheet">
 <style>
 :root{
   --gold:#C9A84C;--gold-light:#E8C97A;--gold-muted:#6B5420;
@@ -501,10 +501,19 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
             <div class="info-label">Email</div>
             <input type="text" class="info-input" id="contactsEmail" placeholder="citypause@mail.ru">
           </div>
-          <div class="info-field" style="margin-bottom:24px">
+          <div class="info-field" style="margin-bottom:16px">
             <div class="info-label">Telegram (username без @, например: citypause)</div>
             <input type="text" class="info-input" id="contactsTelegram" placeholder="citypause">
           </div>
+          <div class="info-field" style="margin-bottom:16px">
+            <div class="info-label">WhatsApp (номер телефона)</div>
+            <input type="text" class="info-input" id="contactsWhatsapp" placeholder="+7 (383) 000-00-00">
+          </div>
+          <div class="info-field" style="margin-bottom:24px">
+            <div class="info-label">MAX (мессенджер)</div>
+            <input type="text" class="info-input" id="contactsMax" placeholder="+7 (383) 000-00-00">
+          </div>
+          <div style="font-size:10px;color:var(--text-muted);margin-bottom:16px">Незаполненные поля не показываются на сайте</div>
           <button class="btn btn-primary" onclick="saveContacts()">Сохранить контакты</button>
         </div>
       </div>
@@ -627,9 +636,38 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
 
     <!-- SITE SETTINGS -->
     <div class="panel" id="panel-sitesettings">
+      <div class="card" style="max-width:700px;margin-bottom:20px">
+        <div class="card-header">
+          <span class="card-title">Оформление</span>
+        </div>
+        <div class="card-body">
+          <div class="info-field" style="margin-bottom:16px">
+            <div class="info-label">Название сайта</div>
+            <input type="text" class="info-input" id="settingsSiteName" placeholder="Городская Пауза" style="width:100%">
+          </div>
+
+          <div class="info-field" style="margin-bottom:16px">
+            <div class="info-label">Заголовок на главном экране (Hero)</div>
+            <input type="text" class="info-input" id="settingsHeroTitle" placeholder="Искусство комфортного проживания" style="width:100%">
+          </div>
+
+          <div class="info-field" style="margin-bottom:24px">
+            <div class="info-label">Подзаголовок на главном экране</div>
+            <input type="text" class="info-input" id="settingsHeroSubtitle" placeholder="Апартаменты премиум-класса · Посуточная аренда" style="width:100%">
+          </div>
+
+          <div class="info-field" style="margin-bottom:8px">
+            <div class="info-label">Шрифт логотипа и навигации</div>
+          </div>
+          <div id="fontPicker" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-bottom:20px"></div>
+
+          <button class="btn btn-primary" onclick="saveDesignSettings()">Сохранить оформление</button>
+        </div>
+      </div>
+
       <div class="card" style="max-width:700px">
         <div class="card-header">
-          <span class="card-title">Настройки сайта</span>
+          <span class="card-title">Медиа и карта</span>
         </div>
         <div class="card-body">
           <div style="font-size:11px;color:var(--text-muted);margin-bottom:24px;padding:12px 16px;background:rgba(201,168,76,.04);border:1px solid rgba(201,168,76,.1)">
@@ -1749,6 +1787,8 @@ async function loadContacts() {
     document.getElementById('contactsPhone').value    = c.phone    || '';
     document.getElementById('contactsEmail').value    = c.email    || '';
     document.getElementById('contactsTelegram').value = c.telegram || '';
+    document.getElementById('contactsWhatsapp').value = c.whatsapp || '';
+    document.getElementById('contactsMax').value      = c.max      || '';
   } catch(e) {}
 }
 
@@ -1757,6 +1797,8 @@ async function saveContacts() {
     phone:    document.getElementById('contactsPhone').value.trim(),
     email:    document.getElementById('contactsEmail').value.trim(),
     telegram: document.getElementById('contactsTelegram').value.trim().replace(/^@/, ''),
+    whatsapp: document.getElementById('contactsWhatsapp').value.trim(),
+    max:      document.getElementById('contactsMax').value.trim(),
   };
   try {
     await apiPost('/api/contacts', payload);
@@ -1847,6 +1889,7 @@ async function uploadPlacePhoto() {
   const formData = new FormData();
   formData.append('file', file);
   formData.append('label', document.getElementById('placeName').value || 'Место');
+  formData.append('purpose', 'place');
   try {
     const resp = await fetch(`${API_BASE}/api/photos/upload`, {
       method: 'POST',
@@ -2034,11 +2077,41 @@ async function saveHouseRules() {
 }
 
 // SITE SETTINGS
+const FONT_OPTIONS = [
+  {key: 'im_fell',    label: 'IM Fell English', family: "'IM Fell English',serif",  weight: 400},
+  {key: 'playfair',   label: 'Playfair Display', family: "'Playfair Display',serif", weight: 700},
+  {key: 'unifraktur', label: 'UnifrakturMaguntia', family: "'UnifrakturMaguntia',serif", weight: 400},
+  {key: 'tangerine',  label: 'Tangerine',        family: "'Tangerine',cursive",      weight: 700},
+  {key: 'pacifico',   label: 'Pacifico',         family: "'Pacifico',cursive",       weight: 400},
+  {key: 'bebas',      label: 'Bebas Neue',       family: "'Bebas Neue',sans-serif",  weight: 400},
+];
+let selectedFont = 'im_fell';
+
+function renderFontPicker() {
+  const el = document.getElementById('fontPicker');
+  el.innerHTML = FONT_OPTIONS.map(f => `
+    <div onclick="selectFont('${f.key}')" id="fontOpt-${f.key}" style="cursor:pointer;padding:14px 8px;text-align:center;border:1px solid ${f.key === selectedFont ? 'var(--gold)' : 'var(--black-border)'};background:var(--black-card);transition:border-color .2s">
+      <div style="font-family:${f.family};font-weight:${f.weight};font-size:20px;letter-spacing:.03em;background:linear-gradient(180deg,#FFD060 0%,#D4920A 28%,#8B5E00 50%,#D4920A 72%,#FFD060 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:4px">Городская Пауза</div>
+      <div style="font-size:9px;color:var(--text-muted);letter-spacing:.05em">${f.label}</div>
+    </div>
+  `).join('');
+}
+
+function selectFont(key) {
+  selectedFont = key;
+  renderFontPicker();
+}
+
 async function loadSiteSettings() {
   try {
     const s = await apiGet('/api/site-settings');
-    document.getElementById('settingsMapUrl').value     = s.map_url     || '';
-    document.getElementById('settingsMapService').value = s.map_service || 'yandex';
+    document.getElementById('settingsMapUrl').value       = s.map_url        || '';
+    document.getElementById('settingsMapService').value   = s.map_service    || 'yandex';
+    document.getElementById('settingsSiteName').value     = s.site_name      || 'Городская Пауза';
+    document.getElementById('settingsHeroTitle').value    = s.hero_title     || '';
+    document.getElementById('settingsHeroSubtitle').value = s.hero_subtitle  || '';
+    selectedFont = s.logo_font || 'im_fell';
+    renderFontPicker();
     if(s.hero_photo) {
       const img = document.getElementById('heroPhotoImg');
       img.src = `${API_BASE}/data/photos/${s.hero_photo}`;
@@ -2065,6 +2138,7 @@ async function uploadSettingsPhoto(type) {
   const formData = new FormData();
   formData.append('file', file);
   formData.append('label', label);
+  formData.append('purpose', 'site');
   try {
     showToast('Загружаю фото...', 'gold');
     const resp = await fetch(`${API_BASE}/api/photos/upload`, {
@@ -2106,6 +2180,20 @@ async function saveSiteSettings() {
     const current = await apiGet('/api/site-settings');
     await apiPost('/api/site-settings', {...current, ...payload});
     showToast('Настройки сохранены', 'gold');
+  } catch(e) { showToast('Ошибка сохранения', 'err'); }
+}
+
+async function saveDesignSettings() {
+  const payload = {
+    site_name:     document.getElementById('settingsSiteName').value.trim()     || 'Городская Пауза',
+    hero_title:    document.getElementById('settingsHeroTitle').value.trim(),
+    hero_subtitle: document.getElementById('settingsHeroSubtitle').value.trim(),
+    logo_font:     selectedFont,
+  };
+  try {
+    const current = await apiGet('/api/site-settings');
+    await apiPost('/api/site-settings', {...current, ...payload});
+    showToast('Оформление сохранено', 'gold');
   } catch(e) { showToast('Ошибка сохранения', 'err'); }
 }
 
