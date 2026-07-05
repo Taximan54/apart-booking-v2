@@ -96,6 +96,10 @@ class SiteSettings(BaseModel):
     hero_subtitle: str = "Апартаменты премиум-класса · Посуточная аренда"
     logo_font: str = "im_fell"  # im_fell / playfair / unifraktur / tangerine / pacifico / bebas
     logo_bold: bool = False
+    logo_scale: float = 1.0     # 1 / 1.5 / 2 / 3 — множитель размера логотипа и кнопки "Забронировать"
+    logo_bold: bool = False
+    logo_scale: float = 1.0     # 1.0–3.0, размер логотипа/навигации относительно базового
+    logo_bold: bool = False
     logo_scale: float = 1.0    # 1.0 / 1.5 / 2.0 / 2.5 / 3.0
 
 class HouseRulesText(BaseModel):
