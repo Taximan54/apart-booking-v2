@@ -661,6 +661,17 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
           </div>
           <div id="fontPicker" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-bottom:20px"></div>
 
+          <div style="display:flex;gap:24px;flex-wrap:wrap;margin-bottom:24px">
+            <div>
+              <div class="info-label" style="margin-bottom:8px">Начертание</div>
+              <div id="boldToggle" style="display:flex;gap:8px"></div>
+            </div>
+            <div>
+              <div class="info-label" style="margin-bottom:8px">Размер</div>
+              <div id="scalePicker" style="display:flex;gap:8px"></div>
+            </div>
+          </div>
+
           <button class="btn btn-primary" onclick="saveDesignSettings()">Сохранить оформление</button>
         </div>
       </div>
@@ -2086,20 +2097,49 @@ const FONT_OPTIONS = [
   {key: 'bebas',      label: 'Bebas Neue',       family: "'Bebas Neue',sans-serif",  weight: 400},
 ];
 let selectedFont = 'im_fell';
+let selectedBold = false;
+let selectedScale = 1.0;
+const SCALE_OPTIONS = [1.0, 1.5, 2.0, 2.5, 3.0];
 
 function renderFontPicker() {
   const el = document.getElementById('fontPicker');
   el.innerHTML = FONT_OPTIONS.map(f => `
     <div onclick="selectFont('${f.key}')" id="fontOpt-${f.key}" style="cursor:pointer;padding:14px 8px;text-align:center;border:1px solid ${f.key === selectedFont ? 'var(--gold)' : 'var(--black-border)'};background:var(--black-card);transition:border-color .2s">
-      <div style="font-family:${f.family};font-weight:${f.weight};font-size:20px;letter-spacing:.03em;background:linear-gradient(180deg,#FFD060 0%,#D4920A 28%,#8B5E00 50%,#D4920A 72%,#FFD060 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:4px">Городская Пауза</div>
+      <div style="font-family:${f.family};font-weight:${selectedBold ? 700 : f.weight};font-size:20px;letter-spacing:.03em;background:linear-gradient(180deg,#FFD060 0%,#D4920A 28%,#8B5E00 50%,#D4920A 72%,#FFD060 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:4px">Городская Пауза</div>
       <div style="font-size:9px;color:var(--text-muted);letter-spacing:.05em">${f.label}</div>
     </div>
+  `).join('');
+}
+
+function renderBoldToggle() {
+  const el = document.getElementById('boldToggle');
+  const opts = [{v:false,label:'Обычный'},{v:true,label:'Жирный'}];
+  el.innerHTML = opts.map(o => `
+    <button type="button" onclick="selectBold(${o.v})" class="btn ${selectedBold===o.v ? 'btn-primary' : 'btn-ghost'} btn-sm">${o.label}</button>
+  `).join('');
+}
+
+function renderScalePicker() {
+  const el = document.getElementById('scalePicker');
+  el.innerHTML = SCALE_OPTIONS.map(s => `
+    <button type="button" onclick="selectScale(${s})" class="btn ${selectedScale===s ? 'btn-primary' : 'btn-ghost'} btn-sm">${s}x</button>
   `).join('');
 }
 
 function selectFont(key) {
   selectedFont = key;
   renderFontPicker();
+}
+
+function selectBold(v) {
+  selectedBold = v;
+  renderBoldToggle();
+  renderFontPicker();
+}
+
+function selectScale(v) {
+  selectedScale = v;
+  renderScalePicker();
 }
 
 async function loadSiteSettings() {
@@ -2111,7 +2151,11 @@ async function loadSiteSettings() {
     document.getElementById('settingsHeroTitle').value    = s.hero_title     || '';
     document.getElementById('settingsHeroSubtitle').value = s.hero_subtitle  || '';
     selectedFont = s.logo_font || 'im_fell';
+    selectedBold = !!s.logo_bold;
+    selectedScale = s.logo_scale || 1.0;
     renderFontPicker();
+    renderBoldToggle();
+    renderScalePicker();
     if(s.hero_photo) {
       const img = document.getElementById('heroPhotoImg');
       img.src = `${API_BASE}/data/photos/${s.hero_photo}`;
@@ -2189,6 +2233,8 @@ async function saveDesignSettings() {
     hero_title:    document.getElementById('settingsHeroTitle').value.trim(),
     hero_subtitle: document.getElementById('settingsHeroSubtitle').value.trim(),
     logo_font:     selectedFont,
+    logo_bold:     selectedBold,
+    logo_scale:    selectedScale,
   };
   try {
     const current = await apiGet('/api/site-settings');

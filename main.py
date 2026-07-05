@@ -95,6 +95,8 @@ class SiteSettings(BaseModel):
     hero_title: str = "Искусство комфортного проживания"
     hero_subtitle: str = "Апартаменты премиум-класса · Посуточная аренда"
     logo_font: str = "im_fell"  # im_fell / playfair / unifraktur / tangerine / pacifico / bebas
+    logo_bold: bool = False
+    logo_scale: float = 1.0    # 1.0 / 1.5 / 2.0 / 2.5 / 3.0
 
 class HouseRulesText(BaseModel):
     text: str = ""
@@ -945,6 +947,8 @@ DEFAULT_SETTINGS = {
     "hero_title": "Искусство комфортного проживания",
     "hero_subtitle": "Апартаменты премиум-класса · Посуточная аренда",
     "logo_font": "im_fell",
+    "logo_bold": False,
+    "logo_scale": 1.0,
 }
 
 @app.get("/api/site-settings")
