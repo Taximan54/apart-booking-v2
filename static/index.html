@@ -23,7 +23,8 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 header{position:fixed;top:0;left:0;right:0;z-index:1000;display:flex;align-items:center;justify-content:space-between;gap:24px;padding:16px 40px;background:linear-gradient(to bottom,rgba(10,10,10,.98),rgba(10,10,10,.85));backdrop-filter:blur(20px);border-bottom:1px solid rgba(201,168,76,.15);transition:padding .4s}
 .logo{flex-shrink:0;font-family:var(--logo-font);font-size:calc(32px * var(--logo-scale));font-weight:var(--logo-weight);letter-spacing:.08em;text-decoration:none;background:linear-gradient(180deg,#FFD060 0%,#D4920A 28%,#8B5E00 50%,#D4920A 72%,#FFD060 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;filter:drop-shadow(0 2px 8px rgba(80,40,0,.8))}
 .logo span{font-weight:inherit}
-nav{flex:1;display:flex;flex-wrap:wrap;justify-content:center;align-content:center;align-items:center;row-gap:10px;column-gap:36px;min-width:0}
+nav{flex:1;display:flex;flex-direction:column;align-items:center;row-gap:10px;min-width:0}
+.nav-row{display:flex;flex-wrap:nowrap;justify-content:center;column-gap:36px}
 nav a{font-family:var(--logo-font);font-weight:var(--logo-weight);text-decoration:none;font-size:calc(18px * var(--nav-scale));letter-spacing:.04em;transition:opacity .3s;background:linear-gradient(180deg,#FFD060 0%,#D4920A 28%,#8B5E00 50%,#D4920A 72%,#FFD060 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;filter:drop-shadow(0 1px 4px rgba(80,40,0,.6));white-space:nowrap}
 nav a:hover{opacity:.7}
 nav a:hover{color:var(--gold)}
@@ -31,7 +32,7 @@ nav a:hover{color:var(--gold)}
 .nav-btn:hover{border-color:#FFD060;opacity:.8}
 
 @media(max-width:1250px){
-  nav{column-gap:20px}
+  .nav-row{column-gap:20px}
 }
 
 /* HERO */
@@ -284,13 +285,17 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
 <header id="mainHeader">
   <a href="#" class="logo">Городская Пауза</a>
   <nav>
-    <a href="#gallery">Галерея</a>
-    <a href="#amenities">Удобства</a>
-    <a href="#location">Расположение</a>
-    <a href="#prices">Цены</a>
-    <a href="/static/house_rules.html">Правила проживания</a>
-    <a href="/static/places.html">Куда сходить?</a>
-    <a href="#contacts">Контакты</a>
+    <div class="nav-row">
+      <a href="#gallery">Галерея</a>
+      <a href="#amenities">Удобства</a>
+      <a href="#location">Расположение</a>
+      <a href="#prices">Цены</a>
+    </div>
+    <div class="nav-row">
+      <a href="/static/house_rules.html">Правила проживания</a>
+      <a href="/static/places.html">Куда сходить?</a>
+      <a href="#contacts">Контакты</a>
+    </div>
   </nav>
   <a href="#booking" class="nav-btn">Забронировать</a>
 </header>
