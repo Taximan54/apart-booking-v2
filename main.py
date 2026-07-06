@@ -97,6 +97,7 @@ class SiteSettings(BaseModel):
     logo_font: str = "im_fell"  # im_fell / playfair / unifraktur / tangerine / pacifico / bebas
     logo_bold: bool = False
     logo_scale: float = 1.0     # 1 / 1.5 / 2 / 3 — множитель размера логотипа и кнопки "Забронировать"
+    nav_scale: float = 1.0      # множитель размера пунктов меню (навигации)
     logo_bold: bool = False
     logo_scale: float = 1.0     # 1.0–3.0, размер логотипа/навигации относительно базового
     logo_bold: bool = False
@@ -953,6 +954,7 @@ DEFAULT_SETTINGS = {
     "logo_font": "im_fell",
     "logo_bold": False,
     "logo_scale": 1.0,
+    "nav_scale": 1.0,
 }
 
 @app.get("/api/site-settings")

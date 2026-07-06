@@ -12,7 +12,7 @@
   --gold:#D4A017;--gold-light:#F0C040;--gold-dark:#8B6914;--gold-muted:#6B5420;
   --black:#0A0A0A;--black-card:#141414;--black-border:#1E1E1E;
   --text-primary:#F0E6C8;--text-secondary:#A89060;--text-muted:#5A4A30;--white:#FAF6EE;
-  --logo-font:'IM Fell English',serif;--logo-weight:400;--logo-scale:1;
+  --logo-font:'IM Fell English',serif;--logo-weight:400;--logo-scale:1;--nav-scale:1;
 }
 *{margin:0;padding:0;box-sizing:border-box}
 html{scroll-behavior:smooth}
@@ -24,7 +24,7 @@ header{position:fixed;top:0;left:0;right:0;z-index:1000;display:flex;align-items
 .logo{flex-shrink:0;font-family:var(--logo-font);font-size:calc(32px * var(--logo-scale));font-weight:var(--logo-weight);letter-spacing:.08em;text-decoration:none;background:linear-gradient(180deg,#FFD060 0%,#D4920A 28%,#8B5E00 50%,#D4920A 72%,#FFD060 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;filter:drop-shadow(0 2px 8px rgba(80,40,0,.8))}
 .logo span{font-weight:inherit}
 nav{display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:center;row-gap:8px;max-width:520px}
-nav a{font-family:var(--logo-font);font-weight:var(--logo-weight);text-decoration:none;font-size:16px;letter-spacing:.04em;margin-left:24px;transition:opacity .3s;background:linear-gradient(180deg,#FFD060 0%,#D4920A 28%,#8B5E00 50%,#D4920A 72%,#FFD060 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;filter:drop-shadow(0 1px 4px rgba(80,40,0,.6));white-space:nowrap}
+nav a{font-family:var(--logo-font);font-weight:var(--logo-weight);text-decoration:none;font-size:calc(16px * var(--nav-scale));letter-spacing:.04em;margin-left:24px;transition:opacity .3s;background:linear-gradient(180deg,#FFD060 0%,#D4920A 28%,#8B5E00 50%,#D4920A 72%,#FFD060 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;filter:drop-shadow(0 1px 4px rgba(80,40,0,.6));white-space:nowrap}
 nav a:hover{opacity:.7}
 nav a:hover{color:var(--gold)}
 .nav-btn{flex-shrink:0;margin-left:0;padding:12px 28px;background:transparent;border:1px solid #D4920A;font-size:calc(18px * var(--logo-scale));font-family:var(--logo-font);font-weight:var(--logo-weight);letter-spacing:.05em;cursor:pointer;transition:all .3s;text-decoration:none;display:inline-block;background-clip:text;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-image:linear-gradient(180deg,#FFD060 0%,#D4920A 28%,#8B5E00 50%,#D4920A 72%,#FFD060 100%);filter:drop-shadow(0 1px 4px rgba(80,40,0,.6))}
@@ -865,6 +865,7 @@ async function init() {
     document.documentElement.style.setProperty('--logo-font', font.family);
     document.documentElement.style.setProperty('--logo-weight', settings.logo_bold ? 700 : font.weight);
     document.documentElement.style.setProperty('--logo-scale', settings.logo_scale || 1);
+    document.documentElement.style.setProperty('--nav-scale', settings.nav_scale || 1);
 
     const siteName = settings.site_name || 'Городская Пауза';
     document.title = `${siteName} — Апартаменты посуточно`;

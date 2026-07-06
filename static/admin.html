@@ -667,8 +667,13 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
               <div id="boldToggle" style="display:flex;gap:8px"></div>
             </div>
             <div>
-              <div class="info-label" style="margin-bottom:8px">Размер</div>
+              <div class="info-label" style="margin-bottom:8px">Размер логотипа и кнопки «Забронировать»</div>
               <div id="scalePicker" style="display:flex;gap:8px"></div>
+            </div>
+            <div>
+              <div class="info-label" style="margin-bottom:8px">Размер меню (навигации)</div>
+              <div id="navScalePicker" style="display:flex;gap:8px"></div>
+              <div style="font-size:10px;color:var(--text-muted);margin-top:6px;max-width:220px">При увеличении меню может перенестись в 3 строки вместо 2</div>
             </div>
           </div>
 
@@ -2099,7 +2104,9 @@ const FONT_OPTIONS = [
 let selectedFont = 'im_fell';
 let selectedBold = false;
 let selectedScale = 1.0;
+let selectedNavScale = 1.0;
 const SCALE_OPTIONS = [1.0, 1.5, 2.0, 2.5, 3.0];
+const NAV_SCALE_OPTIONS = [1.0, 1.2, 1.4, 1.6, 1.8];
 
 function renderFontPicker() {
   const el = document.getElementById('fontPicker');
@@ -2126,6 +2133,13 @@ function renderScalePicker() {
   `).join('');
 }
 
+function renderNavScalePicker() {
+  const el = document.getElementById('navScalePicker');
+  el.innerHTML = NAV_SCALE_OPTIONS.map(s => `
+    <button type="button" onclick="selectNavScale(${s})" class="btn ${selectedNavScale===s ? 'btn-primary' : 'btn-ghost'} btn-sm">${s}x</button>
+  `).join('');
+}
+
 function selectFont(key) {
   selectedFont = key;
   renderFontPicker();
@@ -2142,6 +2156,11 @@ function selectScale(v) {
   renderScalePicker();
 }
 
+function selectNavScale(v) {
+  selectedNavScale = v;
+  renderNavScalePicker();
+}
+
 async function loadSiteSettings() {
   try {
     const s = await apiGet('/api/site-settings');
@@ -2153,9 +2172,11 @@ async function loadSiteSettings() {
     selectedFont = s.logo_font || 'im_fell';
     selectedBold = !!s.logo_bold;
     selectedScale = s.logo_scale || 1.0;
+    selectedNavScale = s.nav_scale || 1.0;
     renderFontPicker();
     renderBoldToggle();
     renderScalePicker();
+    renderNavScalePicker();
     if(s.hero_photo) {
       const img = document.getElementById('heroPhotoImg');
       img.src = `${API_BASE}/data/photos/${s.hero_photo}`;
@@ -2235,6 +2256,7 @@ async function saveDesignSettings() {
     logo_font:     selectedFont,
     logo_bold:     selectedBold,
     logo_scale:    selectedScale,
+    nav_scale:     selectedNavScale,
   };
   try {
     const current = await apiGet('/api/site-settings');
