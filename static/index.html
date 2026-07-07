@@ -13,6 +13,7 @@
   --black:#0A0A0A;--black-card:#141414;--black-border:#1E1E1E;
   --text-primary:#F0E6C8;--text-secondary:#A89060;--text-muted:#5A4A30;--white:#FAF6EE;
   --logo-font:'IM Fell English',serif;--logo-weight:400;--logo-scale:1;--nav-scale:1;
+  --accent-gradient:linear-gradient(180deg,#FFD060 0%,#D4920A 28%,#8B5E00 50%,#D4920A 72%,#FFD060 100%);
 }
 *{margin:0;padding:0;box-sizing:border-box}
 html{scroll-behavior:smooth}
@@ -21,15 +22,15 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 
 /* HEADER */
 header{position:fixed;top:0;left:0;right:0;z-index:1000;display:flex;align-items:center;justify-content:space-between;gap:24px;padding:16px 40px;background:linear-gradient(to bottom,rgba(10,10,10,.98),rgba(10,10,10,.85));backdrop-filter:blur(20px);border-bottom:1px solid rgba(201,168,76,.15);transition:padding .4s}
-.logo{flex-shrink:0;font-family:var(--logo-font);font-size:calc(32px * var(--logo-scale));font-weight:var(--logo-weight);letter-spacing:.08em;text-decoration:none;background:linear-gradient(180deg,#FFD060 0%,#D4920A 28%,#8B5E00 50%,#D4920A 72%,#FFD060 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;filter:drop-shadow(0 2px 8px rgba(80,40,0,.8))}
+.logo{flex-shrink:0;font-family:var(--logo-font);font-size:calc(32px * var(--logo-scale));font-weight:var(--logo-weight);letter-spacing:.08em;text-decoration:none;background:var(--accent-gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;filter:drop-shadow(0 2px 8px rgba(80,40,0,.8))}
 .logo span{font-weight:inherit}
 nav{flex:1;display:flex;flex-direction:column;align-items:center;row-gap:10px;min-width:0}
 .nav-row{display:flex;flex-wrap:nowrap;justify-content:center;column-gap:36px}
-nav a{font-family:var(--logo-font);font-weight:var(--logo-weight);text-decoration:none;font-size:calc(18px * var(--nav-scale));letter-spacing:.04em;transition:opacity .3s;background:linear-gradient(180deg,#FFD060 0%,#D4920A 28%,#8B5E00 50%,#D4920A 72%,#FFD060 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;filter:drop-shadow(0 1px 4px rgba(80,40,0,.6));white-space:nowrap}
+nav a{font-family:var(--logo-font);font-weight:var(--logo-weight);text-decoration:none;font-size:calc(18px * var(--nav-scale));letter-spacing:.04em;transition:opacity .3s;background:var(--accent-gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;filter:drop-shadow(0 1px 4px rgba(80,40,0,.6));white-space:nowrap}
 nav a:hover{opacity:.7}
 nav a:hover{color:var(--gold)}
-.nav-btn{flex-shrink:0;margin-left:0;padding:12px 28px;background:transparent;border:1px solid #D4920A;font-size:calc(18px * var(--logo-scale));font-family:var(--logo-font);font-weight:var(--logo-weight);letter-spacing:.05em;cursor:pointer;transition:all .3s;text-decoration:none;display:inline-block;background-clip:text;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-image:linear-gradient(180deg,#FFD060 0%,#D4920A 28%,#8B5E00 50%,#D4920A 72%,#FFD060 100%);filter:drop-shadow(0 1px 4px rgba(80,40,0,.6))}
-.nav-btn:hover{border-color:#FFD060;opacity:.8}
+.nav-btn{flex-shrink:0;margin-left:0;padding:12px 28px;background:transparent;border:1px solid var(--gold);font-size:calc(18px * var(--logo-scale));font-family:var(--logo-font);font-weight:var(--logo-weight);letter-spacing:.05em;cursor:pointer;transition:all .3s;text-decoration:none;display:inline-block;background-clip:text;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-image:var(--accent-gradient);filter:drop-shadow(0 1px 4px rgba(80,40,0,.6))}
+.nav-btn:hover{border-color:var(--gold-light);opacity:.8}
 
 @media(max-width:1250px){
   .nav-row{column-gap:20px}
@@ -871,6 +872,24 @@ async function init() {
     document.documentElement.style.setProperty('--logo-weight', settings.logo_bold ? 700 : font.weight);
     document.documentElement.style.setProperty('--logo-scale', settings.logo_scale || 1);
     document.documentElement.style.setProperty('--nav-scale', settings.nav_scale || 1);
+
+    const COLOR_THEMES = {
+      gold:       {gold:'#D4A017', light:'#F0C040', dark:'#8B6914', muted:'#6B5420', gradient:'linear-gradient(180deg,#FFD060 0%,#D4920A 28%,#8B5E00 50%,#D4920A 72%,#FFD060 100%)'},
+      emerald:    {gold:'#2E8B57', light:'#6FCF97', dark:'#145A32', muted:'#1F6B45', gradient:'linear-gradient(180deg,#8FE3B0 0%,#2E8B57 28%,#0E3D22 50%,#2E8B57 72%,#8FE3B0 100%)'},
+      sapphire:   {gold:'#2A5CAA', light:'#7EB6FF', dark:'#12294F', muted:'#1F3D6E', gradient:'linear-gradient(180deg,#A8CFFF 0%,#2A5CAA 28%,#0C1E3D 50%,#2A5CAA 72%,#A8CFFF 100%)'},
+      burgundy:   {gold:'#7B1E3A', light:'#C2607F', dark:'#3D0E1C', muted:'#5C1730', gradient:'linear-gradient(180deg,#DE93A9 0%,#7B1E3A 28%,#2E0A16 50%,#7B1E3A 72%,#DE93A9 100%)'},
+      amethyst:   {gold:'#7B4B94', light:'#C6A2D9', dark:'#3F2650', muted:'#5C3A70', gradient:'linear-gradient(180deg,#DDBFEA 0%,#7B4B94 28%,#2F1D3D 50%,#7B4B94 72%,#DDBFEA 100%)'},
+      dusty_rose: {gold:'#C08497', light:'#ECC9D2', dark:'#7A4653', muted:'#9A6575', gradient:'linear-gradient(180deg,#F5DEE3 0%,#C08497 28%,#5E3540 50%,#C08497 72%,#F5DEE3 100%)'},
+      teal:       {gold:'#1F8A8C', light:'#6FD8D2', dark:'#0D4547', muted:'#166668', gradient:'linear-gradient(180deg,#9FEAE5 0%,#1F8A8C 28%,#082D2E 50%,#1F8A8C 72%,#9FEAE5 100%)'},
+      copper:     {gold:'#B5651D', light:'#E8A15C', dark:'#5C310C', muted:'#8A4A15', gradient:'linear-gradient(180deg,#F3C495 0%,#B5651D 28%,#3E2008 50%,#B5651D 72%,#F3C495 100%)'},
+      graphite:   {gold:'#8A8D91', light:'#E4E6E9', dark:'#3A3C3F', muted:'#5F6266', gradient:'linear-gradient(180deg,#F2F3F4 0%,#8A8D91 28%,#232426 50%,#8A8D91 72%,#F2F3F4 100%)'},
+    };
+    const theme = COLOR_THEMES[settings.color_theme] || COLOR_THEMES.gold;
+    document.documentElement.style.setProperty('--gold', theme.gold);
+    document.documentElement.style.setProperty('--gold-light', theme.light);
+    document.documentElement.style.setProperty('--gold-dark', theme.dark);
+    document.documentElement.style.setProperty('--gold-muted', theme.muted);
+    document.documentElement.style.setProperty('--accent-gradient', theme.gradient);
 
     const siteName = settings.site_name || 'Городская Пауза';
     document.title = `${siteName} — Апартаменты посуточно`;

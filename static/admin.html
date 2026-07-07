@@ -661,6 +661,11 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
           </div>
           <div id="fontPicker" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-bottom:20px"></div>
 
+          <div class="info-field" style="margin-bottom:8px">
+            <div class="info-label">Цветовая схема</div>
+          </div>
+          <div id="colorPicker" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-bottom:24px"></div>
+
           <div style="display:flex;gap:24px;flex-wrap:wrap;margin-bottom:24px">
             <div>
               <div class="info-label" style="margin-bottom:8px">Начертание</div>
@@ -2105,8 +2110,35 @@ let selectedFont = 'im_fell';
 let selectedBold = false;
 let selectedScale = 1.0;
 let selectedNavScale = 1.0;
+let selectedColorTheme = 'gold';
 const SCALE_OPTIONS = [1.0, 1.5, 2.0, 2.5, 3.0];
 const NAV_SCALE_OPTIONS = [1.0, 1.2, 1.4, 1.6, 1.8];
+const COLOR_THEMES = [
+  {key: 'gold',       label: 'Золото',        gradient: 'linear-gradient(180deg,#FFD060 0%,#D4920A 28%,#8B5E00 50%,#D4920A 72%,#FFD060 100%)'},
+  {key: 'emerald',    label: 'Изумруд',       gradient: 'linear-gradient(180deg,#8FE3B0 0%,#2E8B57 28%,#0E3D22 50%,#2E8B57 72%,#8FE3B0 100%)'},
+  {key: 'sapphire',   label: 'Сапфир',        gradient: 'linear-gradient(180deg,#A8CFFF 0%,#2A5CAA 28%,#0C1E3D 50%,#2A5CAA 72%,#A8CFFF 100%)'},
+  {key: 'burgundy',   label: 'Бордо',         gradient: 'linear-gradient(180deg,#DE93A9 0%,#7B1E3A 28%,#2E0A16 50%,#7B1E3A 72%,#DE93A9 100%)'},
+  {key: 'amethyst',   label: 'Аметист',       gradient: 'linear-gradient(180deg,#DDBFEA 0%,#7B4B94 28%,#2F1D3D 50%,#7B4B94 72%,#DDBFEA 100%)'},
+  {key: 'dusty_rose', label: 'Пыльная роза',  gradient: 'linear-gradient(180deg,#F5DEE3 0%,#C08497 28%,#5E3540 50%,#C08497 72%,#F5DEE3 100%)'},
+  {key: 'teal',       label: 'Бирюза',        gradient: 'linear-gradient(180deg,#9FEAE5 0%,#1F8A8C 28%,#082D2E 50%,#1F8A8C 72%,#9FEAE5 100%)'},
+  {key: 'copper',     label: 'Медь',          gradient: 'linear-gradient(180deg,#F3C495 0%,#B5651D 28%,#3E2008 50%,#B5651D 72%,#F3C495 100%)'},
+  {key: 'graphite',   label: 'Графит',        gradient: 'linear-gradient(180deg,#F2F3F4 0%,#8A8D91 28%,#232426 50%,#8A8D91 72%,#F2F3F4 100%)'},
+];
+
+function renderColorPicker() {
+  const el = document.getElementById('colorPicker');
+  el.innerHTML = COLOR_THEMES.map(c => `
+    <div onclick="selectColorTheme('${c.key}')" id="colorOpt-${c.key}" style="cursor:pointer;padding:12px 6px;text-align:center;border:1px solid ${c.key === selectedColorTheme ? '#fff' : 'var(--black-border)'};background:var(--black-card);transition:border-color .2s">
+      <div style="width:100%;height:28px;border-radius:2px;margin-bottom:6px;background:${c.gradient}"></div>
+      <div style="font-size:9px;color:var(--text-muted);letter-spacing:.05em">${c.label}</div>
+    </div>
+  `).join('');
+}
+
+function selectColorTheme(key) {
+  selectedColorTheme = key;
+  renderColorPicker();
+}
 
 function renderFontPicker() {
   const el = document.getElementById('fontPicker');
@@ -2173,10 +2205,12 @@ async function loadSiteSettings() {
     selectedBold = !!s.logo_bold;
     selectedScale = s.logo_scale || 1.0;
     selectedNavScale = s.nav_scale || 1.0;
+    selectedColorTheme = s.color_theme || 'gold';
     renderFontPicker();
     renderBoldToggle();
     renderScalePicker();
     renderNavScalePicker();
+    renderColorPicker();
     if(s.hero_photo) {
       const img = document.getElementById('heroPhotoImg');
       img.src = `${API_BASE}/data/photos/${s.hero_photo}`;
@@ -2257,6 +2291,7 @@ async function saveDesignSettings() {
     logo_bold:     selectedBold,
     logo_scale:    selectedScale,
     nav_scale:     selectedNavScale,
+    color_theme:   selectedColorTheme,
   };
   try {
     const current = await apiGet('/api/site-settings');

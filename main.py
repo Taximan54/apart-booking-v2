@@ -96,12 +96,9 @@ class SiteSettings(BaseModel):
     hero_subtitle: str = "Апартаменты премиум-класса · Посуточная аренда"
     logo_font: str = "im_fell"  # im_fell / playfair / unifraktur / tangerine / pacifico / bebas
     logo_bold: bool = False
-    logo_scale: float = 1.0     # 1 / 1.5 / 2 / 3 — множитель размера логотипа и кнопки "Забронировать"
-    nav_scale: float = 1.0      # множитель размера пунктов меню (навигации)
-    logo_bold: bool = False
-    logo_scale: float = 1.0     # 1.0–3.0, размер логотипа/навигации относительно базового
-    logo_bold: bool = False
-    logo_scale: float = 1.0    # 1.0 / 1.5 / 2.0 / 2.5 / 3.0
+    logo_scale: float = 1.0     # 1.0 / 1.5 / 2.0 / 2.5 / 3.0 — размер логотипа и кнопки "Забронировать"
+    nav_scale: float = 1.0      # 1.0–1.8 — размер пунктов меню (навигации)
+    color_theme: str = "gold"   # gold / emerald / sapphire / burgundy / amethyst / dusty_rose / teal / copper / graphite
 
 class HouseRulesText(BaseModel):
     text: str = ""
@@ -955,6 +952,7 @@ DEFAULT_SETTINGS = {
     "logo_bold": False,
     "logo_scale": 1.0,
     "nav_scale": 1.0,
+    "color_theme": "gold",
 }
 
 @app.get("/api/site-settings")
