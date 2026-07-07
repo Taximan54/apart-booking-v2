@@ -21,7 +21,7 @@ from fastapi import FastAPI, HTTPException, Header, Depends, UploadFile, File, F
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, PlainTextResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
 
@@ -99,6 +99,16 @@ class SiteSettings(BaseModel):
     logo_scale: float = 1.0     # 1.0 / 1.5 / 2.0 / 2.5 / 3.0 — размер логотипа и кнопки "Забронировать"
     nav_scale: float = 1.0      # 1.0–1.8 — размер пунктов меню (навигации)
     color_theme: str = "gold"   # gold / emerald / sapphire / burgundy / amethyst / dusty_rose / teal / copper / graphite
+    nav_labels: Dict[str, str] = Field(default_factory=lambda: {
+        "gallery": "Галерея",
+        "amenities": "Удобства",
+        "location": "Расположение",
+        "prices": "Цены",
+        "house_rules": "Правила проживания",
+        "places": "Куда сходить?",
+        "contacts": "Контакты",
+        "booking": "Забронировать",
+    })
 
 class HouseRulesText(BaseModel):
     text: str = ""
@@ -953,6 +963,16 @@ DEFAULT_SETTINGS = {
     "logo_scale": 1.0,
     "nav_scale": 1.0,
     "color_theme": "gold",
+    "nav_labels": {
+        "gallery": "Галерея",
+        "amenities": "Удобства",
+        "location": "Расположение",
+        "prices": "Цены",
+        "house_rules": "Правила проживания",
+        "places": "Куда сходить?",
+        "contacts": "Контакты",
+        "booking": "Забронировать",
+    },
 }
 
 @app.get("/api/site-settings")

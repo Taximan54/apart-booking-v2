@@ -682,6 +682,11 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
             </div>
           </div>
 
+          <div class="info-field" style="margin-bottom:8px">
+            <div class="info-label">Текст пунктов навигации</div>
+          </div>
+          <div id="navLabelsEditor" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:24px"></div>
+
           <button class="btn btn-primary" onclick="saveDesignSettings()">Сохранить оформление</button>
         </div>
       </div>
@@ -2140,6 +2145,28 @@ function selectColorTheme(key) {
   renderColorPicker();
 }
 
+const NAV_LABEL_KEYS = [
+  {key: 'gallery',     def: 'Галерея'},
+  {key: 'amenities',   def: 'Удобства'},
+  {key: 'location',    def: 'Расположение'},
+  {key: 'prices',      def: 'Цены'},
+  {key: 'house_rules', def: 'Правила проживания'},
+  {key: 'places',      def: 'Куда сходить?'},
+  {key: 'contacts',    def: 'Контакты'},
+  {key: 'booking',     def: 'Забронировать'},
+];
+let navLabels = {};
+
+function renderNavLabelsEditor() {
+  const el = document.getElementById('navLabelsEditor');
+  el.innerHTML = NAV_LABEL_KEYS.map(item => `
+    <div class="info-field">
+      <div class="info-label" style="font-size:9px">${item.def}</div>
+      <input type="text" class="info-input" id="navLabel-input-${item.key}" value="${(navLabels[item.key] || item.def).replace(/"/g,'&quot;')}" style="width:100%">
+    </div>
+  `).join('');
+}
+
 function renderFontPicker() {
   const el = document.getElementById('fontPicker');
   el.innerHTML = FONT_OPTIONS.map(f => `
@@ -2206,11 +2233,13 @@ async function loadSiteSettings() {
     selectedScale = s.logo_scale || 1.0;
     selectedNavScale = s.nav_scale || 1.0;
     selectedColorTheme = s.color_theme || 'gold';
+    navLabels = s.nav_labels || {};
     renderFontPicker();
     renderBoldToggle();
     renderScalePicker();
     renderNavScalePicker();
     renderColorPicker();
+    renderNavLabelsEditor();
     if(s.hero_photo) {
       const img = document.getElementById('heroPhotoImg');
       img.src = `${API_BASE}/data/photos/${s.hero_photo}`;
@@ -2283,6 +2312,11 @@ async function saveSiteSettings() {
 }
 
 async function saveDesignSettings() {
+  const collectedNavLabels = {};
+  NAV_LABEL_KEYS.forEach(item => {
+    const el = document.getElementById(`navLabel-input-${item.key}`);
+    collectedNavLabels[item.key] = (el && el.value.trim()) || item.def;
+  });
   const payload = {
     site_name:     document.getElementById('settingsSiteName').value.trim()     || 'Городская Пауза',
     hero_title:    document.getElementById('settingsHeroTitle').value.trim(),
@@ -2292,6 +2326,7 @@ async function saveDesignSettings() {
     logo_scale:    selectedScale,
     nav_scale:     selectedNavScale,
     color_theme:   selectedColorTheme,
+    nav_labels:    collectedNavLabels,
   };
   try {
     const current = await apiGet('/api/site-settings');

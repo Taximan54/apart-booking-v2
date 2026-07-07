@@ -287,18 +287,18 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
   <a href="#" class="logo">Городская Пауза</a>
   <nav>
     <div class="nav-row">
-      <a href="#gallery">Галерея</a>
-      <a href="#amenities">Удобства</a>
-      <a href="#location">Расположение</a>
-      <a href="#prices">Цены</a>
+      <a href="#gallery" id="navLabel-gallery">Галерея</a>
+      <a href="#amenities" id="navLabel-amenities">Удобства</a>
+      <a href="#location" id="navLabel-location">Расположение</a>
+      <a href="#prices" id="navLabel-prices">Цены</a>
     </div>
     <div class="nav-row">
-      <a href="/static/house_rules.html">Правила проживания</a>
-      <a href="/static/places.html">Куда сходить?</a>
-      <a href="#contacts">Контакты</a>
+      <a href="/static/house_rules.html" id="navLabel-house_rules">Правила проживания</a>
+      <a href="/static/places.html" id="navLabel-places">Куда сходить?</a>
+      <a href="#contacts" id="navLabel-contacts">Контакты</a>
     </div>
   </nav>
-  <a href="#booking" class="nav-btn">Забронировать</a>
+  <a href="#booking" class="nav-btn" id="navLabel-booking">Забронировать</a>
 </header>
 
 <!-- HERO -->
@@ -905,6 +905,13 @@ async function init() {
     if(settings.hero_subtitle) {
       const sub = document.querySelector('.hero-sub');
       if(sub) sub.textContent = settings.hero_subtitle;
+    }
+
+    if(settings.nav_labels) {
+      Object.entries(settings.nav_labels).forEach(([key, label]) => {
+        const el = document.getElementById(`navLabel-${key}`);
+        if(el && label) el.textContent = label;
+      });
     }
 
     if(settings.hero_photo) {
