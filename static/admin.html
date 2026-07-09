@@ -687,6 +687,28 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
           </div>
           <div id="navLabelsEditor" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:24px"></div>
 
+          <div style="border-top:1px solid var(--black-border);margin:8px 0 20px"></div>
+
+          <div class="info-field" style="margin-bottom:8px">
+            <div class="info-label">Шрифт заголовка и подзаголовка (Hero)</div>
+          </div>
+          <div id="heroFontPicker" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-bottom:20px"></div>
+
+          <div style="display:flex;gap:24px;flex-wrap:wrap;margin-bottom:24px">
+            <div>
+              <div class="info-label" style="margin-bottom:8px">Начертание</div>
+              <div id="heroBoldToggle" style="display:flex;gap:8px"></div>
+            </div>
+            <div>
+              <div class="info-label" style="margin-bottom:8px">Размер</div>
+              <div id="heroScalePicker" style="display:flex;gap:8px"></div>
+            </div>
+            <div>
+              <div class="info-label" style="margin-bottom:8px">Расположение на экране</div>
+              <div id="heroPositionPicker" style="display:flex;gap:8px"></div>
+            </div>
+          </div>
+
           <button class="btn btn-primary" onclick="saveDesignSettings()">Сохранить оформление</button>
         </div>
       </div>
@@ -2111,13 +2133,22 @@ const FONT_OPTIONS = [
   {key: 'pacifico',   label: 'Pacifico',         family: "'Pacifico',cursive",       weight: 400},
   {key: 'bebas',      label: 'Bebas Neue',       family: "'Bebas Neue',sans-serif",  weight: 400},
 ];
+const HERO_FONT_OPTIONS = [
+  {key: 'cormorant',  label: 'Cormorant Garamond', family: "'Cormorant Garamond',serif", weight: 400},
+  ...FONT_OPTIONS,
+];
 let selectedFont = 'im_fell';
 let selectedBold = false;
 let selectedScale = 1.0;
 let selectedNavScale = 1.0;
 let selectedColorTheme = 'gold';
+let selectedHeroFont = 'cormorant';
+let selectedHeroBold = false;
+let selectedHeroScale = 1.0;
+let selectedHeroPosition = 'center';
 const SCALE_OPTIONS = [1.0, 1.5, 2.0, 2.5, 3.0];
 const NAV_SCALE_OPTIONS = [1.0, 1.2, 1.4, 1.6, 1.8];
+const HERO_POSITION_OPTIONS = [{v:'left',label:'Слева'},{v:'center',label:'По центру'},{v:'right',label:'Справа'}];
 const COLOR_THEMES = [
   {key: 'gold',       label: 'Золото',        gradient: 'linear-gradient(180deg,#FFD060 0%,#D4920A 28%,#8B5E00 50%,#D4920A 72%,#FFD060 100%)'},
   {key: 'emerald',    label: 'Изумруд',       gradient: 'linear-gradient(180deg,#8FE3B0 0%,#2E8B57 28%,#0E3D22 50%,#2E8B57 72%,#8FE3B0 100%)'},
@@ -2199,6 +2230,59 @@ function renderNavScalePicker() {
   `).join('');
 }
 
+function renderHeroFontPicker() {
+  const el = document.getElementById('heroFontPicker');
+  el.innerHTML = HERO_FONT_OPTIONS.map(f => `
+    <div onclick="selectHeroFont('${f.key}')" id="heroFontOpt-${f.key}" style="cursor:pointer;padding:14px 8px;text-align:center;border:1px solid ${f.key === selectedHeroFont ? 'var(--gold)' : 'var(--black-border)'};background:var(--black-card);transition:border-color .2s">
+      <div style="font-family:${f.family};font-weight:${selectedHeroBold ? 700 : f.weight};font-size:20px;letter-spacing:.03em;background:linear-gradient(180deg,#FFD060 0%,#D4920A 28%,#8B5E00 50%,#D4920A 72%,#FFD060 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:4px">Городская Пауза</div>
+      <div style="font-size:9px;color:var(--text-muted);letter-spacing:.05em">${f.label}</div>
+    </div>
+  `).join('');
+}
+
+function selectHeroFont(key) {
+  selectedHeroFont = key;
+  renderHeroFontPicker();
+}
+
+function renderHeroBoldToggle() {
+  const el = document.getElementById('heroBoldToggle');
+  const opts = [{v:false,label:'Обычный'},{v:true,label:'Жирный'}];
+  el.innerHTML = opts.map(o => `
+    <button type="button" onclick="selectHeroBold(${o.v})" class="btn ${selectedHeroBold===o.v ? 'btn-primary' : 'btn-ghost'} btn-sm">${o.label}</button>
+  `).join('');
+}
+
+function selectHeroBold(v) {
+  selectedHeroBold = v;
+  renderHeroBoldToggle();
+  renderHeroFontPicker();
+}
+
+function renderHeroScalePicker() {
+  const el = document.getElementById('heroScalePicker');
+  el.innerHTML = SCALE_OPTIONS.map(s => `
+    <button type="button" onclick="selectHeroScale(${s})" class="btn ${selectedHeroScale===s ? 'btn-primary' : 'btn-ghost'} btn-sm">${s}x</button>
+  `).join('');
+}
+
+function selectHeroScale(v) {
+  selectedHeroScale = v;
+  renderHeroScalePicker();
+}
+
+function renderHeroPositionPicker() {
+  const el = document.getElementById('heroPositionPicker');
+  el.innerHTML = HERO_POSITION_OPTIONS.map(o => `
+    <button type="button" onclick="selectHeroPosition('${o.v}')" class="btn ${selectedHeroPosition===o.v ? 'btn-primary' : 'btn-ghost'} btn-sm">${o.label}</button>
+  `).join('');
+}
+
+function selectHeroPosition(v) {
+  selectedHeroPosition = v;
+  renderHeroPositionPicker();
+}
+
 function selectFont(key) {
   selectedFont = key;
   renderFontPicker();
@@ -2234,12 +2318,20 @@ async function loadSiteSettings() {
     selectedNavScale = s.nav_scale || 1.0;
     selectedColorTheme = s.color_theme || 'gold';
     navLabels = s.nav_labels || {};
+    selectedHeroFont = s.hero_font || 'cormorant';
+    selectedHeroBold = !!s.hero_bold;
+    selectedHeroScale = s.hero_scale || 1.0;
+    selectedHeroPosition = s.hero_position || 'center';
     renderFontPicker();
     renderBoldToggle();
     renderScalePicker();
     renderNavScalePicker();
     renderColorPicker();
     renderNavLabelsEditor();
+    renderHeroFontPicker();
+    renderHeroBoldToggle();
+    renderHeroScalePicker();
+    renderHeroPositionPicker();
     if(s.hero_photo) {
       const img = document.getElementById('heroPhotoImg');
       img.src = `${API_BASE}/data/photos/${s.hero_photo}`;
@@ -2327,6 +2419,10 @@ async function saveDesignSettings() {
     nav_scale:     selectedNavScale,
     color_theme:   selectedColorTheme,
     nav_labels:    collectedNavLabels,
+    hero_font:     selectedHeroFont,
+    hero_bold:     selectedHeroBold,
+    hero_scale:    selectedHeroScale,
+    hero_position: selectedHeroPosition,
   };
   try {
     const current = await apiGet('/api/site-settings');

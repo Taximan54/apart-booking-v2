@@ -109,6 +109,10 @@ class SiteSettings(BaseModel):
         "contacts": "Контакты",
         "booking": "Забронировать",
     })
+    hero_font: str = "cormorant"    # cormorant / im_fell / playfair / unifraktur / tangerine / pacifico / bebas
+    hero_bold: bool = False
+    hero_scale: float = 1.0         # 1.0 / 1.5 / 2.0 / 2.5 / 3.0 — размер hero-заголовка и подзаголовка
+    hero_position: str = "center"   # left / center / right — расположение текста на hero-фото
 
 class HouseRulesText(BaseModel):
     text: str = ""
@@ -973,6 +977,10 @@ DEFAULT_SETTINGS = {
         "contacts": "Контакты",
         "booking": "Забронировать",
     },
+    "hero_font": "cormorant",
+    "hero_bold": False,
+    "hero_scale": 1.0,
+    "hero_position": "center",
 }
 
 @app.get("/api/site-settings")

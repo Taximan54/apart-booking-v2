@@ -14,6 +14,7 @@
   --text-primary:#F0E6C8;--text-secondary:#A89060;--text-muted:#5A4A30;--white:#FAF6EE;
   --logo-font:'IM Fell English',serif;--logo-weight:400;--logo-scale:1;--nav-scale:1;
   --accent-gradient:linear-gradient(180deg,#FFD060 0%,#D4920A 28%,#8B5E00 50%,#D4920A 72%,#FFD060 100%);
+  --hero-font:'Cormorant Garamond',serif;--hero-weight:400;--hero-scale:1;
 }
 *{margin:0;padding:0;box-sizing:border-box}
 html{scroll-behavior:smooth}
@@ -38,16 +39,24 @@ nav a:hover{color:var(--gold)}
 
 /* HERO */
 .hero{position:relative;height:100vh;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.hero.pos-left{justify-content:flex-start}
+.hero.pos-right{justify-content:flex-end}
 .hero-bg{position:absolute;inset:0;background-image:url('/data/photos/photo_ec777cb650cf.jpg');background-size:cover;background-position:center 40%;transform:scale(1.1);transition:transform .1s linear;will-change:transform}
 .hero-overlay{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.55) 0%,rgba(0,0,0,.3) 50%,rgba(0,0,0,.7) 100%)}
 .hero-lines{position:absolute;inset:0;background-image:linear-gradient(rgba(212,160,23,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(212,160,23,.03) 1px,transparent 1px);background-size:80px 80px;mask-image:radial-gradient(ellipse at center,black 20%,transparent 80%)}
-.hero-content{position:relative;z-index:10;text-align:center;max-width:900px;padding:0 40px}
+.hero-content{position:relative;z-index:10;text-align:center;max-width:900px;padding:0 60px}
+.hero-content.pos-left{text-align:left}
+.hero-content.pos-right{text-align:right}
 .eyebrow{font-size:11px;letter-spacing:.5em;color:var(--gold);text-transform:uppercase;margin-bottom:28px;font-weight:400;display:flex;align-items:center;justify-content:center;gap:16px;text-shadow:0 1px 10px rgba(0,0,0,.9)}
+.hero-content.pos-left .eyebrow{justify-content:flex-start}
+.hero-content.pos-right .eyebrow{justify-content:flex-end}
 .eyebrow::before,.eyebrow::after{content:'';width:40px;height:1px;background:var(--gold);opacity:.5}
-.hero h1{font-family:'Cormorant Garamond',serif;font-size:clamp(52px,7vw,96px);font-weight:400;line-height:1.05;color:var(--gold);margin-bottom:12px;text-shadow:0 2px 20px rgba(0,0,0,.8),0 0 60px rgba(0,0,0,.5)}
+.hero h1{font-family:var(--hero-font);font-size:calc(clamp(52px,7vw,96px) * var(--hero-scale));font-weight:var(--hero-weight);line-height:1.05;color:var(--gold);margin-bottom:12px;text-shadow:0 2px 20px rgba(0,0,0,.8),0 0 60px rgba(0,0,0,.5)}
 .hero h1 em{font-style:italic;color:var(--gold)}
-.hero-sub{font-size:13px;letter-spacing:.15em;color:var(--gold);text-transform:uppercase;margin-bottom:56px;font-weight:400;text-shadow:0 1px 10px rgba(0,0,0,.9)}
+.hero-sub{font-family:var(--hero-font);font-size:calc(13px * var(--hero-scale));letter-spacing:.15em;color:var(--gold);text-transform:uppercase;margin-bottom:56px;font-weight:var(--hero-weight);text-shadow:0 1px 10px rgba(0,0,0,.9)}
 .hero-cta{display:flex;gap:20px;justify-content:center;align-items:center}
+.hero-content.pos-left .hero-cta{justify-content:flex-start}
+.hero-content.pos-right .hero-cta{justify-content:flex-end}
 .btn-gold{padding:16px 48px;background:var(--gold);color:var(--black);border:none;font-family:'Montserrat',sans-serif;font-size:11px;letter-spacing:.25em;text-transform:uppercase;font-weight:500;cursor:pointer;transition:all .3s;text-decoration:none;display:inline-block}
 .btn-gold:hover{background:var(--gold-light);transform:translateY(-1px)}
 .btn-outline{padding:16px 48px;background:transparent;color:var(--text-secondary);border:1px solid rgba(201,168,76,.3);font-family:'Montserrat',sans-serif;font-size:11px;letter-spacing:.25em;text-transform:uppercase;font-weight:400;cursor:pointer;transition:all .3s;text-decoration:none;display:inline-block}
@@ -302,11 +311,11 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
 </header>
 
 <!-- HERO -->
-<div class="hero">
+<div class="hero" id="heroSection">
   <div class="hero-bg" id="heroBg"></div>
   <div class="hero-overlay"></div>
   <div class="hero-lines"></div>
-  <div class="hero-content">
+  <div class="hero-content" id="heroContent">
     <div class="eyebrow">Апартаменты в городе</div>
     <h1 style="color:var(--gold)">Искусство<br><span style="color:var(--gold)">комфортного</span><br>проживания</h1>
     <p class="hero-sub">Апартаменты премиум-класса &nbsp;·&nbsp; Посуточная аренда</p>
@@ -860,6 +869,7 @@ async function init() {
     const settings = await fetch(`${API.BASE}/api/site-settings`).then(r=>r.json());
 
     const FONT_MAP = {
+      cormorant:  {family:"'Cormorant Garamond',serif", weight:400},
       im_fell:    {family:"'IM Fell English',serif",    weight:400},
       playfair:   {family:"'Playfair Display',serif",   weight:700},
       unifraktur: {family:"'UnifrakturMaguntia',serif",  weight:400},
@@ -872,6 +882,20 @@ async function init() {
     document.documentElement.style.setProperty('--logo-weight', settings.logo_bold ? 700 : font.weight);
     document.documentElement.style.setProperty('--logo-scale', settings.logo_scale || 1);
     document.documentElement.style.setProperty('--nav-scale', settings.nav_scale || 1);
+
+    const heroFont = FONT_MAP[settings.hero_font] || FONT_MAP.cormorant;
+    document.documentElement.style.setProperty('--hero-font', heroFont.family);
+    document.documentElement.style.setProperty('--hero-weight', settings.hero_bold ? 700 : heroFont.weight);
+    document.documentElement.style.setProperty('--hero-scale', settings.hero_scale || 1);
+
+    const heroPos = ['left', 'center', 'right'].includes(settings.hero_position) ? settings.hero_position : 'center';
+    const heroSection = document.getElementById('heroSection');
+    const heroContent = document.getElementById('heroContent');
+    [heroSection, heroContent].forEach(el => {
+      if(!el) return;
+      el.classList.remove('pos-left', 'pos-right');
+      if(heroPos !== 'center') el.classList.add(`pos-${heroPos}`);
+    });
 
     const COLOR_THEMES = {
       gold:       {gold:'#D4A017', light:'#F0C040', dark:'#8B6914', muted:'#6B5420', gradient:'linear-gradient(180deg,#FFD060 0%,#D4920A 28%,#8B5E00 50%,#D4920A 72%,#FFD060 100%)'},
