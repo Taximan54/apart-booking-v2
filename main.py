@@ -214,6 +214,21 @@ class BookingCreate(BaseModel):
     contract_signed: bool = False
     promo_code: str = ""
 
+class ManualBookingCreate(BaseModel):
+    source: str = "avito"   # avito / yandex / sutochno / phone / other
+    check_in: str
+    check_out: str
+    guest_name: str
+    guest_phone: str = ""
+    guest_email: str = ""
+    guests_count: int = 2
+    notes: str = ""
+    passport: str = ""
+    total_price: int = 0
+
+class ResendContract(BaseModel):
+    email: str
+
 class BookingUpdate(BaseModel):
     status: str
 
@@ -434,6 +449,52 @@ def save_contract(booking_ref, contract_text):
     with open(path, "w", encoding="utf-8") as f:
         f.write(contract_text)
     return path
+
+def email_manual_contract(booking, target_email):
+    """
+    Письмо с договором для броней с внешних площадок (Авито и т.п.) или
+    для ручной/повторной отправки договора администратором.
+    В отличие от email_booking_confirmed — без текста про предоплату/остаток,
+    так как условия оплаты на внешних площадках отличаются.
+    """
+    booking_ref  = str(booking.get("username") or booking.get("id", ""))
+    check_in_fmt  = datetime.strptime(booking["check_in"],  "%Y-%m-%d").strftime("%d.%m.%Y")
+    check_out_fmt = datetime.strptime(booking["check_out"], "%Y-%m-%d").strftime("%d.%m.%Y")
+    contract_text = generate_contract(booking)
+    contract_filename = f"dogovor_{booking_ref}.txt"
+
+    html = f"""
+    <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#0A0A0A;color:#F0E6C8;padding:40px">
+      <div style="text-align:center;margin-bottom:32px">
+        <div style="font-size:28px;letter-spacing:4px;color:#C9A84C">ГОРОДСКАЯ ПАУЗА</div>
+      </div>
+      <div style="background:#141414;border:1px solid #1E1E1E;padding:32px;margin-bottom:24px">
+        <div style="font-size:16px;color:#C9A84C;margin-bottom:16px">Договор аренды апартаментов</div>
+        <div style="font-size:13px;color:#A89060;margin-bottom:24px">Бронь {booking_ref}</div>
+        <table style="width:100%;border-collapse:collapse">
+          <tr><td style="padding:8px 0;color:#5A4A30;font-size:12px">Заезд</td>
+              <td style="color:#F0E6C8;font-size:12px">{check_in_fmt} с 15:00</td></tr>
+          <tr><td style="padding:8px 0;color:#5A4A30;font-size:12px">Выезд</td>
+              <td style="color:#F0E6C8;font-size:12px">{check_out_fmt} до 12:00</td></tr>
+        </table>
+      </div>
+      <div style="background:#141414;border:1px solid #1E1E1E;padding:24px;margin-bottom:24px">
+        <div style="font-size:12px;color:#A89060;line-height:1.7">
+          Полный текст договора для ознакомления и подписания приложен к этому письму
+          отдельным файлом ({contract_filename}). Пожалуйста, ознакомьтесь с условиями
+          перед заездом.
+        </div>
+      </div>
+      <div style="text-align:center;font-size:11px;color:#5A4A30">citypause@mail.ru &nbsp;|&nbsp; citypause.ru</div>
+    </div>
+    """
+    save_contract(booking_ref, contract_text)
+    send_email(
+        target_email,
+        f"Договор аренды — {booking_ref}",
+        html,
+        attachments=[{"filename": contract_filename, "content": contract_text}]
+    )
 
 def load_checkin_memo(door_code=""):
     """Загружает памятку гостю, подставляет код замка."""
@@ -1390,6 +1451,77 @@ async def create_booking(b: BookingCreate):
             pass
 
     return {"booking_id": booking_ref, "status": "waiting_payment"}
+
+@app.post("/api/admin/manual-booking")
+async def create_manual_booking(b: ManualBookingCreate, _: bool = Depends(require_admin)):
+    """
+    Ручное создание брони для внешних площадок (Авито, Яндекс.Путешествия,
+    Суточно.ру и т.д.), которые оформлены не через сайт. Бронь сразу
+    подтверждена, блокирует даты в календаре, и гостю уходит договор
+    на почту (если email указан).
+    """
+    try:
+        d_in  = datetime.strptime(b.check_in,  "%Y-%m-%d").date()
+        d_out = datetime.strptime(b.check_out, "%Y-%m-%d").date()
+        nights_count = (d_out - d_in).days
+    except Exception:
+        raise HTTPException(status_code=400, detail="Неверный формат дат")
+    if nights_count < 1:
+        raise HTTPException(status_code=400, detail="Дата выезда должна быть позже даты заезда")
+
+    valid_sources = {"avito", "yandex", "sutochno", "phone", "other"}
+    source = b.source if b.source in valid_sources else "other"
+
+    conn = get_db()
+    booking_ref = "GP-" + "".join(random.choices(string.ascii_uppercase + string.digits, k=6))
+    conn.execute("""
+        INSERT INTO bookings (
+            user_id, username, check_in, check_out, guests, status,
+            guest_name, guest_phone, guest_email, guests_count,
+            notes, passport, payment_method, total_price, nights, source,
+            promo_code, discount_percent
+        ) VALUES (0, ?, ?, ?, ?, 'confirmed', ?, ?, ?, ?, ?, ?, 'external', ?, ?, ?, '', 0)
+    """, (
+        booking_ref, b.check_in, b.check_out, b.guests_count,
+        b.guest_name, b.guest_phone, b.guest_email, b.guests_count,
+        b.notes, b.passport, b.total_price, nights_count, source
+    ))
+    conn.commit()
+    conn.close()
+
+    booking_dict = {
+        "username": booking_ref,
+        "guest_name": b.guest_name,
+        "passport": b.passport,
+        "check_in": b.check_in,
+        "check_out": b.check_out,
+        "nights": nights_count,
+        "guests_count": b.guests_count,
+        "total_price": b.total_price,
+        "discount_percent": 0,
+    }
+
+    if b.guest_email:
+        import threading
+        threading.Thread(target=email_manual_contract, args=(booking_dict, b.guest_email)).start()
+    else:
+        # Даже без email — сохраняем текст договора в архив, чтобы можно
+        # было скачать/отправить позже вручную
+        save_contract(booking_ref, generate_contract(booking_dict))
+
+    return {"ok": True, "booking_ref": booking_ref}
+
+@app.post("/api/admin/bookings/{ref}/resend-contract")
+async def resend_contract(ref: str, r: ResendContract, _: bool = Depends(require_admin)):
+    """Повторная (или ручная) отправка договора на указанный email по номеру брони."""
+    conn = get_db()
+    row = conn.execute("SELECT * FROM bookings WHERE username = ?", (ref,)).fetchone()
+    conn.close()
+    if not row:
+        raise HTTPException(status_code=404, detail="Бронь не найдена")
+    booking = dict(row)
+    email_manual_contract(booking, r.email)
+    return {"ok": True}
 
 @app.put("/api/bookings/{booking_id}")
 async def update_booking(booking_id: str, u: BookingUpdate, _: bool = Depends(require_admin)):

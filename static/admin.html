@@ -206,6 +206,9 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
       <a class="sb-item" onclick="showPanel('bookings',this)">
         <span class="sb-icon">◻</span>Все брони
       </a>
+      <a class="sb-item" onclick="showPanel('manualbooking',this)">
+        <span class="sb-icon">✍</span>Ручная бронь
+      </a>
     </div>
     <div class="sb-section">
       <div class="sb-section-label">Управление</div>
@@ -302,6 +305,102 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
             <thead><tr><th>#</th><th>Гость</th><th>Телефон</th><th>Заезд</th><th>Выезд</th><th>Ночей</th><th>Сумма</th><th>Оплата</th><th>Статус</th><th></th></tr></thead>
             <tbody id="bookingsBody"><tr><td colspan="10" style="text-align:center;padding:48px;color:var(--text-muted)">Загрузка бронирований...</td></tr></tbody>
           </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- MANUAL BOOKING (внешние площадки) -->
+    <div class="panel" id="panel-manualbooking">
+      <div class="card" style="max-width:700px;margin-bottom:20px">
+        <div class="card-header">
+          <span class="card-title">Создать бронь и отправить договор</span>
+        </div>
+        <div class="card-body">
+          <div style="font-size:11px;color:var(--text-muted);line-height:1.7;margin-bottom:20px;padding:12px 16px;background:rgba(201,168,76,.04);border:1px solid rgba(201,168,76,.1)">
+            Для броней с внешних площадок (Авито, Яндекс.Путешествия, Суточно.ру и т.д.), которые оформлены не через сайт.
+            Бронь создастся с сразу подтверждённым статусом и заблокирует даты в календаре, а гостю сразу уйдёт договор на почту.
+          </div>
+
+          <div class="info-field" style="margin-bottom:16px">
+            <div class="info-label">Источник брони</div>
+            <select class="info-input" id="mbSource" style="width:100%">
+              <option value="avito">Avito</option>
+              <option value="yandex">Яндекс.Путешествия</option>
+              <option value="sutochno">Суточно.ру</option>
+              <option value="phone">Телефон</option>
+              <option value="other">Другое</option>
+            </select>
+          </div>
+
+          <div style="display:flex;gap:16px;margin-bottom:16px">
+            <div class="info-field" style="flex:1">
+              <div class="info-label">Дата заезда</div>
+              <input type="date" class="info-input" id="mbCheckIn" style="width:100%">
+            </div>
+            <div class="info-field" style="flex:1">
+              <div class="info-label">Дата выезда</div>
+              <input type="date" class="info-input" id="mbCheckOut" style="width:100%">
+            </div>
+            <div class="info-field" style="width:120px">
+              <div class="info-label">Гостей</div>
+              <input type="number" class="info-input" id="mbGuests" value="2" min="1" style="width:100%">
+            </div>
+          </div>
+
+          <div class="info-field" style="margin-bottom:16px">
+            <div class="info-label">ФИО гостя</div>
+            <input type="text" class="info-input" id="mbGuestName" placeholder="Иванов Иван Иванович" style="width:100%">
+          </div>
+
+          <div style="display:flex;gap:16px;margin-bottom:16px">
+            <div class="info-field" style="flex:1">
+              <div class="info-label">Телефон</div>
+              <input type="text" class="info-input" id="mbPhone" placeholder="+7 900 000-00-00" style="width:100%">
+            </div>
+            <div class="info-field" style="flex:1">
+              <div class="info-label">Email (на него уйдёт договор)</div>
+              <input type="email" class="info-input" id="mbEmail" placeholder="guest@mail.ru" style="width:100%">
+            </div>
+          </div>
+
+          <div class="info-field" style="margin-bottom:16px">
+            <div class="info-label">Паспортные данные</div>
+            <input type="text" class="info-input" id="mbPassport" placeholder="серия, номер, кем и когда выдан" style="width:100%">
+          </div>
+
+          <div class="info-field" style="margin-bottom:16px">
+            <div class="info-label">Итоговая сумма, ₽</div>
+            <input type="number" class="info-input" id="mbTotal" placeholder="0" style="width:100%">
+          </div>
+
+          <div class="info-field" style="margin-bottom:24px">
+            <div class="info-label">Заметка (видна только в админке)</div>
+            <input type="text" class="info-input" id="mbNotes" placeholder="Например: оплачено на Avito полностью" style="width:100%">
+          </div>
+
+          <button class="btn btn-primary" onclick="createManualBooking()">Создать бронь и отправить договор</button>
+        </div>
+      </div>
+
+      <div class="card" style="max-width:700px">
+        <div class="card-header">
+          <span class="card-title">Повторно отправить договор</span>
+        </div>
+        <div class="card-body">
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:20px">
+            Для случая, если письмо не дошло или нужно отправить на другой email — по номеру уже существующей брони.
+          </div>
+          <div style="display:flex;gap:16px;align-items:flex-end">
+            <div class="info-field" style="flex:1">
+              <div class="info-label">Номер брони</div>
+              <input type="text" class="info-input" id="resendBookingRef" placeholder="GP-XXXXXX" style="width:100%">
+            </div>
+            <div class="info-field" style="flex:1">
+              <div class="info-label">Email для отправки</div>
+              <input type="email" class="info-input" id="resendEmail" placeholder="guest@mail.ru" style="width:100%">
+            </div>
+            <button class="btn btn-primary" onclick="resendContractManual()">Отправить</button>
+          </div>
         </div>
       </div>
     </div>
@@ -1583,7 +1682,7 @@ function showPanel(id, el) {
   if(panel) panel.classList.add('active');
   document.querySelectorAll('.sb-item').forEach(i=>i.classList.remove('active'));
   if(el) el.classList.add('active');
-  const titles = {dashboard:'Дашборд',bookings:'Все брони',calendar:'Управление календарём',prices:'Цены',promo:'Промокоды',settings:'Настройки',contract:'Договор',contracts:'Архив договоров',checkin:'Памятка гостю',checkout:'Чек-лист выезда',houserules:'Правила проживания',sitesettings:'Настройки сайта',reviews:'Отзывы',places:'Куда сходить',contacts:'Контакты',photos:'Фотографии'};
+  const titles = {dashboard:'Дашборд',bookings:'Все брони',manualbooking:'Ручная бронь (внешние площадки)',calendar:'Управление календарём',prices:'Цены',promo:'Промокоды',settings:'Настройки',contract:'Договор',contracts:'Архив договоров',checkin:'Памятка гостю',checkout:'Чек-лист выезда',houserules:'Правила проживания',sitesettings:'Настройки сайта',reviews:'Отзывы',places:'Куда сходить',contacts:'Контакты',photos:'Фотографии'};
   document.getElementById('topbarTitle').textContent = titles[id]||id;
   if(id==='settings') { loadDesc(); }
   if(id==='contract')   { if(typeof loadContractForEditor==='function') loadContractForEditor(); }
@@ -1825,6 +1924,55 @@ async function savePhotosOrder() {
     showToast('Порядок сохранён', 'gold');
   } catch(e) {
     showToast('Ошибка сохранения порядка', 'err');
+  }
+}
+
+// MANUAL BOOKING (внешние площадки)
+async function createManualBooking() {
+  const payload = {
+    source:       document.getElementById('mbSource').value,
+    check_in:     document.getElementById('mbCheckIn').value,
+    check_out:    document.getElementById('mbCheckOut').value,
+    guest_name:   document.getElementById('mbGuestName').value.trim(),
+    guest_phone:  document.getElementById('mbPhone').value.trim(),
+    guest_email:  document.getElementById('mbEmail').value.trim(),
+    guests_count: parseInt(document.getElementById('mbGuests').value) || 2,
+    passport:     document.getElementById('mbPassport').value.trim(),
+    total_price:  parseInt(document.getElementById('mbTotal').value) || 0,
+    notes:        document.getElementById('mbNotes').value.trim(),
+  };
+  if(!payload.check_in || !payload.check_out) {
+    showToast('Укажите даты заезда и выезда', 'err');
+    return;
+  }
+  if(!payload.guest_name) {
+    showToast('Укажите ФИО гостя', 'err');
+    return;
+  }
+  try {
+    const res = await apiPost('/api/admin/manual-booking', payload);
+    showToast(`Бронь ${res.booking_ref} создана` + (payload.guest_email ? ', договор отправлен' : ''), 'gold');
+    ['mbGuestName','mbPhone','mbEmail','mbPassport','mbTotal','mbNotes','mbCheckIn','mbCheckOut'].forEach(id => {
+      document.getElementById(id).value = '';
+    });
+    document.getElementById('mbGuests').value = 2;
+  } catch(e) {
+    showToast('Ошибка: ' + e.message, 'err');
+  }
+}
+
+async function resendContractManual() {
+  const ref = document.getElementById('resendBookingRef').value.trim();
+  const email = document.getElementById('resendEmail').value.trim();
+  if(!ref || !email) {
+    showToast('Укажите номер брони и email', 'err');
+    return;
+  }
+  try {
+    await apiPost(`/api/admin/bookings/${ref}/resend-contract`, {email});
+    showToast('Договор отправлен на ' + email, 'gold');
+  } catch(e) {
+    showToast('Ошибка: ' + e.message, 'err');
   }
 }
 
