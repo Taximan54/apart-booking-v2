@@ -41,7 +41,7 @@ nav a:hover{color:var(--gold)}
 .hero{position:relative;height:100vh;display:flex;align-items:center;justify-content:center;overflow:hidden}
 .hero.pos-left{justify-content:flex-start}
 .hero.pos-right{justify-content:flex-end}
-.hero-bg{position:absolute;inset:0;background-image:url('/data/photos/photo_ec777cb650cf.jpg');background-size:cover;background-position:center 40%;transform:scale(1.1);transition:transform .1s linear;will-change:transform}
+.hero-bg{position:absolute;inset:0;background-size:cover;background-position:center 40%;transform:scale(1.1);transition:transform .1s linear;will-change:transform}
 .hero-overlay{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.55) 0%,rgba(0,0,0,.3) 50%,rgba(0,0,0,.7) 100%)}
 .hero-lines{position:absolute;inset:0;background-image:linear-gradient(rgba(212,160,23,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(212,160,23,.03) 1px,transparent 1px);background-size:80px 80px;mask-image:radial-gradient(ellipse at center,black 20%,transparent 80%)}
 .hero-content{position:relative;z-index:10;text-align:center;max-width:900px;padding:0 60px}
@@ -273,8 +273,13 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
 .review-author{font-size:11px;color:var(--text-muted);letter-spacing:.15em;text-transform:uppercase}
 .review-date{font-size:10px;color:var(--text-muted);margin-top:4px}
 @media(max-width:1024px){
-  header{padding:16px 24px !important}
+  header{padding:14px 20px !important}
   nav{display:none}
+  .logo{font-size:24px !important}
+  .nav-btn{font-size:13px !important;padding:9px 16px !important}
+  .hamburger{display:flex}
+  .hero-bg{background-position:center 30%;transform:scale(1.05)}
+  .hero-content{padding:0 24px}
   .features-strip{grid-template-columns:1fr 1fr}
   .gallery-main-grid{grid-template-columns:1fr 1fr}
   .gallery-main-grid .gitem:first-child{grid-row:auto;height:200px}
@@ -287,6 +292,21 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
   footer{grid-template-columns:1fr;text-align:center}
   .footer-r{text-align:center}
 }
+@media(min-width:1025px){
+  .hamburger{display:none}
+}
+
+/* MOBILE NAV */
+.hamburger{flex-shrink:0;width:32px;height:24px;display:flex;flex-direction:column;justify-content:space-between;background:none;border:none;cursor:pointer;padding:0;z-index:1100}
+.hamburger span{display:block;height:2px;width:100%;background:var(--gold);border-radius:1px;transition:transform .3s,opacity .3s}
+.hamburger.open span:nth-child(1){transform:translateY(11px) rotate(45deg)}
+.hamburger.open span:nth-child(2){opacity:0}
+.hamburger.open span:nth-child(3){transform:translateY(-11px) rotate(-45deg)}
+.mobile-nav{position:fixed;top:0;left:0;right:0;bottom:0;z-index:999;background:rgba(10,10,10,.98);backdrop-filter:blur(10px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px;opacity:0;pointer-events:none;transition:opacity .3s}
+.mobile-nav.open{opacity:1;pointer-events:auto}
+.mobile-nav a{font-family:var(--logo-font);font-size:22px;letter-spacing:.04em;text-decoration:none;color:var(--text-primary)}
+.mobile-nav a:active{opacity:.6}
+.mobile-nav .nav-btn{font-size:16px !important;padding:14px 36px !important;margin-top:12px}
 </style>
 </head>
 <body>
@@ -308,7 +328,21 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
     </div>
   </nav>
   <a href="#booking" class="nav-btn" id="navLabel-booking">Забронировать</a>
+  <button class="hamburger" id="hamburgerBtn" onclick="toggleMobileNav()" aria-label="Меню">
+    <span></span><span></span><span></span>
+  </button>
 </header>
+
+<div class="mobile-nav" id="mobileNav">
+  <a href="#gallery" id="navLabel-gallery-m" onclick="closeMobileNav()">Галерея</a>
+  <a href="#amenities" id="navLabel-amenities-m" onclick="closeMobileNav()">Удобства</a>
+  <a href="#location" id="navLabel-location-m" onclick="closeMobileNav()">Расположение</a>
+  <a href="#prices" id="navLabel-prices-m" onclick="closeMobileNav()">Цены</a>
+  <a href="/static/house_rules.html" id="navLabel-house_rules-m" onclick="closeMobileNav()">Правила проживания</a>
+  <a href="/static/places.html" id="navLabel-places-m" onclick="closeMobileNav()">Куда сходить?</a>
+  <a href="#contacts" id="navLabel-contacts-m" onclick="closeMobileNav()">Контакты</a>
+  <a href="#booking" class="nav-btn" id="navLabel-booking-m" onclick="closeMobileNav()">Забронировать</a>
+</div>
 
 <!-- HERO -->
 <div class="hero" id="heroSection">
@@ -935,6 +969,8 @@ async function init() {
       Object.entries(settings.nav_labels).forEach(([key, label]) => {
         const el = document.getElementById(`navLabel-${key}`);
         if(el && label) el.textContent = label;
+        const elMobile = document.getElementById(`navLabel-${key}-m`);
+        if(elMobile && label) elMobile.textContent = label;
       });
     }
 
@@ -963,6 +999,18 @@ async function init() {
     }
   } catch(e) {}
   loadGallery();
+}
+
+// ============================================================
+// MOBILE NAV
+// ============================================================
+function toggleMobileNav() {
+  document.getElementById('mobileNav').classList.toggle('open');
+  document.getElementById('hamburgerBtn').classList.toggle('open');
+}
+function closeMobileNav() {
+  document.getElementById('mobileNav').classList.remove('open');
+  document.getElementById('hamburgerBtn').classList.remove('open');
 }
 
 // ============================================================
