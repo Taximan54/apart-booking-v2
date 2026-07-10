@@ -1109,15 +1109,17 @@ DEFAULT_SETTINGS = {
     "hero_position": "center",
 }
 
-@app.get("/api/site-settings")
-async def get_site_settings():
+def get_site_settings_dict():
+    """Внутренний helper — читает настройки сайта с мержем дефолтов (без require_admin)."""
     if os.path.exists(SETTINGS_FILE):
         with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
             saved = json.load(f)
-        # Мержим с дефолтами — если settings.json был создан до появления
-        # новых полей (site_name, hero_title и т.д.), они всё равно будут в ответе
         return {**DEFAULT_SETTINGS, **saved}
     return DEFAULT_SETTINGS
+
+@app.get("/api/site-settings")
+async def get_site_settings():
+    return get_site_settings_dict()
 
 @app.post("/api/site-settings")
 async def set_site_settings(s: SiteSettings, _: bool = Depends(require_admin)):
@@ -1271,12 +1273,31 @@ async def upload_photo(
         json.dump(order_data, f, ensure_ascii=False)
     return {"ok": True, "filename": filename, "url": f"/data/photos/{filename}"}
 
+def find_photo_usages(filename):
+    """Возвращает список мест использования фото (hero/карта/место), если оно где-то занято."""
+    usages = []
+    settings = get_site_settings_dict()
+    if settings.get("hero_photo") == filename:
+        usages.append("обложка сайта (hero-фото)")
+    if settings.get("map_photo") == filename:
+        usages.append("фото карты в разделе «Расположение»")
+    for p in load_places():
+        if p.get("photo") == filename:
+            usages.append(f"место «{p.get('name', '')}» на странице «Куда сходить?»")
+    return usages
+
 @app.delete("/api/photos/{filename}")
-async def delete_photo(filename: str, _: bool = Depends(require_admin)):
-    """Удаление фото."""
+async def delete_photo(filename: str, force: bool = False, _: bool = Depends(require_admin)):
+    """Удаление фото. Если фото используется как hero/карта/фото места — требует force=true."""
     filepath = os.path.join(PHOTOS_DIR, filename)
     if not os.path.exists(filepath):
         raise HTTPException(status_code=404, detail="Файл не найден")
+    usages = find_photo_usages(filename)
+    if usages and not force:
+        raise HTTPException(
+            status_code=409,
+            detail="Это фото сейчас используется: " + "; ".join(usages) + ". Удалить всё равно?"
+        )
     os.remove(filepath)
     order_data = load_photos_order_data()
     order_data["order"] = [f for f in order_data["order"] if f != filename]
