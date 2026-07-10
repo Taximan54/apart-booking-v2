@@ -16,6 +16,14 @@ from email.mime.base import MIMEBase
 from email import encoders
 from datetime import datetime, date, timezone, timedelta
 from typing import Optional, Dict
+from xml.sax.saxutils import escape as xml_escape
+
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.units import mm
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+from reportlab.lib.styles import ParagraphStyle
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
 
 from fastapi import FastAPI, HTTPException, Header, Depends, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
@@ -341,9 +349,9 @@ MAIL_ADMIN    = os.getenv("MAIL_ADMIN", "citypause@mail.ru")
 
 def send_email(to, subject, html_body, attachments=None):
     """
-    attachments: список словарей [{"filename": "dogovor_123.txt", "content": "...текст..."}]
-    Текстовые вложения кодируются в UTF-8 и прикрепляются как отдельный .txt файл,
-    чтобы длинный договор не обрезался почтовым клиентом при показе тела письма.
+    attachments: список словарей. Поддерживаются два варианта:
+      - {"filename": "dogovor_123.txt", "content": "...текст..."} — текстовое вложение (UTF-8)
+      - {"filename": "dogovor_123.pdf", "filepath": "/data/contracts/GP-XXXXXX.pdf"} — бинарный файл с диска (PDF и т.п.)
     """
     if not MAIL_PASSWORD:
         print("WARNING: MAIL_PASSWORD not set")
@@ -363,9 +371,13 @@ def send_email(to, subject, html_body, attachments=None):
 
         for att in (attachments or []):
             filename = att.get("filename", "attachment.txt")
-            content  = att.get("content", "")
+            if "filepath" in att:
+                with open(att["filepath"], "rb") as f:
+                    payload_bytes = f.read()
+            else:
+                payload_bytes = att.get("content", "").encode("utf-8")
             part = MIMEBase("application", "octet-stream")
-            part.set_payload(content.encode("utf-8"))
+            part.set_payload(payload_bytes)
             encoders.encode_base64(part)
             part.add_header("Content-Disposition", f'attachment; filename="{filename}"')
             msg.attach(part)
@@ -444,10 +456,62 @@ def generate_contract(booking):
     })
 
 def save_contract(booking_ref, contract_text):
-    """Сохраняет договор в файл."""
+    """Сохраняет договор в файл (.txt — для архива в админке)."""
     path = os.path.join(CONTRACTS_DIR, booking_ref + ".txt")
     with open(path, "w", encoding="utf-8") as f:
         f.write(contract_text)
+    return path
+
+_CYRILLIC_FONT_NAME = None
+
+def _register_cyrillic_font():
+    """
+    Регистрирует шрифт с поддержкой кириллицы для reportlab.
+    Стандартные встроенные шрифты reportlab (Helvetica и т.п.) кириллицу не поддерживают.
+    """
+    global _CYRILLIC_FONT_NAME
+    if _CYRILLIC_FONT_NAME:
+        return _CYRILLIC_FONT_NAME
+    candidates = [
+        ("DejaVuSans", "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"),
+        ("Liberation", "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf"),
+        ("Noto", "/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf"),
+        ("Arial", "/usr/share/fonts/truetype/msttcorefonts/Arial.ttf"),
+    ]
+    for name, path in candidates:
+        if os.path.exists(path):
+            try:
+                pdfmetrics.registerFont(TTFont(name, path))
+                _CYRILLIC_FONT_NAME = name
+                return name
+            except Exception:
+                continue
+    print("WARNING: не найден TTF-шрифт с кириллицей (нужен пакет fonts-dejavu-core) — "
+          "PDF-договор может отобразиться некорректно")
+    _CYRILLIC_FONT_NAME = "Helvetica"
+    return _CYRILLIC_FONT_NAME
+
+def generate_contract_pdf(contract_text, booking_ref):
+    """Рендерит уже заполненный текст договора в PDF-файл и сохраняет в архив."""
+    font_name = _register_cyrillic_font()
+    path = os.path.join(CONTRACTS_DIR, booking_ref + ".pdf")
+    doc = SimpleDocTemplate(
+        path, pagesize=A4,
+        leftMargin=20 * mm, rightMargin=20 * mm,
+        topMargin=18 * mm, bottomMargin=18 * mm,
+        title=f"Договор аренды {booking_ref}",
+    )
+    style = ParagraphStyle(
+        "contract", fontName=font_name, fontSize=10.5, leading=15, spaceAfter=4,
+    )
+    story = []
+    for raw_line in contract_text.split("\n"):
+        line = raw_line.strip()
+        if not line:
+            story.append(Spacer(1, 8))
+            continue
+        story.append(Paragraph(xml_escape(line), style))
+    doc.build(story)
     return path
 
 def email_manual_contract(booking, target_email):
@@ -461,7 +525,7 @@ def email_manual_contract(booking, target_email):
     check_in_fmt  = datetime.strptime(booking["check_in"],  "%Y-%m-%d").strftime("%d.%m.%Y")
     check_out_fmt = datetime.strptime(booking["check_out"], "%Y-%m-%d").strftime("%d.%m.%Y")
     contract_text = generate_contract(booking)
-    contract_filename = f"dogovor_{booking_ref}.txt"
+    contract_filename = f"dogovor_{booking_ref}.pdf"
 
     html = f"""
     <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#0A0A0A;color:#F0E6C8;padding:40px">
@@ -480,20 +544,20 @@ def email_manual_contract(booking, target_email):
       </div>
       <div style="background:#141414;border:1px solid #1E1E1E;padding:24px;margin-bottom:24px">
         <div style="font-size:12px;color:#A89060;line-height:1.7">
-          Полный текст договора для ознакомления и подписания приложен к этому письму
-          отдельным файлом ({contract_filename}). Пожалуйста, ознакомьтесь с условиями
-          перед заездом.
+          Договор для ознакомления и подписания приложен к этому письму отдельным
+          файлом ({contract_filename}). Пожалуйста, ознакомьтесь с условиями перед заездом.
         </div>
       </div>
       <div style="text-align:center;font-size:11px;color:#5A4A30">citypause@mail.ru &nbsp;|&nbsp; citypause.ru</div>
     </div>
     """
     save_contract(booking_ref, contract_text)
+    pdf_path = generate_contract_pdf(contract_text, booking_ref)
     send_email(
         target_email,
         f"Договор аренды — {booking_ref}",
         html,
-        attachments=[{"filename": contract_filename, "content": contract_text}]
+        attachments=[{"filename": contract_filename, "filepath": pdf_path}]
     )
 
 def load_checkin_memo(door_code=""):
@@ -679,7 +743,8 @@ def email_booking_confirmed(booking, door_code=None):
 
     contract_text = generate_contract(booking)
     save_contract(booking_ref, contract_text)
-    contract_filename = f"dogovor_{booking_ref}.txt"
+    pdf_path = generate_contract_pdf(contract_text, booking_ref)
+    contract_filename = f"dogovor_{booking_ref}.pdf"
 
     html = (
         "<div style='font-family:Arial,sans-serif;max-width:600px;margin:0 auto;"
@@ -727,7 +792,7 @@ def email_booking_confirmed(booking, door_code=None):
     send_email(guest_email,
                "\u0411\u0440\u043e\u043d\u044c \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0430 \u2014 " + booking_ref,
                html,
-               attachments=[{"filename": contract_filename, "content": contract_text}])
+               attachments=[{"filename": contract_filename, "filepath": pdf_path}])
 
 def email_admin_new_booking(booking_id, guest_name, guest_phone, guest_email,
                              check_in, check_out, nights, total,
