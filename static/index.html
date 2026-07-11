@@ -600,8 +600,14 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
             <div><div class="dbox-label">Выезд</div><div class="dbox-val" id="diChO">—</div></div>
           </div>
           <div class="pbd" id="pbd" style="display:none">
-            <div class="pbrow"><span class="lbl" id="pbNightsLbl">—</span><span class="val" id="pbNightsCost">—</span></div>
-            <div class="pbrow"><span class="lbl">Уборка</span><span class="val" id="pbClean">—</span></div>
+            <div class="pbrow" id="pbNightsRow"><span class="lbl" id="pbNightsLbl">—</span><span class="val" id="pbNightsCost">—</span></div>
+            <label class="pbrow" id="pbCleanRow" style="cursor:pointer;align-items:center">
+              <span class="lbl" style="display:flex;align-items:center;gap:8px">
+                <input type="checkbox" id="pbCleanCheckbox" onchange="updatePanel()" style="width:15px;height:15px;accent-color:var(--gold);cursor:pointer">
+                Доп. уборка + смена белья <span style="color:var(--text-muted);font-size:10px">(по желанию)</span>
+              </span>
+              <span class="val" id="pbClean">—</span>
+            </label>
             <div id="promoRow" style="display:flex;gap:8px;margin:4px 0">
               <input type="text" id="promoInput" placeholder="Промокод" style="flex:1;background:var(--black-card);border:1px solid var(--black-border);color:var(--text-primary);padding:10px 12px;font-family:'Montserrat',sans-serif;font-size:12px;outline:none;text-transform:uppercase">
               <button type="button" id="promoBtn" onclick="applyPromoCode()" style="flex:0 0 100px;background:transparent;border:1px solid rgba(201,168,76,.3);color:var(--text-secondary);font-family:'Montserrat',sans-serif;font-size:10px;letter-spacing:.1em;text-transform:uppercase;cursor:pointer">Применить</button>
@@ -683,7 +689,7 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
           <!-- Итог -->
           <div class="pbd">
             <div class="pbrow"><span class="lbl" id="s3NightsLbl">—</span><span class="val" id="s3NightsCost">—</span></div>
-            <div class="pbrow"><span class="lbl">Уборка</span><span class="val" id="s3Clean">—</span></div>
+            <div class="pbrow"><span class="lbl">Доп. уборка + бельё</span><span class="val" id="s3Clean">—</span></div>
             <div class="pbrow pbtotal"><span class="lbl">Итого</span><span class="val" id="s3Total">—</span></div>
             <div class="pbrow" style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(201,168,76,.1)">
               <span class="lbl" style="color:var(--gold)">Предоплата 20%</span>
@@ -1320,7 +1326,9 @@ function updatePanel(){
     cost += isWE(d.getFullYear(), d.getMonth(), d.getDate())
       ? CONFIG.weekend : CONFIG.weekday;
   }
-  const subtotal = cost + CONFIG.cleaning;
+  const cleaningChecked = document.getElementById('pbCleanCheckbox')?.checked || false;
+  const cleaningCost = cleaningChecked ? CONFIG.cleaning : 0;
+  const subtotal = cost + cleaningCost;
   let discount = 0;
   if(appliedPromo){
     discount = Math.round(subtotal * appliedPromo.percent / 100);
@@ -1330,7 +1338,7 @@ function updatePanel(){
                 : n%10>=2&&n%10<=4&&!(n>=11&&n<=19) ? 'ночи' : 'ночей';
   document.getElementById('pbNightsLbl').textContent  = nights + ' ' + nw(nights) + ' × тариф';
   document.getElementById('pbNightsCost').textContent = '₽' + cost.toLocaleString('ru');
-  document.getElementById('pbClean').textContent      = '₽' + CONFIG.cleaning.toLocaleString('ru');
+  document.getElementById('pbClean').textContent      = (cleaningChecked ? '+' : '') + '₽' + CONFIG.cleaning.toLocaleString('ru');
   if(appliedPromo){
     document.getElementById('pbPromoRow').style.display = 'flex';
     document.getElementById('pbPromoLbl').textContent = 'Промокод ' + appliedPromo.code + ' (−' + appliedPromo.percent + '%)';
@@ -1349,7 +1357,7 @@ function updatePanel(){
   const pc = document.getElementById('privacyCheck');
   if(pc) pc.checked = true;
   const prepay = Math.ceil(total * 0.2);
-  bookingData = {nights, cost, subtotal, discount, total, prepay, start:selStart, end:selEnd, nw:nw(nights), promo: appliedPromo};
+  bookingData = {nights, cost, subtotal, discount, total, prepay, start:selStart, end:selEnd, nw:nw(nights), promo: appliedPromo, cleaning: cleaningCost, cleaningSelected: cleaningChecked};
 }
 
 async function applyPromoCode(){
@@ -1540,7 +1548,7 @@ function goS3fromContract(){
   safeDot('sd4','add','active');
   document.getElementById('s3NightsLbl').textContent=bookingData.nights+' '+bookingData.nw;
   document.getElementById('s3NightsCost').textContent='₽'+bookingData.cost.toLocaleString('ru');
-  document.getElementById('s3Clean').textContent='₽'+CONFIG.cleaning.toLocaleString('ru');
+  document.getElementById('s3Clean').textContent = bookingData.cleaningSelected ? ('+₽'+bookingData.cleaning.toLocaleString('ru')) : 'не выбрано';
   document.getElementById('s3Total').textContent='₽'+bookingData.total.toLocaleString('ru');
   document.getElementById('s3Prepay').textContent='₽'+Math.ceil(bookingData.total*0.2).toLocaleString('ru');
   document.getElementById('payStatusBox').style.display='none';
@@ -1570,7 +1578,7 @@ function goS3(){
   document.getElementById('panelTitle').textContent='Оплата';
   document.getElementById('s3NightsLbl').textContent=`${bookingData.nights} ${bookingData.nw}`;
   document.getElementById('s3NightsCost').textContent=`₽${bookingData.cost.toLocaleString('ru')}`;
-  document.getElementById('s3Clean').textContent=`₽${CONFIG.cleaning.toLocaleString('ru')}`;
+  document.getElementById('s3Clean').textContent = bookingData.cleaningSelected ? ('+₽'+bookingData.cleaning.toLocaleString('ru')) : 'не выбрано';
   document.getElementById('s3Total').textContent=`₽${bookingData.total.toLocaleString('ru')}`;
   document.getElementById('s3Prepay').textContent=`₽${Math.ceil(bookingData.total*0.2).toLocaleString('ru')}`;
   // Сбрасываем статус оплаты при переходе на шаг 3
