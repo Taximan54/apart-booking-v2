@@ -194,6 +194,7 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
   .stat-card-val{font-size:30px !important}
   .stat-card-icon{display:none}
   .booking-filters .btn{font-size:10px !important;padding:8px 12px !important}
+  .card-header{flex-wrap:wrap;gap:8px;padding:16px !important}
 
   /* Таблицы -> карточки на мобильных, вместо горизонтального скролла */
   .tbl thead{display:none}
@@ -1784,6 +1785,8 @@ function renderDashStrip() {
   const isMobile = window.matchMedia('(max-width:768px)').matches;
 
   if(isMobile) {
+    strip.style.flexDirection = 'column';
+    strip.style.overflowX = 'visible';
     const half = Math.ceil(dim / 2);
     const row1 = document.createElement('div');
     row1.style.cssText = 'display:flex;gap:3px;margin-bottom:4px';
@@ -1795,6 +1798,8 @@ function renderDashStrip() {
     strip.appendChild(row1);
     strip.appendChild(row2);
   } else {
+    strip.style.flexDirection = 'row';
+    strip.style.overflowX = 'auto';
     for(let d = 1; d <= dim; d++) {
       strip.appendChild(makeDayCell(d));
     }
