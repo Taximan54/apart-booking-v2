@@ -180,10 +180,22 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
   .topbar{padding:14px 16px}
   .topbar-date{display:none}
   .card-body{overflow-x:auto}
-  .tbl{min-width:460px}
   .card{max-width:100% !important}
   #designPreview{position:static !important}
+  .price-grid{grid-template-columns:1fr !important}
+  .price-grid .pib-input{font-size:22px !important}
+  .grid-2col,.modal-booking-detail{grid-template-columns:1fr !important}
+  .flex-2col{flex-wrap:wrap !important}
+  .flex-2col > *{min-width:100% !important}
   .content{padding:16px !important}
+
+  /* Таблицы -> карточки на мобильных, вместо горизонтального скролла */
+  .tbl thead{display:none}
+  .tbl,.tbl tbody,.tbl tr,.tbl td{display:block;width:100%}
+  .tbl{min-width:0}
+  .tbl tr{margin-bottom:12px;border:1px solid var(--black-border);border-radius:2px;padding:10px 14px}
+  .tbl td{padding:5px 0;border:none;text-align:left}
+  .tbl td[data-label]:not([data-label=""])::before{content:attr(data-label);display:block;font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px}
 }
 </style>
 </head>
@@ -294,7 +306,7 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
         </div>
       </div>
 
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+      <div class="grid-2col" style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
         <div class="card">
           <div class="card-header">
             <span class="card-title">Ближайшие заезды</span>
@@ -368,7 +380,7 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
             </select>
           </div>
 
-          <div style="display:flex;gap:16px;margin-bottom:16px">
+          <div class="flex-2col" style="display:flex;gap:16px;margin-bottom:16px">
             <div class="info-field" style="flex:1">
               <div class="info-label">Дата заезда</div>
               <input type="date" class="info-input" id="mbCheckIn" style="width:100%">
@@ -388,7 +400,7 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
             <input type="text" class="info-input" id="mbGuestName" placeholder="Иванов Иван Иванович" style="width:100%">
           </div>
 
-          <div style="display:flex;gap:16px;margin-bottom:16px">
+          <div class="flex-2col" style="display:flex;gap:16px;margin-bottom:16px">
             <div class="info-field" style="flex:1">
               <div class="info-label">Телефон</div>
               <input type="text" class="info-input" id="mbPhone" placeholder="+7 900 000-00-00" style="width:100%">
@@ -426,7 +438,7 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
           <div style="font-size:11px;color:var(--text-muted);margin-bottom:20px">
             Для случая, если письмо не дошло или нужно отправить на другой email — по номеру уже существующей брони.
           </div>
-          <div style="display:flex;gap:16px;align-items:flex-end">
+          <div class="flex-2col" style="display:flex;gap:16px;align-items:flex-end">
             <div class="info-field" style="flex:1">
               <div class="info-label">Номер брони</div>
               <input type="text" class="info-input" id="resendBookingRef" placeholder="GP-XXXXXX" style="width:100%">
@@ -670,7 +682,7 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
           <div id="placeFormWrap" style="display:none;background:var(--black-card);border:1px solid var(--black-border);padding:20px;margin-bottom:24px">
             <div style="font-size:11px;color:var(--gold);letter-spacing:.2em;text-transform:uppercase;margin-bottom:16px" id="placeFormTitle">Новое место</div>
             <input type="hidden" id="placeEditId">
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+            <div class="grid-2col" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
               <div class="info-field">
                 <div class="info-label">Название</div>
                 <input type="text" class="info-input" id="placeName" placeholder="Новосибирский зоопарк">
@@ -732,7 +744,7 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
               <div class="info-label">Текст отзыва</div>
               <textarea class="info-input" id="reviewText" rows="4" style="resize:vertical" placeholder="Отличная квартира, всё понравилось!"></textarea>
             </div>
-            <div style="display:flex;gap:16px;margin-bottom:12px">
+            <div class="flex-2col" style="display:flex;gap:16px;margin-bottom:12px">
               <div class="info-field" style="flex:1">
                 <div class="info-label">Оценка (1–5)</div>
                 <input type="number" class="info-input" id="reviewRating" value="5" min="1" max="5">
@@ -976,7 +988,7 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
 
     <!-- SETTINGS -->
     <div class="panel" id="panel-settings">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;max-width:900px">
+      <div class="grid-2col" style="display:grid;grid-template-columns:1fr 1fr;gap:24px;max-width:900px">
         <div class="card">
           <div class="card-header"><span class="card-title">Код замка</span></div>
           <div class="card-body">
@@ -1305,13 +1317,13 @@ function addPromoRow(code = '', percent = '') {
   const tbody = document.getElementById('promoTableBody');
   const tr = document.createElement('tr');
   tr.innerHTML =
-    '<td><input type="text" class="pib-input promo-code-input" ' +
+    '<td data-label="Код"><input type="text" class="pib-input promo-code-input" ' +
     'style="font-size:14px;padding:8px 10px;text-transform:uppercase" ' +
     'value="' + code + '" placeholder="SUMMER10"></td>' +
-    '<td><input type="number" class="pib-input promo-percent-input" ' +
+    '<td data-label="Скидка, %"><input type="number" class="pib-input promo-percent-input" ' +
     'style="font-size:14px;padding:8px 10px;width:90px" ' +
     'value="' + percent + '" placeholder="10"></td>' +
-    '<td><button class="btn btn-danger btn-sm" onclick="this.closest(\'tr\').remove()">✕</button></td>';
+    '<td data-label=""><button class="btn btn-danger btn-sm" onclick="this.closest(\'tr\').remove()">✕</button></td>';
   tbody.appendChild(tr);
 }
 
@@ -1463,11 +1475,11 @@ function updateDashboard() {
   } else {
     tbody.innerHTML = upcoming.map(b => `
       <tr onclick="openBookingModal(${JSON.stringify(b).split('"').join("'").replace(/'/g,"&#39;")})" style="cursor:pointer">
-        <td><strong style="color:var(--text-primary)">${b.guest_name}</strong></td>
-        <td>${fmtDateRu(b.check_in)}</td>
-        <td>${b.nights}</td>
-        <td style="color:var(--gold)">₽${(b.total_price||0).toLocaleString('ru')}</td>
-        <td>${statusBadge(b.status)}</td>
+        <td data-label="Гость"><strong style="color:var(--text-primary)">${b.guest_name}</strong></td>
+        <td data-label="Заезд">${fmtDateRu(b.check_in)}</td>
+        <td data-label="Ночей">${b.nights}</td>
+        <td data-label="Сумма" style="color:var(--gold)">₽${(b.total_price||0).toLocaleString('ru')}</td>
+        <td data-label="Статус">${statusBadge(b.status)}</td>
       </tr>
     `).join('');
   }
@@ -1516,16 +1528,16 @@ function renderBookingsTable(list) {
   const sorted = [...list].sort((a,b) => new Date(b.check_in)-new Date(a.check_in));
   tbody.innerHTML = sorted.map((b,i) => `
     <tr onclick="openBookingModal(${encodeBooking(b)})" style="cursor:pointer">
-      <td style="color:var(--gold-muted);font-size:10px">${b.id||i+1}</td>
-      <td><strong style="color:var(--text-primary)">${b.guest_name}</strong></td>
-      <td>${b.guest_phone||'—'}</td>
-      <td>${fmtDateRu(b.check_in)}</td>
-      <td>${fmtDateRu(b.check_out)}</td>
-      <td>${b.nights}</td>
-      <td style="color:var(--gold)">₽${(b.total_price||0).toLocaleString('ru')}</td>
-      <td>${payBadge(b.payment_method)}</td>
-      <td>${statusBadge(b.status)}</td>
-      <td><button class="btn btn-ghost btn-icon" onclick="event.stopPropagation();openBookingModal(${encodeBooking(b)})">›</button></td>
+      <td data-label="#" style="color:var(--gold-muted);font-size:10px">${b.id||i+1}</td>
+      <td data-label="Гость"><strong style="color:var(--text-primary)">${b.guest_name}</strong></td>
+      <td data-label="Телефон">${b.guest_phone||'—'}</td>
+      <td data-label="Заезд">${fmtDateRu(b.check_in)}</td>
+      <td data-label="Выезд">${fmtDateRu(b.check_out)}</td>
+      <td data-label="Ночей">${b.nights}</td>
+      <td data-label="Сумма" style="color:var(--gold)">₽${(b.total_price||0).toLocaleString('ru')}</td>
+      <td data-label="Оплата">${payBadge(b.payment_method)}</td>
+      <td data-label="Статус">${statusBadge(b.status)}</td>
+      <td data-label=""><button class="btn btn-ghost btn-icon" onclick="event.stopPropagation();openBookingModal(${encodeBooking(b)})">›</button></td>
     </tr>
   `).join('');
 }
@@ -1927,15 +1939,15 @@ async function loadContractsArchive() {
         <tbody>
           ${contracts.map(c => `
             <tr>
-              <td style="color:var(--gold);font-size:12px">${c.ref}</td>
-              <td>
+              <td data-label="Бронь" style="color:var(--gold);font-size:12px">${c.ref}</td>
+              <td data-label="Гость">
                 <div style="font-size:12px;color:var(--text-primary)">${c.guest_name || '—'}</div>
                 <div style="font-size:11px;color:var(--text-muted)">${c.guest_email || ''}</div>
               </td>
-              <td style="font-size:12px">${c.check_in || '—'} → ${c.check_out || '—'}</td>
-              <td style="font-size:12px">${c.total_price ? '₽' + Number(c.total_price).toLocaleString('ru') : '—'}</td>
-              <td style="font-size:11px;color:var(--text-muted)">${c.created}</td>
-              <td>
+              <td data-label="Даты" style="font-size:12px">${c.check_in || '—'} → ${c.check_out || '—'}</td>
+              <td data-label="Сумма" style="font-size:12px">${c.total_price ? '₽' + Number(c.total_price).toLocaleString('ru') : '—'}</td>
+              <td data-label="Создан" style="font-size:11px;color:var(--text-muted)">${c.created}</td>
+              <td data-label="">
                 <button class="btn btn-ghost btn-sm" onclick="downloadContract('${c.ref}', '${c.guest_name || c.ref}')">Скачать</button>
               </td>
             </tr>
