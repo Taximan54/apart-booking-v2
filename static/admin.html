@@ -773,19 +773,33 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
           <span class="card-title">Оформление</span>
         </div>
         <div class="card-body">
+          <div id="designPreview" style="position:sticky;top:8px;z-index:5;margin-bottom:28px;border:1px solid var(--black-border);border-radius:4px;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,.4)">
+            <div id="dpHeader" style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;background:linear-gradient(to bottom,rgba(10,10,10,.98),rgba(10,10,10,.85));border-bottom:1px solid rgba(201,168,76,.15)">
+              <div id="dpLogo" style="letter-spacing:.05em">Городская Пауза</div>
+              <div id="dpBookBtn" style="padding:6px 14px;border:1px solid #D4A017;font-size:10px;letter-spacing:.05em;white-space:nowrap">Забронировать</div>
+            </div>
+            <div id="dpHero" style="padding:36px 24px;min-height:160px;display:flex;flex-direction:column;justify-content:center;background:#141414">
+              <div id="dpHeroTitle" style="line-height:1.1;margin-bottom:8px">Искусство комфортного проживания</div>
+              <div id="dpHeroSub" style="letter-spacing:.1em;text-transform:uppercase;opacity:.9">Апартаменты премиум-класса · Посуточная аренда</div>
+            </div>
+            <div style="padding:6px 16px;font-size:9px;color:var(--text-muted);border-top:1px solid var(--black-border);background:var(--black-card)">
+              Живой предпросмотр — обновляется сразу при изменении полей ниже (без сохранения). Не 1:1 копия сайта, но даёт понимание вида.
+            </div>
+          </div>
+
           <div class="info-field" style="margin-bottom:16px">
             <div class="info-label">Название сайта</div>
-            <input type="text" class="info-input" id="settingsSiteName" placeholder="Городская Пауза" style="width:100%">
+            <input type="text" class="info-input" id="settingsSiteName" placeholder="Городская Пауза" style="width:100%" oninput="renderDesignPreview()">
           </div>
 
           <div class="info-field" style="margin-bottom:16px">
             <div class="info-label">Заголовок на главном экране (Hero)</div>
-            <input type="text" class="info-input" id="settingsHeroTitle" placeholder="Искусство комфортного проживания" style="width:100%">
+            <input type="text" class="info-input" id="settingsHeroTitle" placeholder="Искусство комфортного проживания" style="width:100%" oninput="renderDesignPreview()">
           </div>
 
           <div class="info-field" style="margin-bottom:24px">
             <div class="info-label">Подзаголовок на главном экране</div>
-            <input type="text" class="info-input" id="settingsHeroSubtitle" placeholder="Апартаменты премиум-класса · Посуточная аренда" style="width:100%">
+            <input type="text" class="info-input" id="settingsHeroSubtitle" placeholder="Апартаменты премиум-класса · Посуточная аренда" style="width:100%" oninput="renderDesignPreview()">
           </div>
 
           <div class="info-field" style="margin-bottom:8px">
@@ -2413,15 +2427,15 @@ const SCALE_OPTIONS = [1.0, 1.5, 2.0, 2.5, 3.0];
 const NAV_SCALE_OPTIONS = [1.0, 1.2, 1.4, 1.6, 1.8];
 const HERO_POSITION_OPTIONS = [{v:'left',label:'Слева'},{v:'center',label:'По центру'},{v:'right',label:'Справа'}];
 const COLOR_THEMES = [
-  {key: 'gold',       label: 'Золото',        gradient: 'linear-gradient(180deg,#FFD060 0%,#D4920A 28%,#8B5E00 50%,#D4920A 72%,#FFD060 100%)'},
-  {key: 'emerald',    label: 'Изумруд',       gradient: 'linear-gradient(180deg,#8FE3B0 0%,#2E8B57 28%,#0E3D22 50%,#2E8B57 72%,#8FE3B0 100%)'},
-  {key: 'sapphire',   label: 'Сапфир',        gradient: 'linear-gradient(180deg,#A8CFFF 0%,#2A5CAA 28%,#0C1E3D 50%,#2A5CAA 72%,#A8CFFF 100%)'},
-  {key: 'burgundy',   label: 'Бордо',         gradient: 'linear-gradient(180deg,#DE93A9 0%,#7B1E3A 28%,#2E0A16 50%,#7B1E3A 72%,#DE93A9 100%)'},
-  {key: 'amethyst',   label: 'Аметист',       gradient: 'linear-gradient(180deg,#DDBFEA 0%,#7B4B94 28%,#2F1D3D 50%,#7B4B94 72%,#DDBFEA 100%)'},
-  {key: 'dusty_rose', label: 'Пыльная роза',  gradient: 'linear-gradient(180deg,#F5DEE3 0%,#C08497 28%,#5E3540 50%,#C08497 72%,#F5DEE3 100%)'},
-  {key: 'teal',       label: 'Бирюза',        gradient: 'linear-gradient(180deg,#9FEAE5 0%,#1F8A8C 28%,#082D2E 50%,#1F8A8C 72%,#9FEAE5 100%)'},
-  {key: 'copper',     label: 'Медь',          gradient: 'linear-gradient(180deg,#F3C495 0%,#B5651D 28%,#3E2008 50%,#B5651D 72%,#F3C495 100%)'},
-  {key: 'graphite',   label: 'Графит',        gradient: 'linear-gradient(180deg,#F2F3F4 0%,#8A8D91 28%,#232426 50%,#8A8D91 72%,#F2F3F4 100%)'},
+  {key: 'gold',       label: 'Золото',        solid: '#D4A017', gradient: 'linear-gradient(180deg,#FFD060 0%,#D4920A 28%,#8B5E00 50%,#D4920A 72%,#FFD060 100%)'},
+  {key: 'emerald',    label: 'Изумруд',       solid: '#2E8B57', gradient: 'linear-gradient(180deg,#8FE3B0 0%,#2E8B57 28%,#0E3D22 50%,#2E8B57 72%,#8FE3B0 100%)'},
+  {key: 'sapphire',   label: 'Сапфир',        solid: '#2A5CAA', gradient: 'linear-gradient(180deg,#A8CFFF 0%,#2A5CAA 28%,#0C1E3D 50%,#2A5CAA 72%,#A8CFFF 100%)'},
+  {key: 'burgundy',   label: 'Бордо',         solid: '#7B1E3A', gradient: 'linear-gradient(180deg,#DE93A9 0%,#7B1E3A 28%,#2E0A16 50%,#7B1E3A 72%,#DE93A9 100%)'},
+  {key: 'amethyst',   label: 'Аметист',       solid: '#7B4B94', gradient: 'linear-gradient(180deg,#DDBFEA 0%,#7B4B94 28%,#2F1D3D 50%,#7B4B94 72%,#DDBFEA 100%)'},
+  {key: 'dusty_rose', label: 'Пыльная роза',  solid: '#C08497', gradient: 'linear-gradient(180deg,#F5DEE3 0%,#C08497 28%,#5E3540 50%,#C08497 72%,#F5DEE3 100%)'},
+  {key: 'teal',       label: 'Бирюза',        solid: '#1F8A8C', gradient: 'linear-gradient(180deg,#9FEAE5 0%,#1F8A8C 28%,#082D2E 50%,#1F8A8C 72%,#9FEAE5 100%)'},
+  {key: 'copper',     label: 'Медь',          solid: '#B5651D', gradient: 'linear-gradient(180deg,#F3C495 0%,#B5651D 28%,#3E2008 50%,#B5651D 72%,#F3C495 100%)'},
+  {key: 'graphite',   label: 'Графит',        solid: '#8A8D91', gradient: 'linear-gradient(180deg,#F2F3F4 0%,#8A8D91 28%,#232426 50%,#8A8D91 72%,#F2F3F4 100%)'},
 ];
 
 function renderColorPicker() {
@@ -2437,6 +2451,7 @@ function renderColorPicker() {
 function selectColorTheme(key) {
   selectedColorTheme = key;
   renderColorPicker();
+  renderDesignPreview();
 }
 
 const NAV_LABEL_KEYS = [
@@ -2506,6 +2521,7 @@ function renderHeroFontPicker() {
 function selectHeroFont(key) {
   selectedHeroFont = key;
   renderHeroFontPicker();
+  renderDesignPreview();
 }
 
 function renderHeroBoldToggle() {
@@ -2520,6 +2536,7 @@ function selectHeroBold(v) {
   selectedHeroBold = v;
   renderHeroBoldToggle();
   renderHeroFontPicker();
+  renderDesignPreview();
 }
 
 function renderHeroScalePicker() {
@@ -2532,6 +2549,7 @@ function renderHeroScalePicker() {
 function selectHeroScale(v) {
   selectedHeroScale = v;
   renderHeroScalePicker();
+  renderDesignPreview();
 }
 
 function renderHeroPositionPicker() {
@@ -2544,27 +2562,91 @@ function renderHeroPositionPicker() {
 function selectHeroPosition(v) {
   selectedHeroPosition = v;
   renderHeroPositionPicker();
+  renderDesignPreview();
 }
 
 function selectFont(key) {
   selectedFont = key;
   renderFontPicker();
+  renderDesignPreview();
 }
 
 function selectBold(v) {
   selectedBold = v;
   renderBoldToggle();
   renderFontPicker();
+  renderDesignPreview();
 }
 
 function selectScale(v) {
   selectedScale = v;
   renderScalePicker();
+  renderDesignPreview();
 }
 
 function selectNavScale(v) {
   selectedNavScale = v;
   renderNavScalePicker();
+}
+
+function renderDesignPreview() {
+  const logoEl     = document.getElementById('dpLogo');
+  const btnEl      = document.getElementById('dpBookBtn');
+  const heroTitleEl= document.getElementById('dpHeroTitle');
+  const heroSubEl  = document.getElementById('dpHeroSub');
+  const heroBoxEl  = document.getElementById('dpHero');
+  if(!logoEl) return; // превью ещё не отрендерилось на странице
+
+  const fontObj     = FONT_OPTIONS.find(f => f.key === selectedFont) || FONT_OPTIONS[0];
+  const heroFontObj = HERO_FONT_OPTIONS.find(f => f.key === selectedHeroFont) || HERO_FONT_OPTIONS[0];
+  const theme       = COLOR_THEMES.find(c => c.key === selectedColorTheme) || COLOR_THEMES[0];
+
+  const siteNameEl  = document.getElementById('settingsSiteName');
+  const heroTitleIn = document.getElementById('settingsHeroTitle');
+  const heroSubIn   = document.getElementById('settingsHeroSubtitle');
+  const siteName  = (siteNameEl && siteNameEl.value.trim()) || 'Городская Пауза';
+  const heroTitle = (heroTitleIn && heroTitleIn.value.trim()) || 'Искусство комфортного проживания';
+  const heroSub   = (heroSubIn && heroSubIn.value.trim()) || 'Апартаменты премиум-класса · Посуточная аренда';
+
+  // Логотип
+  logoEl.textContent = siteName;
+  logoEl.style.fontFamily = fontObj.family;
+  logoEl.style.fontWeight = selectedBold ? 700 : fontObj.weight;
+  logoEl.style.fontSize = (18 + Math.min(selectedScale, 2) * 3) + 'px';
+  logoEl.style.background = theme.gradient;
+  logoEl.style.webkitBackgroundClip = 'text';
+  logoEl.style.webkitTextFillColor = 'transparent';
+  logoEl.style.backgroundClip = 'text';
+
+  // Кнопка «Забронировать»
+  btnEl.style.borderColor = theme.solid;
+  btnEl.style.background = theme.gradient;
+  btnEl.style.webkitBackgroundClip = 'text';
+  btnEl.style.webkitTextFillColor = 'transparent';
+  btnEl.style.backgroundClip = 'text';
+  btnEl.style.fontFamily = fontObj.family;
+
+  // Hero-заголовок и подзаголовок
+  heroTitleEl.textContent = heroTitle;
+  heroTitleEl.style.fontFamily = heroFontObj.family;
+  heroTitleEl.style.fontWeight = selectedHeroBold ? 700 : heroFontObj.weight;
+  heroTitleEl.style.fontSize = (22 + Math.min(selectedHeroScale, 2) * 5) + 'px';
+  heroTitleEl.style.background = theme.gradient;
+  heroTitleEl.style.webkitBackgroundClip = 'text';
+  heroTitleEl.style.webkitTextFillColor = 'transparent';
+  heroTitleEl.style.backgroundClip = 'text';
+
+  heroSubEl.textContent = heroSub;
+  heroSubEl.style.fontFamily = heroFontObj.family;
+  heroSubEl.style.fontWeight = selectedHeroBold ? 700 : heroFontObj.weight;
+  heroSubEl.style.fontSize = '11px';
+  heroSubEl.style.color = theme.solid;
+
+  // Расположение hero-текста
+  const align = selectedHeroPosition === 'left' ? 'flex-start' : selectedHeroPosition === 'right' ? 'flex-end' : 'center';
+  const textAlign = selectedHeroPosition === 'left' ? 'left' : selectedHeroPosition === 'right' ? 'right' : 'center';
+  heroBoxEl.style.alignItems = align;
+  heroBoxEl.style.textAlign = textAlign;
 }
 
 async function loadSiteSettings() {
@@ -2595,6 +2677,7 @@ async function loadSiteSettings() {
     renderHeroBoldToggle();
     renderHeroScalePicker();
     renderHeroPositionPicker();
+    renderDesignPreview();
     if(s.hero_photo) {
       const img = document.getElementById('heroPhotoImg');
       img.src = `${API_BASE}/data/photos/${s.hero_photo}`;
