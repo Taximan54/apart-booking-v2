@@ -189,6 +189,11 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
   .flex-2col{flex-wrap:wrap !important}
   .flex-2col > *{min-width:100% !important}
   .content{padding:16px !important}
+  .stat-card{padding:16px 14px !important}
+  .stat-card-label{font-size:9px !important;letter-spacing:.1em !important}
+  .stat-card-val{font-size:30px !important}
+  .stat-card-icon{display:none}
+  .booking-filters .btn{font-size:10px !important;padding:8px 12px !important}
 
   /* Таблицы -> карточки на мобильных, вместо горизонтального скролла */
   .tbl thead{display:none}
@@ -293,8 +298,8 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
     <div class="panel active" id="panel-dashboard">
       <div class="stats-row" id="statsRow">
         <div class="stat-card"><div class="stat-card-icon">◻</div><div class="stat-card-label">Всего броней</div><div class="stat-card-val" id="sTotal">—</div><div class="stat-card-sub">за всё время</div></div>
-        <div class="stat-card"><div class="stat-card-icon">◈</div><div class="stat-card-label">Этот месяц</div><div class="stat-card-val" id="sMonth">—</div><div class="stat-card-sub">бронирований</div></div>
         <div class="stat-card"><div class="stat-card-icon">₽</div><div class="stat-card-label">Доход (месяц)</div><div class="stat-card-val" id="sRevenue">—</div><div class="stat-card-sub">рублей</div></div>
+        <div class="stat-card"><div class="stat-card-icon">◈</div><div class="stat-card-label">Этот месяц</div><div class="stat-card-val" id="sMonth">—</div><div class="stat-card-sub">бронирований</div></div>
         <div class="stat-card"><div class="stat-card-icon">⊛</div><div class="stat-card-label">Занятость</div><div class="stat-card-val" id="sOccupancy">—</div><div class="stat-card-sub">этот месяц</div></div>
       </div>
 
@@ -348,9 +353,9 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
 
     <!-- BOOKINGS -->
     <div class="panel" id="panel-bookings">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:12px">
         <div></div>
-        <div style="display:flex;gap:8px">
+        <div class="booking-filters" style="display:flex;gap:8px;flex-wrap:wrap">
           <button class="btn btn-ghost btn-sm" onclick="filterBookings('all')" id="fAll">Все</button>
           <button class="btn btn-ghost btn-sm" onclick="filterBookings('confirmed')" id="fConf">Подтверждённые</button>
           <button class="btn btn-ghost btn-sm" onclick="filterBookings('waiting_payment')" id="fPend">Ждут оплаты</button>
@@ -1748,8 +1753,7 @@ function renderDashStrip() {
     for(let d = new Date(s); d < e; d.setDate(d.getDate() + 1)) clientBooked.add(fmtDate(d));
   });
 
-  strip.innerHTML = '';
-  for(let d = 1; d <= dim; d++) {
+  function makeDayCell(d) {
     const dateObj = new Date(year, month, d);
     const ds = fmtDate(dateObj);
     const cell = document.createElement('div');
@@ -1773,7 +1777,27 @@ function renderDashStrip() {
       cell.style.border = '1px solid var(--black-border)';
       cell.style.color = 'var(--text-secondary)';
     }
-    strip.appendChild(cell);
+    return cell;
+  }
+
+  strip.innerHTML = '';
+  const isMobile = window.matchMedia('(max-width:768px)').matches;
+
+  if(isMobile) {
+    const half = Math.ceil(dim / 2);
+    const row1 = document.createElement('div');
+    row1.style.cssText = 'display:flex;gap:3px;margin-bottom:4px';
+    const row2 = document.createElement('div');
+    row2.style.cssText = 'display:flex;gap:3px';
+    for(let d = 1; d <= dim; d++) {
+      (d <= half ? row1 : row2).appendChild(makeDayCell(d));
+    }
+    strip.appendChild(row1);
+    strip.appendChild(row2);
+  } else {
+    for(let d = 1; d <= dim; d++) {
+      strip.appendChild(makeDayCell(d));
+    }
   }
 }
 
