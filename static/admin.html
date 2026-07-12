@@ -167,16 +167,18 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
   .stats-row{grid-template-columns:1fr 1fr}
   .admin-cal-wrap{grid-template-columns:1fr}
 }
+.admin-hamburger{display:none;flex-shrink:0;width:28px;height:20px;flex-direction:column;justify-content:space-between;background:none;border:none;cursor:pointer;padding:0;margin-right:16px}
+.admin-hamburger span{display:block;height:2px;width:100%;background:var(--gold);border-radius:1px}
+.admin-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:99}
 @media(max-width:768px){
   .sidebar{transform:translateX(-100%)}
   .sidebar.open{transform:translateX(0)}
   .main{margin-left:0}
   .admin-hamburger{display:flex}
   .admin-backdrop.open{display:block}
+  .topbar{padding:14px 16px}
+  .topbar-date{display:none}
 }
-.admin-hamburger{display:none;flex-shrink:0;width:28px;height:20px;flex-direction:column;justify-content:space-between;background:none;border:none;cursor:pointer;padding:0;margin-right:16px}
-.admin-hamburger span{display:block;height:2px;width:100%;background:var(--gold);border-radius:1px}
-.admin-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:99}
 </style>
 </head>
 <body>
