@@ -168,6 +168,7 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
   .stats-row{grid-template-columns:1fr 1fr}
   .admin-cal-wrap{grid-template-columns:1fr}
 }
+.mob-only-cell{display:none}
 .admin-hamburger{display:none;flex-shrink:0;width:28px;height:20px;flex-direction:column;justify-content:space-between;background:none;border:none;cursor:pointer;padding:0;margin-right:16px}
 .admin-hamburger span{display:block;height:2px;width:100%;background:var(--gold);border-radius:1px}
 .admin-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:99}
@@ -193,9 +194,19 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
   .tbl thead{display:none}
   .tbl,.tbl tbody,.tbl tr,.tbl td{display:block;width:100%}
   .tbl{min-width:0}
-  .tbl tr{margin-bottom:12px;border:1px solid var(--black-border);border-radius:2px;padding:10px 14px}
+  .tbl tr{margin-bottom:12px;border:1px solid var(--black-border);border-radius:2px;padding:10px 14px;position:relative}
   .tbl td{padding:5px 0;border:none;text-align:left}
   .tbl td[data-label]:not([data-label=""])::before{content:attr(data-label);display:block;font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px}
+
+  /* Компактная карточка брони — только главное, остальное по тапу (открывает модалку) */
+  .mob-only-cell{display:block !important}
+  #bookingsBody td.desk-only-cell,
+  #bookingsBody td[data-label="#"],
+  #bookingsBody td[data-label="Телефон"],
+  #bookingsBody td[data-label="Ночей"],
+  #bookingsBody td[data-label="Оплата"],
+  #bookingsBody td[data-label=""]{display:none}
+  #bookingsBody tr::after{content:'Нажмите для подробностей ›';position:absolute;right:14px;bottom:10px;font-size:9px;color:var(--text-muted)}
 }
 </style>
 </head>
@@ -1531,8 +1542,9 @@ function renderBookingsTable(list) {
       <td data-label="#" style="color:var(--gold-muted);font-size:10px">${b.id||i+1}</td>
       <td data-label="Гость"><strong style="color:var(--text-primary)">${b.guest_name}</strong></td>
       <td data-label="Телефон">${b.guest_phone||'—'}</td>
-      <td data-label="Заезд">${fmtDateRu(b.check_in)}</td>
-      <td data-label="Выезд">${fmtDateRu(b.check_out)}</td>
+      <td data-label="Даты" class="mob-only-cell">${fmtDateRu(b.check_in)} → ${fmtDateRu(b.check_out)}</td>
+      <td data-label="Заезд" class="desk-only-cell">${fmtDateRu(b.check_in)}</td>
+      <td data-label="Выезд" class="desk-only-cell">${fmtDateRu(b.check_out)}</td>
       <td data-label="Ночей">${b.nights}</td>
       <td data-label="Сумма" style="color:var(--gold)">₽${(b.total_price||0).toLocaleString('ru')}</td>
       <td data-label="Оплата">${payBadge(b.payment_method)}</td>
