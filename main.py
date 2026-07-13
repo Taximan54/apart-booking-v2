@@ -104,7 +104,7 @@ class SiteSettings(BaseModel):
     hero_subtitle: str = "Апартаменты премиум-класса · Посуточная аренда"
     logo_font: str = "im_fell"  # im_fell / playfair / unifraktur / tangerine / pacifico / bebas
     logo_bold: bool = False
-    logo_scale: float = 1.0     # 1.0 / 1.5 / 2.0 / 2.5 / 3.0 — размер логотипа и кнопки "Забронировать"
+    logo_scale: float = 1.0     # 0.5 / 0.7 / 1.0 / 1.5 / 2.0 / 2.5 — размер логотипа и кнопки "Забронировать"
     nav_scale: float = 1.0      # 1.0–1.8 — размер пунктов меню (навигации)
     color_theme: str = "gold"   # gold / emerald / sapphire / burgundy / amethyst / dusty_rose / teal / copper / graphite
     nav_labels: Dict[str, str] = Field(default_factory=lambda: {
@@ -119,7 +119,8 @@ class SiteSettings(BaseModel):
     })
     hero_font: str = "cormorant"    # cormorant / im_fell / playfair / unifraktur / tangerine / pacifico / bebas
     hero_bold: bool = False
-    hero_scale: float = 1.0         # 1.0 / 1.5 / 2.0 / 2.5 / 3.0 — размер hero-заголовка и подзаголовка
+    hero_title_scale: float = 1.0    # 0.5 / 0.7 / 1.0 / 1.5 / 2.0 — размер hero-заголовка
+    hero_subtitle_scale: float = 1.0 # 0.5 / 0.7 / 1.0 / 1.5 / 2.0 — размер hero-подзаголовка
     hero_position: str = "center"   # left / center / right — расположение текста на hero-фото
 
 class HouseRulesText(BaseModel):
@@ -1105,7 +1106,8 @@ DEFAULT_SETTINGS = {
     },
     "hero_font": "cormorant",
     "hero_bold": False,
-    "hero_scale": 1.0,
+    "hero_title_scale": 1.0,
+    "hero_subtitle_scale": 1.0,
     "hero_position": "center",
 }
 

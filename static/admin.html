@@ -892,8 +892,12 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
               <div id="heroBoldToggle" style="display:flex;gap:8px"></div>
             </div>
             <div>
-              <div class="info-label" style="margin-bottom:8px">Размер</div>
-              <div id="heroScalePicker" style="display:flex;gap:8px"></div>
+              <div class="info-label" style="margin-bottom:8px">Размер заголовка</div>
+              <div id="heroTitleScalePicker" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+            </div>
+            <div>
+              <div class="info-label" style="margin-bottom:8px">Размер подзаголовка</div>
+              <div id="heroSubtitleScalePicker" style="display:flex;gap:8px;flex-wrap:wrap"></div>
             </div>
             <div>
               <div class="info-label" style="margin-bottom:8px">Расположение на экране</div>
@@ -2492,9 +2496,11 @@ let selectedNavScale = 1.0;
 let selectedColorTheme = 'gold';
 let selectedHeroFont = 'cormorant';
 let selectedHeroBold = false;
-let selectedHeroScale = 1.0;
+let selectedHeroTitleScale = 1.0;
+let selectedHeroSubtitleScale = 1.0;
 let selectedHeroPosition = 'center';
-const SCALE_OPTIONS = [1.0, 1.5, 2.0, 2.5, 3.0];
+const SCALE_OPTIONS = [0.5, 0.7, 1.0, 1.5, 2.0, 2.5];
+const HERO_SCALE_OPTIONS = [0.5, 0.7, 1.0, 1.5, 2.0];
 const NAV_SCALE_OPTIONS = [1.0, 1.2, 1.4, 1.6, 1.8];
 const HERO_POSITION_OPTIONS = [{v:'left',label:'Слева'},{v:'center',label:'По центру'},{v:'right',label:'Справа'}];
 const COLOR_THEMES = [
@@ -2610,16 +2616,29 @@ function selectHeroBold(v) {
   renderDesignPreview();
 }
 
-function renderHeroScalePicker() {
-  const el = document.getElementById('heroScalePicker');
-  el.innerHTML = SCALE_OPTIONS.map(s => `
-    <button type="button" onclick="selectHeroScale(${s})" class="btn ${selectedHeroScale===s ? 'btn-primary' : 'btn-ghost'} btn-sm">${s}x</button>
+function renderHeroTitleScalePicker() {
+  const el = document.getElementById('heroTitleScalePicker');
+  el.innerHTML = HERO_SCALE_OPTIONS.map(s => `
+    <button type="button" onclick="selectHeroTitleScale(${s})" class="btn ${selectedHeroTitleScale===s ? 'btn-primary' : 'btn-ghost'} btn-sm">${s}x</button>
   `).join('');
 }
 
-function selectHeroScale(v) {
-  selectedHeroScale = v;
-  renderHeroScalePicker();
+function selectHeroTitleScale(v) {
+  selectedHeroTitleScale = v;
+  renderHeroTitleScalePicker();
+  renderDesignPreview();
+}
+
+function renderHeroSubtitleScalePicker() {
+  const el = document.getElementById('heroSubtitleScalePicker');
+  el.innerHTML = HERO_SCALE_OPTIONS.map(s => `
+    <button type="button" onclick="selectHeroSubtitleScale(${s})" class="btn ${selectedHeroSubtitleScale===s ? 'btn-primary' : 'btn-ghost'} btn-sm">${s}x</button>
+  `).join('');
+}
+
+function selectHeroSubtitleScale(v) {
+  selectedHeroSubtitleScale = v;
+  renderHeroSubtitleScalePicker();
   renderDesignPreview();
 }
 
@@ -2701,7 +2720,7 @@ function renderDesignPreview() {
   heroTitleEl.textContent = heroTitle;
   heroTitleEl.style.fontFamily = heroFontObj.family;
   heroTitleEl.style.fontWeight = selectedHeroBold ? 700 : heroFontObj.weight;
-  heroTitleEl.style.fontSize = (22 + Math.min(selectedHeroScale, 2) * 5) + 'px';
+  heroTitleEl.style.fontSize = (18 + selectedHeroTitleScale * 8) + 'px';
   heroTitleEl.style.background = theme.gradient;
   heroTitleEl.style.webkitBackgroundClip = 'text';
   heroTitleEl.style.webkitTextFillColor = 'transparent';
@@ -2710,7 +2729,7 @@ function renderDesignPreview() {
   heroSubEl.textContent = heroSub;
   heroSubEl.style.fontFamily = heroFontObj.family;
   heroSubEl.style.fontWeight = selectedHeroBold ? 700 : heroFontObj.weight;
-  heroSubEl.style.fontSize = '11px';
+  heroSubEl.style.fontSize = (8 + selectedHeroSubtitleScale * 4) + 'px';
   heroSubEl.style.color = theme.solid;
 
   // Расположение hero-текста
@@ -2736,7 +2755,8 @@ async function loadSiteSettings() {
     navLabels = s.nav_labels || {};
     selectedHeroFont = s.hero_font || 'cormorant';
     selectedHeroBold = !!s.hero_bold;
-    selectedHeroScale = s.hero_scale || 1.0;
+    selectedHeroTitleScale = s.hero_title_scale || 1.0;
+    selectedHeroSubtitleScale = s.hero_subtitle_scale || 1.0;
     selectedHeroPosition = s.hero_position || 'center';
     renderFontPicker();
     renderBoldToggle();
@@ -2746,7 +2766,8 @@ async function loadSiteSettings() {
     renderNavLabelsEditor();
     renderHeroFontPicker();
     renderHeroBoldToggle();
-    renderHeroScalePicker();
+    renderHeroTitleScalePicker();
+    renderHeroSubtitleScalePicker();
     renderHeroPositionPicker();
     renderDesignPreview();
     if(s.hero_photo) {
@@ -2838,7 +2859,8 @@ async function saveDesignSettings() {
     nav_labels:    collectedNavLabels,
     hero_font:     selectedHeroFont,
     hero_bold:     selectedHeroBold,
-    hero_scale:    selectedHeroScale,
+    hero_title_scale:    selectedHeroTitleScale,
+    hero_subtitle_scale: selectedHeroSubtitleScale,
     hero_position: selectedHeroPosition,
   };
   try {

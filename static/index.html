@@ -14,7 +14,7 @@
   --text-primary:#F0E6C8;--text-secondary:#A89060;--text-muted:#5A4A30;--white:#FAF6EE;
   --logo-font:'IM Fell English',serif;--logo-weight:400;--logo-scale:1;--nav-scale:1;
   --accent-gradient:linear-gradient(180deg,#FFD060 0%,#D4920A 28%,#8B5E00 50%,#D4920A 72%,#FFD060 100%);
-  --hero-font:'Cormorant Garamond',serif;--hero-weight:400;--hero-scale:1;
+  --hero-font:'Cormorant Garamond',serif;--hero-weight:400;--hero-title-scale:1;--hero-subtitle-scale:1;
 }
 *{margin:0;padding:0;box-sizing:border-box}
 html{scroll-behavior:smooth}
@@ -51,9 +51,9 @@ nav a:hover{color:var(--gold)}
 .hero-content.pos-left .eyebrow{justify-content:flex-start}
 .hero-content.pos-right .eyebrow{justify-content:flex-end}
 .eyebrow::before,.eyebrow::after{content:'';width:40px;height:1px;background:var(--gold);opacity:.5}
-.hero h1{font-family:var(--hero-font);font-size:calc(clamp(52px,7vw,96px) * var(--hero-scale));font-weight:var(--hero-weight);line-height:1.05;color:var(--gold);margin-bottom:12px;text-shadow:0 2px 20px rgba(0,0,0,.8),0 0 60px rgba(0,0,0,.5)}
+.hero h1{font-family:var(--hero-font);font-size:calc(clamp(52px,7vw,96px) * var(--hero-title-scale));font-weight:var(--hero-weight);line-height:1.05;color:var(--gold);margin-bottom:12px;text-shadow:0 2px 20px rgba(0,0,0,.8),0 0 60px rgba(0,0,0,.5)}
 .hero h1 em{font-style:italic;color:var(--gold)}
-.hero-sub{font-family:var(--hero-font);font-size:calc(13px * var(--hero-scale));letter-spacing:.15em;color:var(--gold);text-transform:uppercase;margin-bottom:56px;font-weight:var(--hero-weight);text-shadow:0 1px 10px rgba(0,0,0,.9)}
+.hero-sub{font-family:var(--hero-font);font-size:calc(13px * var(--hero-subtitle-scale));letter-spacing:.15em;color:var(--gold);text-transform:uppercase;margin-bottom:56px;font-weight:var(--hero-weight);text-shadow:0 1px 10px rgba(0,0,0,.9)}
 .hero-cta{display:flex;gap:20px;justify-content:center;align-items:center}
 .hero-content.pos-left .hero-cta{justify-content:flex-start}
 .hero-content.pos-right .hero-cta{justify-content:flex-end}
@@ -925,7 +925,8 @@ async function init() {
     const heroFont = FONT_MAP[settings.hero_font] || FONT_MAP.cormorant;
     document.documentElement.style.setProperty('--hero-font', heroFont.family);
     document.documentElement.style.setProperty('--hero-weight', settings.hero_bold ? 700 : heroFont.weight);
-    document.documentElement.style.setProperty('--hero-scale', settings.hero_scale || 1);
+    document.documentElement.style.setProperty('--hero-title-scale', settings.hero_title_scale || 1);
+    document.documentElement.style.setProperty('--hero-subtitle-scale', settings.hero_subtitle_scale || 1);
 
     const heroPos = ['left', 'center', 'right'].includes(settings.hero_position) ? settings.hero_position : 'center';
     const heroSection = document.getElementById('heroSection');
