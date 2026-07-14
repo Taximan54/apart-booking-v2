@@ -123,8 +123,8 @@ section{position:relative;z-index:1;scroll-margin-top:100px}
 
 /* AMENITIES */
 #amenities{padding:100px 0}
-.amenities-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--black-border);margin-top:64px}
-.amenity-item{background:var(--black);padding:36px 28px;display:flex;flex-direction:column;gap:12px;transition:background .3s;position:relative}
+.amenities-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin-top:64px;border-top:1px solid var(--black-border);border-left:1px solid var(--black-border)}
+.amenity-item{background:var(--black);padding:36px 28px;display:flex;flex-direction:column;gap:12px;transition:background .3s;position:relative;border-right:1px solid var(--black-border);border-bottom:1px solid var(--black-border)}
 .amenity-item::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:var(--gold);transform:scaleX(0);transition:transform .3s;transform-origin:left}
 .amenity-item:hover{background:var(--black-card)}
 .amenity-item:hover::after{transform:scaleX(1)}
