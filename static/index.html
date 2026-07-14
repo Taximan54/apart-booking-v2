@@ -671,9 +671,20 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
         <div id="stpContract" style="display:none;flex-direction:column;flex:1">
           <div style="font-size:10px;letter-spacing:.3em;text-transform:uppercase;color:var(--text-muted);margin-bottom:16px">Ознакомьтесь и подпишите договор</div>
           <div id="contractText" style="background:var(--black);border:1px solid var(--black-border);padding:20px;max-height:320px;overflow-y:auto;font-size:11px;color:var(--text-secondary);line-height:1.8;font-weight:300;margin-bottom:16px;white-space:pre-wrap;font-family:monospace"></div>
+
+          <div style="margin-bottom:16px;padding:16px;background:rgba(201,168,76,.04);border:1px solid rgba(201,168,76,.1)">
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px;line-height:1.6">
+              Прикрепите фото <strong style="color:var(--gold)">главного разворота паспорта</strong>
+              (страница с фото, ФИО, серией и номером) — необязательно, но ускорит заселение.
+            </div>
+            <input type="file" id="passportPhotoInput" accept="image/*" capture="environment" style="display:none" onchange="uploadPassportPhoto()">
+            <button type="button" class="btn-outline-s" onclick="document.getElementById('passportPhotoInput').click()" style="width:100%">📎 Прикрепить фото паспорта</button>
+            <div id="passportPhotoStatus" style="font-size:11px;margin-top:8px;color:var(--text-muted)"></div>
+          </div>
+
           <div style="padding:16px;background:rgba(201,168,76,.04);border:1px solid rgba(201,168,76,.1);margin-bottom:16px">
             <label style="display:flex;align-items:flex-start;gap:12px;cursor:pointer">
-              <input type="checkbox" id="contractCheck" style="margin-top:3px;accent-color:var(--gold);width:16px;height:16px;flex-shrink:0">
+              <input type="checkbox" id="contractCheck" checked style="margin-top:3px;accent-color:var(--gold);width:16px;height:16px;flex-shrink:0">
               <span style="font-size:11px;color:var(--text-muted);line-height:1.6;font-weight:300">
                 Я ознакомился(ась) с условиями договора краткосрочной аренды и согласен(а) с ними
               </span>
@@ -1548,6 +1559,40 @@ function safeDot(id, action, cls){
   else if(action==='remove') el.classList.remove(cls);
 }
 
+let uploadedPassportPhoto = '';
+
+async function uploadPassportPhoto() {
+  const input = document.getElementById('passportPhotoInput');
+  const file = input.files[0];
+  const statusEl = document.getElementById('passportPhotoStatus');
+  if(!file) return;
+
+  statusEl.textContent = 'Загружаем и сжимаем фото...';
+  statusEl.style.color = 'var(--text-muted)';
+
+  const formData = new FormData();
+  formData.append('file', file);
+
+  try {
+    const resp = await fetch(`${API.BASE}/api/upload-passport-photo`, {
+      method: 'POST',
+      body: formData
+    });
+    if(!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      throw new Error(err.detail || 'Ошибка загрузки');
+    }
+    const data = await resp.json();
+    uploadedPassportPhoto = data.filename;
+    statusEl.textContent = `✓ Фото прикреплено (${data.size_kb} КБ)`;
+    statusEl.style.color = 'var(--gold)';
+  } catch(e) {
+    statusEl.textContent = 'Не удалось загрузить фото: ' + e.message;
+    statusEl.style.color = '#C0392B';
+    uploadedPassportPhoto = '';
+  }
+}
+
 async function goToContract(){
   if(!document.getElementById('gName').value.trim()||!document.getElementById('gPhone').value.trim()||!document.getElementById('gEmail').value.trim()){
     showToast('Заполните все обязательные поля','err'); return;
@@ -1563,6 +1608,8 @@ async function goToContract(){
   document.getElementById('contractText').innerText = 'Загрузка договора...';
   const text = await buildContract();
   document.getElementById('contractText').innerText = text;
+  const cc = document.getElementById('contractCheck');
+  if(cc) cc.checked = true;
 }
 
 function goS2fromContract(){
@@ -1660,6 +1707,7 @@ async function submitBooking(){
     guests_count: parseInt(document.getElementById('gCount').value),
     notes:        document.getElementById('gNotes').value.trim(),
     passport:     document.getElementById('gPassport').value.trim(),
+    passport_photo: uploadedPassportPhoto,
     payment_method: 'tbank',
     total_price:  bookingData.total,
     contract_signed: true,

@@ -1675,6 +1675,9 @@ function openBookingModal(encoded) {
     ['Оплата', b.payment_method||'—'],
     ['Статус', statusBadge(b.status)],
     ['Пожелания', b.notes||'—'],
+    ['Фото паспорта', b.has_passport_photo
+      ? `<button class="btn btn-ghost btn-sm" onclick="viewPassportPhoto('${b.username||b.id}')">🖼 Посмотреть</button>`
+      : '—'],
   );
   document.getElementById('modalDetails').innerHTML = detailRows
     .map(([l,v]) => `<div class="mbd-box"><div class="mbd-label">${l}</div><div class="mbd-val">${v}</div></div>`).join('');
@@ -1687,6 +1690,20 @@ function openBookingModal(encoded) {
   btnFullPay.style.display = (s === 'confirmed') ? '' : 'none';
 
   document.getElementById('bookingModal').classList.add('open');
+}
+
+async function viewPassportPhoto(ref) {
+  try {
+    const resp = await fetch(`${API_BASE}/api/admin/passport-photo/${ref}`, {
+      headers: ADMIN_TOKEN ? {'Authorization': 'Bearer ' + ADMIN_TOKEN} : {}
+    });
+    if(!resp.ok) throw new Error('not found');
+    const blob = await resp.blob();
+    const url = URL.createObjectURL(blob);
+    window.open(url, '_blank');
+  } catch(e) {
+    showToast('Фото паспорта не найдено', 'err');
+  }
 }
 
 async function confirmBooking() {

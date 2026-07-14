@@ -1,5 +1,6 @@
 import asyncio
 import os
+import io
 import json
 import sqlite3
 import smtplib
@@ -28,7 +29,8 @@ from reportlab.pdfbase.ttfonts import TTFont
 from fastapi import FastAPI, HTTPException, Header, Depends, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse, PlainTextResponse
+from fastapi.responses import HTMLResponse, PlainTextResponse, FileResponse
+from PIL import Image
 from pydantic import BaseModel, Field
 from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
@@ -244,6 +246,7 @@ class BookingCreate(BaseModel):
     guests_count: int = 2
     notes: str = ""
     passport: str = ""
+    passport_photo: str = ""   # имя файла из /api/upload-passport-photo (пусто, если не прикреплялось)
     payment_method: str = "tbank"
     total_price: int = 0
     contract_signed: bool = False
@@ -300,6 +303,8 @@ PHOTOS_DIR       = f"{DATA_DIR}/photos"
 PHOTOS_ORDER_FILE = f"{DATA_DIR}/photos_order.json"
 CONTRACTS_DIR    = f"{DATA_DIR}/contracts"
 AUTH_FILE        = f"{DATA_DIR}/admin_auth.json"
+PASSPORT_DIR         = f"{DATA_DIR}/passports"           # ЗАЩИЩЁННАЯ папка — НЕ должна раздаваться nginx как статика!
+PASSPORT_MAP_FILE    = f"{DATA_DIR}/passport_photos.json"  # {booking_ref: filename}
 DEFAULT_PRICES   = {"weekday": 3500, "weekend": 4500, "cleaning": 1500}
 
 os.makedirs(CONTRACTS_DIR, exist_ok=True)
@@ -1372,6 +1377,73 @@ async def set_photo_label(filename: str, lb: PhotoLabel, _: bool = Depends(requi
     return {"ok": True}
 
 # =====================================================
+# API — PASSPORT PHOTO (защищённое хранение)
+# =====================================================
+# ВАЖНО: PASSPORT_DIR НЕ должна раздаваться nginx напрямую как статика
+# (в отличие от /data/photos/) — доступ к фото паспорта только через
+# защищённый эндпоинт с проверкой Bearer-токена админа.
+
+def compress_passport_image(file_bytes: bytes) -> bytes:
+    """
+    Сжимает фото паспорта до разумного размера для хранения:
+    - уменьшает до максимум 1600px по длинной стороне (достаточно, чтобы
+      прочитать текст и разглядеть фото, но не хранить лишние мегабайты)
+    - конвертирует в JPEG с качеством 82% (даже с телефона в 12+ Мп
+      итоговый файл обычно 100-300КБ вместо нескольких мегабайт)
+    """
+    img = Image.open(io.BytesIO(file_bytes))
+    img = img.convert("RGB")  # на случай PNG с альфа-каналом или HEIC
+    img.thumbnail((1600, 1600), Image.LANCZOS)
+    out = io.BytesIO()
+    img.save(out, format="JPEG", quality=82, optimize=True)
+    return out.getvalue()
+
+def load_passport_map():
+    if os.path.exists(PASSPORT_MAP_FILE):
+        with open(PASSPORT_MAP_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return {}
+
+def save_passport_map(data):
+    with open(PASSPORT_MAP_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False)
+
+@app.post("/api/upload-passport-photo")
+async def upload_passport_photo(file: UploadFile = File(...)):
+    """
+    Публичный эндпоинт — гость прикрепляет фото разворота паспорта при
+    бронировании (до создания самой брони). Возвращает имя файла, которое
+    нужно передать в /api/bookings полем passport_photo.
+    """
+    content = await file.read()
+    if len(content) > 20 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="Файл слишком большой (макс. 20МБ)")
+    try:
+        compressed = compress_passport_image(content)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Не удалось обработать изображение — попробуйте другое фото")
+
+    os.makedirs(PASSPORT_DIR, exist_ok=True)
+    filename = f"passport_{secrets.token_hex(12)}.jpg"
+    filepath = os.path.join(PASSPORT_DIR, filename)
+    with open(filepath, "wb") as f:
+        f.write(compressed)
+
+    return {"ok": True, "filename": filename, "size_kb": round(len(compressed) / 1024, 1)}
+
+@app.get("/api/admin/passport-photo/{booking_ref}")
+async def get_passport_photo(booking_ref: str, _: bool = Depends(require_admin)):
+    """Просмотр фото паспорта администратором по номеру брони."""
+    pm = load_passport_map()
+    filename = pm.get(booking_ref)
+    if not filename:
+        raise HTTPException(status_code=404, detail="Фото паспорта не прикреплено к этой брони")
+    filepath = os.path.join(PASSPORT_DIR, filename)
+    if not os.path.exists(filepath):
+        raise HTTPException(status_code=404, detail="Файл не найден на диске")
+    return FileResponse(filepath, media_type="image/jpeg")
+
+# =====================================================
 # API — DOOR CODE
 # =====================================================
 
@@ -1480,6 +1552,10 @@ async def get_bookings(admin: Optional[str] = None, authorization: Optional[str]
     bookings = [dict(r) for r in rows]
 
     if admin:
+        pm = load_passport_map()
+        for bk in bookings:
+            ref = bk.get("username") or str(bk.get("id", ""))
+            bk["has_passport_photo"] = ref in pm
         return bookings
 
     # Для сайта — только занятые даты (подтверждённые + ожидающие оплаты)
@@ -1581,6 +1657,11 @@ async def create_booking(b: BookingCreate):
             )
         except Exception:
             pass
+
+    if b.passport_photo:
+        pm = load_passport_map()
+        pm[booking_ref] = b.passport_photo
+        save_passport_map(pm)
 
     return {"booking_id": booking_ref, "status": "waiting_payment"}
 
