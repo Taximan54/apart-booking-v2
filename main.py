@@ -122,6 +122,9 @@ class SiteSettings(BaseModel):
     hero_title_scale: float = 1.0    # 0.5 / 0.7 / 1.0 / 1.5 / 2.0 — размер hero-заголовка
     hero_subtitle_scale: float = 1.0 # 0.5 / 0.7 / 1.0 / 1.5 / 2.0 — размер hero-подзаголовка
     hero_position: str = "center"   # left / center / right — расположение текста на hero-фото
+    hero_eyebrow: str = "Апартаменты в городе"  # надпись над заголовком (с чёрточками); пусто = скрыть строку целиком
+    nav_extra_label: str = ""       # 8-й (опциональный) пункт меню — если пусто, не отображается
+    nav_extra_url: str = ""         # ссылка для 8-го пункта меню
 
 class HouseRulesText(BaseModel):
     text: str = ""
@@ -1109,6 +1112,9 @@ DEFAULT_SETTINGS = {
     "hero_title_scale": 1.0,
     "hero_subtitle_scale": 1.0,
     "hero_position": "center",
+    "hero_eyebrow": "Апартаменты в городе",
+    "nav_extra_label": "",
+    "nav_extra_url": "",
 }
 
 def get_site_settings_dict():

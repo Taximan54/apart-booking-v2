@@ -839,6 +839,12 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
           </div>
 
           <div class="info-field" style="margin-bottom:16px">
+            <div class="info-label">Надпись над заголовком (с чёрточками по бокам)</div>
+            <input type="text" class="info-input" id="settingsHeroEyebrow" placeholder="Апартаменты в городе" style="width:100%" oninput="renderDesignPreview()">
+            <div style="font-size:10px;color:var(--text-muted);margin-top:6px">Оставьте поле пустым, чтобы убрать эту строку целиком (вместе с чёрточками)</div>
+          </div>
+
+          <div class="info-field" style="margin-bottom:16px">
             <div class="info-label">Заголовок на главном экране (Hero)</div>
             <input type="text" class="info-input" id="settingsHeroTitle" placeholder="Искусство комфортного проживания" style="width:100%" oninput="renderDesignPreview()">
           </div>
@@ -877,7 +883,23 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
           <div class="info-field" style="margin-bottom:8px">
             <div class="info-label">Текст пунктов навигации</div>
           </div>
-          <div id="navLabelsEditor" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:24px"></div>
+          <div id="navLabelsEditor" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:16px"></div>
+          <div style="font-size:10px;color:var(--text-muted);margin-bottom:24px">Оставьте поле пустым — пункт меню перестанет отображаться на сайте (и в десктопной, и в мобильной навигации)</div>
+
+          <div class="info-field" style="margin-bottom:8px">
+            <div class="info-label">Дополнительный пункт меню (по желанию)</div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:8px">
+            <div class="info-field">
+              <div class="info-label" style="font-size:9px">Название</div>
+              <input type="text" class="info-input" id="navExtraLabel" placeholder="Например: Отзывы гостей">
+            </div>
+            <div class="info-field">
+              <div class="info-label" style="font-size:9px">Ссылка</div>
+              <input type="text" class="info-input" id="navExtraUrl" placeholder="#reviews или /static/page.html">
+            </div>
+          </div>
+          <div style="font-size:10px;color:var(--text-muted);margin-bottom:24px">Пока «Название» не заполнено — пункт нигде не отображается</div>
 
           <div style="border-top:1px solid var(--black-border);margin:8px 0 20px"></div>
 
@@ -2545,12 +2567,16 @@ let navLabels = {};
 
 function renderNavLabelsEditor() {
   const el = document.getElementById('navLabelsEditor');
-  el.innerHTML = NAV_LABEL_KEYS.map(item => `
+  el.innerHTML = NAV_LABEL_KEYS.map(item => {
+    const stored = navLabels[item.key];
+    const val = (stored !== undefined ? stored : item.def).replace(/"/g,'&quot;');
+    return `
     <div class="info-field">
       <div class="info-label" style="font-size:9px">${item.def}</div>
-      <input type="text" class="info-input" id="navLabel-input-${item.key}" value="${(navLabels[item.key] || item.def).replace(/"/g,'&quot;')}" style="width:100%">
+      <input type="text" class="info-input" id="navLabel-input-${item.key}" value="${val}" placeholder="${item.def}" style="width:100%">
     </div>
-  `).join('');
+  `;
+  }).join('');
 }
 
 function renderFontPicker() {
@@ -2747,6 +2773,9 @@ async function loadSiteSettings() {
     document.getElementById('settingsSiteName').value     = s.site_name      || 'Городская Пауза';
     document.getElementById('settingsHeroTitle').value    = s.hero_title     || '';
     document.getElementById('settingsHeroSubtitle').value = s.hero_subtitle  || '';
+    document.getElementById('settingsHeroEyebrow').value  = s.hero_eyebrow   ?? 'Апартаменты в городе';
+    document.getElementById('navExtraLabel').value        = s.nav_extra_label || '';
+    document.getElementById('navExtraUrl').value          = s.nav_extra_url   || '';
     selectedFont = s.logo_font || 'im_fell';
     selectedBold = !!s.logo_bold;
     selectedScale = s.logo_scale || 1.0;
@@ -2845,12 +2874,15 @@ async function saveDesignSettings() {
   const collectedNavLabels = {};
   NAV_LABEL_KEYS.forEach(item => {
     const el = document.getElementById(`navLabel-input-${item.key}`);
-    collectedNavLabels[item.key] = (el && el.value.trim()) || item.def;
+    collectedNavLabels[item.key] = el ? el.value.trim() : item.def;
   });
   const payload = {
     site_name:     document.getElementById('settingsSiteName').value.trim()     || 'Городская Пауза',
     hero_title:    document.getElementById('settingsHeroTitle').value.trim(),
     hero_subtitle: document.getElementById('settingsHeroSubtitle').value.trim(),
+    hero_eyebrow:  document.getElementById('settingsHeroEyebrow').value.trim(),
+    nav_extra_label: document.getElementById('navExtraLabel').value.trim(),
+    nav_extra_url:   document.getElementById('navExtraUrl').value.trim(),
     logo_font:     selectedFont,
     logo_bold:     selectedBold,
     logo_scale:    selectedScale,
