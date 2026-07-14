@@ -855,6 +855,12 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
           </div>
 
           <div class="info-field" style="margin-bottom:8px">
+            <div class="info-label">Описание квартиры (текст для сайта)</div>
+            <textarea class="info-input" id="aptDesc" rows="5" placeholder="Описание апартаментов..." style="width:100%;resize:vertical;line-height:1.6"></textarea>
+          </div>
+          <button class="btn btn-primary" onclick="saveDesc()" style="margin-bottom:24px">Сохранить описание</button>
+
+          <div class="info-field" style="margin-bottom:8px">
             <div class="info-label">Шрифт логотипа и навигации</div>
           </div>
           <div id="fontPicker" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-bottom:20px"></div>
@@ -1069,13 +1075,28 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
           </div>
         </div>
         <div class="card">
-          <div class="card-header"><span class="card-title">Описание квартиры</span></div>
+          <div class="card-header"><span class="card-title">Часовой пояс</span></div>
           <div class="card-body">
             <div class="info-field">
-              <div class="info-label">Текст для сайта</div>
-              <textarea class="info-input" id="aptDesc" rows="6" placeholder="Описание апартаментов..." style="resize:vertical;line-height:1.6"></textarea>
+              <div class="info-label">Часовой пояс объекта</div>
+              <select class="info-input" id="timezoneOffset">
+                <option value="2">Калининград (UTC+2)</option>
+                <option value="3">Москва (UTC+3)</option>
+                <option value="4">Самара (UTC+4)</option>
+                <option value="5">Екатеринбург (UTC+5)</option>
+                <option value="6">Омск (UTC+6)</option>
+                <option value="7">Новосибирск, Красноярск (UTC+7)</option>
+                <option value="8">Иркутск (UTC+8)</option>
+                <option value="9">Якутск (UTC+9)</option>
+                <option value="10">Владивосток (UTC+10)</option>
+                <option value="11">Магадан, Сахалин (UTC+11)</option>
+                <option value="12">Камчатка (UTC+12)</option>
+              </select>
             </div>
-            <button class="btn btn-primary" onclick="saveDesc()" style="margin-top:8px">Сохранить</button>
+            <div style="font-size:10px;color:var(--text-muted);margin-top:8px;line-height:1.6">
+              По этому времени рассылаются автоматические письма гостям (памятка в день выезда, отзыв на следующий день).
+            </div>
+            <button class="btn btn-primary" onclick="saveTimezone()" style="margin-top:8px">Сохранить</button>
           </div>
         </div>
         <div class="card">
@@ -1438,6 +1459,25 @@ let codeRevealed = false;
 function toggleCode() {
   codeRevealed = !codeRevealed;
   document.getElementById('doorCodeAdmin').classList.toggle('revealed', codeRevealed);
+}
+
+// TIMEZONE
+async function loadTimezone() {
+  try {
+    const s = await apiGet('/api/site-settings');
+    document.getElementById('timezoneOffset').value = String(s.timezone_offset ?? 7);
+  } catch(e) {}
+}
+
+async function saveTimezone() {
+  const offset = parseInt(document.getElementById('timezoneOffset').value, 10);
+  try {
+    const current = await apiGet('/api/site-settings');
+    await apiPost('/api/site-settings', {...current, timezone_offset: offset});
+    showToast('Часовой пояс сохранён', 'gold');
+  } catch(e) {
+    showToast('Ошибка сохранения', 'err');
+  }
 }
 
 // DESCRIPTION
@@ -1910,13 +1950,13 @@ function showPanel(id, el) {
   closeAdminSidebar();
   const titles = {dashboard:'Дашборд',bookings:'Все брони',manualbooking:'Ручная бронь (внешние площадки)',calendar:'Управление календарём',prices:'Цены',promo:'Промокоды',settings:'Настройки',contract:'Договор',contracts:'Архив договоров',checkin:'Памятка гостю',checkout:'Чек-лист выезда',houserules:'Правила проживания',sitesettings:'Настройки сайта',reviews:'Отзывы',places:'Куда сходить',contacts:'Контакты',photos:'Фотографии'};
   document.getElementById('topbarTitle').textContent = titles[id]||id;
-  if(id==='settings') { loadDesc(); }
+  if(id==='settings') { loadTimezone(); }
   if(id==='contract')   { if(typeof loadContractForEditor==='function') loadContractForEditor(); }
   if(id==='contracts')  { if(typeof loadContractsArchive==='function') loadContractsArchive(); }
   if(id==='checkin')     { if(typeof loadCheckinMemo==='function') loadCheckinMemo(); }
   if(id==='checkout')    { if(typeof loadCheckoutChecklist==='function') loadCheckoutChecklist(); }
   if(id==='houserules')  { if(typeof loadHouseRules==='function') loadHouseRules(); }
-  if(id==='sitesettings'){ if(typeof loadSiteSettings==='function') loadSiteSettings(); }
+  if(id==='sitesettings'){ if(typeof loadSiteSettings==='function') loadSiteSettings(); loadDesc(); }
   if(id==='reviews')     { if(typeof loadReviewsAdmin==='function') loadReviewsAdmin(); }
   if(id==='places')      { if(typeof loadPlacesAdmin==='function') loadPlacesAdmin(); }
   if(id==='contacts') { if(typeof loadContacts==='function') loadContacts(); }

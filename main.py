@@ -57,9 +57,17 @@ dp  = Dispatcher(storage=MemoryStorage())
 dp.include_router(user_router)
 dp.include_router(admin_router)
 
-NSK = timezone(timedelta(hours=7))
+NSK = timezone(timedelta(hours=7))  # запасное значение, если настройки ещё не загружены
 def now_nsk():
-    return datetime.now(NSK)
+    """
+    Текущее время в часовом поясе объекта (настраивается в админке —
+    Настройки -> Часовой пояс). Влияет на время автоматических рассылок гостям.
+    """
+    try:
+        offset_hours = float(get_site_settings_dict().get("timezone_offset", 7.0))
+    except Exception:
+        offset_hours = 7.0
+    return datetime.now(timezone(timedelta(hours=offset_hours)))
 
 # =====================================================
 # PYDANTIC MODELS
@@ -125,6 +133,7 @@ class SiteSettings(BaseModel):
     hero_eyebrow: str = "Апартаменты в городе"  # надпись над заголовком (с чёрточками); пусто = скрыть строку целиком
     nav_extra_label: str = ""       # 8-й (опциональный) пункт меню — если пусто, не отображается
     nav_extra_url: str = ""         # ссылка для 8-го пункта меню
+    timezone_offset: float = 7.0    # часовой пояс объекта (UTC+N) — влияет на время автоматических рассылок
     amenities: List[Dict[str, str]] = Field(default_factory=lambda: [
         {"icon": "📶", "name": "Wi-Fi 300 Мбит"},
         {"icon": "❄️", "name": "Кондиционер"},
@@ -1129,6 +1138,7 @@ DEFAULT_SETTINGS = {
     "hero_eyebrow": "Апартаменты в городе",
     "nav_extra_label": "",
     "nav_extra_url": "",
+    "timezone_offset": 7.0,
     "amenities": [
         {"icon": "📶", "name": "Wi-Fi 300 Мбит"},
         {"icon": "❄️", "name": "Кондиционер"},
@@ -1858,7 +1868,7 @@ async def list_contracts(_: bool = Depends(require_admin)):
             "ref": ref,
             "filename": f,
             "size": stat.st_size,
-            "created": datetime.fromtimestamp(stat.st_mtime, tz=NSK).strftime("%d.%m.%Y %H:%M"),
+            "created": datetime.fromtimestamp(stat.st_mtime, tz=now_nsk().tzinfo).strftime("%d.%m.%Y %H:%M"),
         }
         if row:
             entry.update({
