@@ -324,6 +324,7 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
       <a href="/static/house_rules.html" id="navLabel-house_rules">Правила проживания</a>
       <a href="/static/places.html" id="navLabel-places">Куда сходить?</a>
       <a href="#contacts" id="navLabel-contacts">Контакты</a>
+      <a href="#" id="navLabel-extra" style="display:none"></a>
     </div>
   </nav>
   <a href="#booking" class="nav-btn" id="navLabel-booking">Забронировать</a>
@@ -340,6 +341,7 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
   <a href="/static/house_rules.html" id="navLabel-house_rules-m" onclick="closeMobileNav()">Правила проживания</a>
   <a href="/static/places.html" id="navLabel-places-m" onclick="closeMobileNav()">Куда сходить?</a>
   <a href="#contacts" id="navLabel-contacts-m" onclick="closeMobileNav()">Контакты</a>
+  <a href="#" id="navLabel-extra-m" style="display:none" onclick="closeMobileNav()"></a>
   <a href="#booking" class="nav-btn" id="navLabel-booking-m" onclick="closeMobileNav()">Забронировать</a>
 </div>
 
@@ -349,7 +351,7 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
   <div class="hero-overlay"></div>
   <div class="hero-lines"></div>
   <div class="hero-content" id="heroContent">
-    <div class="eyebrow">Апартаменты в городе</div>
+    <div class="eyebrow" id="heroEyebrow">Апартаменты в городе</div>
     <h1 style="color:var(--gold)">Искусство<br><span style="color:var(--gold)">комфортного</span><br>проживания</h1>
     <p class="hero-sub">Апартаменты премиум-класса &nbsp;·&nbsp; Посуточная аренда</p>
     <div class="hero-cta">
@@ -421,7 +423,7 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
       <div class="sec-eyebrow">Комплектация</div>
       <h2 class="sec-title">Удобства</h2>
     </div>
-    <div class="amenities-grid reveal">
+    <div class="amenities-grid reveal" id="amenitiesGrid">
       <div class="amenity-item"><div class="amenity-icon">📶</div><div class="amenity-name">Wi-Fi 300 Мбит</div></div>
       <div class="amenity-item"><div class="amenity-icon">❄️</div><div class="amenity-name">Кондиционер</div></div>
       <div class="amenity-item"><div class="amenity-icon">🍳</div><div class="amenity-name">Полная кухня</div></div>
@@ -970,14 +972,47 @@ async function init() {
       const sub = document.querySelector('.hero-sub');
       if(sub) sub.textContent = settings.hero_subtitle;
     }
+    const eyebrowEl = document.getElementById('heroEyebrow');
+    if(eyebrowEl) {
+      const eyebrowText = settings.hero_eyebrow;
+      if(eyebrowText) { eyebrowEl.textContent = eyebrowText; eyebrowEl.style.display = ''; }
+      else { eyebrowEl.style.display = 'none'; }
+    }
 
     if(settings.nav_labels) {
       Object.entries(settings.nav_labels).forEach(([key, label]) => {
         const el = document.getElementById(`navLabel-${key}`);
-        if(el && label) el.textContent = label;
         const elMobile = document.getElementById(`navLabel-${key}-m`);
-        if(elMobile && label) elMobile.textContent = label;
+        if(label) {
+          if(el) { el.textContent = label; el.style.display = ''; }
+          if(elMobile) { elMobile.textContent = label; elMobile.style.display = ''; }
+        } else {
+          if(el) el.style.display = 'none';
+          if(elMobile) elMobile.style.display = 'none';
+        }
       });
+    }
+
+    // 8-й (опциональный) пункт меню — показываем только если задано название
+    const extraEl = document.getElementById('navLabel-extra');
+    const extraElMobile = document.getElementById('navLabel-extra-m');
+    if(settings.nav_extra_label) {
+      const url = settings.nav_extra_url || '#';
+      if(extraEl) { extraEl.textContent = settings.nav_extra_label; extraEl.href = url; extraEl.style.display = ''; }
+      if(extraElMobile) { extraElMobile.textContent = settings.nav_extra_label; extraElMobile.href = url; extraElMobile.style.display = ''; }
+    }
+
+    // Удобства — рендерим из настроек, пустые (без названия) пропускаем
+    if(Array.isArray(settings.amenities)) {
+      const grid = document.getElementById('amenitiesGrid');
+      if(grid) {
+        const items = settings.amenities.filter(a => a && a.name && a.name.trim());
+        if(items.length) {
+          grid.innerHTML = items.map(a => `
+            <div class="amenity-item"><div class="amenity-icon">${a.icon || '•'}</div><div class="amenity-name">${a.name}</div></div>
+          `).join('');
+        }
+      }
     }
 
     if(settings.hero_photo) {

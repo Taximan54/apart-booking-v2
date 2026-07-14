@@ -989,6 +989,19 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
           <button class="btn btn-primary" onclick="saveSiteSettings()">Сохранить настройки</button>
         </div>
       </div>
+
+      <div class="card" style="max-width:900px">
+        <div class="card-header">
+          <span class="card-title">Удобства</span>
+        </div>
+        <div class="card-body">
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:20px;padding:12px 16px;background:rgba(201,168,76,.04);border:1px solid rgba(201,168,76,.1)">
+            До 12 пунктов. В иконку можно вставить любой эмодзи (📶 ❄️ 🍳 📺 и т.д.). Пустые (без названия) — не отображаются на сайте.
+          </div>
+          <div id="amenitiesEditor" style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px"></div>
+          <button class="btn btn-primary" onclick="saveAmenities()">Сохранить удобства</button>
+        </div>
+      </div>
     </div>
 
     <!-- CHECKIN MEMO -->
@@ -2564,6 +2577,7 @@ const NAV_LABEL_KEYS = [
   {key: 'booking',     def: 'Забронировать'},
 ];
 let navLabels = {};
+let amenitiesData = [];
 
 function renderNavLabelsEditor() {
   const el = document.getElementById('navLabelsEditor');
@@ -2577,6 +2591,39 @@ function renderNavLabelsEditor() {
     </div>
   `;
   }).join('');
+}
+
+function renderAmenitiesEditor() {
+  const el = document.getElementById('amenitiesEditor');
+  if(!el) return;
+  el.innerHTML = amenitiesData.map((a, i) => `
+    <div style="display:flex;gap:10px;align-items:center">
+      <input type="text" class="info-input amenity-icon-input" data-idx="${i}"
+             value="${(a.icon || '').replace(/"/g,'&quot;')}" placeholder="📶"
+             style="width:56px;text-align:center;font-size:18px;flex-shrink:0">
+      <input type="text" class="info-input amenity-name-input" data-idx="${i}"
+             value="${(a.name || '').replace(/"/g,'&quot;')}" placeholder="Например: Кондиционер"
+             style="flex:1">
+    </div>
+  `).join('');
+}
+
+async function saveAmenities() {
+  const icons = document.querySelectorAll('.amenity-icon-input');
+  const names = document.querySelectorAll('.amenity-name-input');
+  const collected = [];
+  for(let i = 0; i < 12; i++) {
+    collected.push({
+      icon: icons[i] ? icons[i].value.trim() : '',
+      name: names[i] ? names[i].value.trim() : '',
+    });
+  }
+  amenitiesData = collected;
+  try {
+    const current = await apiGet('/api/site-settings');
+    await apiPost('/api/site-settings', {...current, amenities: collected});
+    showToast('Удобства сохранены', 'gold');
+  } catch(e) { showToast('Ошибка сохранения', 'err'); }
 }
 
 function renderFontPicker() {
@@ -2782,6 +2829,9 @@ async function loadSiteSettings() {
     selectedNavScale = s.nav_scale || 1.0;
     selectedColorTheme = s.color_theme || 'gold';
     navLabels = s.nav_labels || {};
+    amenitiesData = (s.amenities && s.amenities.length ? s.amenities : []).slice(0, 12);
+    while(amenitiesData.length < 12) amenitiesData.push({icon:'', name:''});
+    renderAmenitiesEditor();
     selectedHeroFont = s.hero_font || 'cormorant';
     selectedHeroBold = !!s.hero_bold;
     selectedHeroTitleScale = s.hero_title_scale || 1.0;

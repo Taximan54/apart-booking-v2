@@ -15,7 +15,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
 from email import encoders
 from datetime import datetime, date, timezone, timedelta
-from typing import Optional, Dict
+from typing import Optional, Dict, List
 from xml.sax.saxutils import escape as xml_escape
 
 from reportlab.lib.pagesizes import A4
@@ -125,6 +125,20 @@ class SiteSettings(BaseModel):
     hero_eyebrow: str = "Апартаменты в городе"  # надпись над заголовком (с чёрточками); пусто = скрыть строку целиком
     nav_extra_label: str = ""       # 8-й (опциональный) пункт меню — если пусто, не отображается
     nav_extra_url: str = ""         # ссылка для 8-го пункта меню
+    amenities: List[Dict[str, str]] = Field(default_factory=lambda: [
+        {"icon": "📶", "name": "Wi-Fi 300 Мбит"},
+        {"icon": "❄️", "name": "Кондиционер"},
+        {"icon": "🍳", "name": "Полная кухня"},
+        {"icon": "🧺", "name": "Стиральная машина"},
+        {"icon": "📺", "name": "Smart TV 43\""},
+        {"icon": "🅿️", "name": "Парковка"},
+        {"icon": "🔑", "name": "Умный замок"},
+        {"icon": "🛁", "name": "Банные принадлежности"},
+        {"icon": "", "name": ""},
+        {"icon": "", "name": ""},
+        {"icon": "", "name": ""},
+        {"icon": "", "name": ""},
+    ])
 
 class HouseRulesText(BaseModel):
     text: str = ""
@@ -1115,6 +1129,20 @@ DEFAULT_SETTINGS = {
     "hero_eyebrow": "Апартаменты в городе",
     "nav_extra_label": "",
     "nav_extra_url": "",
+    "amenities": [
+        {"icon": "📶", "name": "Wi-Fi 300 Мбит"},
+        {"icon": "❄️", "name": "Кондиционер"},
+        {"icon": "🍳", "name": "Полная кухня"},
+        {"icon": "🧺", "name": "Стиральная машина"},
+        {"icon": "📺", "name": "Smart TV 43\""},
+        {"icon": "🅿️", "name": "Парковка"},
+        {"icon": "🔑", "name": "Умный замок"},
+        {"icon": "🛁", "name": "Банные принадлежности"},
+        {"icon": "", "name": ""},
+        {"icon": "", "name": ""},
+        {"icon": "", "name": ""},
+        {"icon": "", "name": ""},
+    ],
 }
 
 def get_site_settings_dict():
