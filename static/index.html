@@ -673,13 +673,23 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
           <div id="contractText" style="background:var(--black);border:1px solid var(--black-border);padding:20px;max-height:320px;overflow-y:auto;font-size:11px;color:var(--text-secondary);line-height:1.8;font-weight:300;margin-bottom:16px;white-space:pre-wrap;font-family:monospace"></div>
 
           <div style="margin-bottom:16px;padding:16px;background:rgba(201,168,76,.04);border:1px solid rgba(201,168,76,.1)">
-            <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px;line-height:1.6">
-              Прикрепите фото <strong style="color:var(--gold)">главного разворота паспорта</strong>
-              (страница с фото, ФИО, серией и номером) — необязательно, но ускорит заселение.
+            <div style="font-size:11px;color:var(--gold);margin-bottom:12px;line-height:1.6">
+              Для бронирования квартиры <strong>необходимо предоставить фотографии паспорта</strong> — это обязательное условие заселения.
             </div>
-            <input type="file" id="passportPhotoInput" accept="image/*" capture="environment" style="display:none" onchange="uploadPassportPhoto()">
-            <button type="button" class="btn-outline-s" onclick="document.getElementById('passportPhotoInput').click()" style="width:100%">📎 Прикрепить фото паспорта</button>
-            <div id="passportPhotoStatus" style="font-size:11px;margin-top:8px;color:var(--text-muted)"></div>
+
+            <div style="margin-bottom:12px">
+              <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">Главный разворот (фото, ФИО, серия и номер)</div>
+              <input type="file" id="passportPhotoInput_main" accept="image/*" capture="environment" style="display:none" onchange="uploadPassportPhoto('main')">
+              <button type="button" class="btn-outline-s" onclick="document.getElementById('passportPhotoInput_main').click()" style="width:100%">📎 Прикрепить разворот</button>
+              <div id="passportPhotoStatus_main" style="font-size:11px;margin-top:6px;color:var(--text-muted)"></div>
+            </div>
+
+            <div>
+              <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">Страница регистрации / прописки</div>
+              <input type="file" id="passportPhotoInput_reg1" accept="image/*" capture="environment" style="display:none" onchange="uploadPassportPhoto('reg1')">
+              <button type="button" class="btn-outline-s" onclick="document.getElementById('passportPhotoInput_reg1').click()" style="width:100%">📎 Прикрепить прописку</button>
+              <div id="passportPhotoStatus_reg1" style="font-size:11px;margin-top:6px;color:var(--text-muted)"></div>
+            </div>
           </div>
 
           <div style="padding:16px;background:rgba(201,168,76,.04);border:1px solid rgba(201,168,76,.1);margin-bottom:16px">
@@ -1559,12 +1569,12 @@ function safeDot(id, action, cls){
   else if(action==='remove') el.classList.remove(cls);
 }
 
-let uploadedPassportPhoto = '';
+let uploadedPassportPhotos = { main: '', reg1: '' };
 
-async function uploadPassportPhoto() {
-  const input = document.getElementById('passportPhotoInput');
+async function uploadPassportPhoto(slot) {
+  const input = document.getElementById(`passportPhotoInput_${slot}`);
   const file = input.files[0];
-  const statusEl = document.getElementById('passportPhotoStatus');
+  const statusEl = document.getElementById(`passportPhotoStatus_${slot}`);
   if(!file) return;
 
   statusEl.textContent = 'Загружаем и сжимаем фото...';
@@ -1583,13 +1593,13 @@ async function uploadPassportPhoto() {
       throw new Error(err.detail || 'Ошибка загрузки');
     }
     const data = await resp.json();
-    uploadedPassportPhoto = data.filename;
-    statusEl.textContent = `✓ Фото прикреплено (${data.size_kb} КБ)`;
+    uploadedPassportPhotos[slot] = data.filename;
+    statusEl.textContent = `✓ Прикреплено (${data.size_kb} КБ)`;
     statusEl.style.color = 'var(--gold)';
   } catch(e) {
     statusEl.textContent = 'Не удалось загрузить фото: ' + e.message;
     statusEl.style.color = '#C0392B';
-    uploadedPassportPhoto = '';
+    uploadedPassportPhotos[slot] = '';
   }
 }
 
@@ -1621,6 +1631,9 @@ function goS2fromContract(){
 }
 
 function goS3fromContract(){
+  if(!uploadedPassportPhotos.main || !uploadedPassportPhotos.reg1){
+    showToast('Необходимо прикрепить оба фото паспорта (разворот и страницу прописки)','err'); return;
+  }
   if(!document.getElementById('contractCheck').checked){
     showToast('Необходимо подписать договор','err'); return;
   }
@@ -1707,7 +1720,8 @@ async function submitBooking(){
     guests_count: parseInt(document.getElementById('gCount').value),
     notes:        document.getElementById('gNotes').value.trim(),
     passport:     document.getElementById('gPassport').value.trim(),
-    passport_photo: uploadedPassportPhoto,
+    passport_photo_main: uploadedPassportPhotos.main,
+    passport_photo_reg1: uploadedPassportPhotos.reg1,
     payment_method: 'tbank',
     total_price:  bookingData.total,
     contract_signed: true,

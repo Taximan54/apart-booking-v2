@@ -136,6 +136,8 @@ class SiteSettings(BaseModel):
     nav_extra_label: str = ""       # 8-й (опциональный) пункт меню — если пусто, не отображается
     nav_extra_url: str = ""         # ссылка для 8-го пункта меню
     timezone_offset: float = 7.0    # часовой пояс объекта (UTC+N) — влияет на время автоматических рассылок
+    notify_checklist_time: str = "10:00"  # время отправки чек-листа выезда (в день выезда)
+    notify_review_time: str = "14:00"     # время отправки запроса отзыва (на след. день после выезда)
     amenities: List[Dict[str, str]] = Field(default_factory=lambda: [
         {"icon": "📶", "name": "Wi-Fi 300 Мбит"},
         {"icon": "❄️", "name": "Кондиционер"},
@@ -246,7 +248,8 @@ class BookingCreate(BaseModel):
     guests_count: int = 2
     notes: str = ""
     passport: str = ""
-    passport_photo: str = ""   # имя файла из /api/upload-passport-photo (пусто, если не прикреплялось)
+    passport_photo_main: str = ""   # разворот паспорта (фото, ФИО, серия/номер)
+    passport_photo_reg1: str = ""   # страница прописки
     payment_method: str = "tbank"
     total_price: int = 0
     contract_signed: bool = False
@@ -304,7 +307,7 @@ PHOTOS_ORDER_FILE = f"{DATA_DIR}/photos_order.json"
 CONTRACTS_DIR    = f"{DATA_DIR}/contracts"
 AUTH_FILE        = f"{DATA_DIR}/admin_auth.json"
 PASSPORT_DIR         = f"{DATA_DIR}/passports"           # ЗАЩИЩЁННАЯ папка — НЕ должна раздаваться nginx как статика!
-PASSPORT_MAP_FILE    = f"{DATA_DIR}/passport_photos.json"  # {booking_ref: filename}
+PASSPORT_MAP_FILE    = f"{DATA_DIR}/passport_photos.json"  # {booking_ref: {"main":.., "reg1":..}}
 DEFAULT_PRICES   = {"weekday": 3500, "weekend": 4500, "cleaning": 1500}
 
 os.makedirs(CONTRACTS_DIR, exist_ok=True)
@@ -1144,6 +1147,8 @@ DEFAULT_SETTINGS = {
     "nav_extra_label": "",
     "nav_extra_url": "",
     "timezone_offset": 7.0,
+    "notify_checklist_time": "10:00",
+    "notify_review_time": "14:00",
     "amenities": [
         {"icon": "📶", "name": "Wi-Fi 300 Мбит"},
         {"icon": "❄️", "name": "Кондиционер"},
@@ -1431,13 +1436,16 @@ async def upload_passport_photo(file: UploadFile = File(...)):
 
     return {"ok": True, "filename": filename, "size_kb": round(len(compressed) / 1024, 1)}
 
-@app.get("/api/admin/passport-photo/{booking_ref}")
-async def get_passport_photo(booking_ref: str, _: bool = Depends(require_admin)):
-    """Просмотр фото паспорта администратором по номеру брони."""
+@app.get("/api/admin/passport-photo/{booking_ref}/{slot}")
+async def get_passport_photo(booking_ref: str, slot: str, _: bool = Depends(require_admin)):
+    """Просмотр фото паспорта администратором по номеру брони. slot: main / reg1."""
+    if slot not in ("main", "reg1"):
+        raise HTTPException(status_code=400, detail="Неверный slot")
     pm = load_passport_map()
-    filename = pm.get(booking_ref)
+    entry = pm.get(booking_ref)
+    filename = entry.get(slot) if isinstance(entry, dict) else None
     if not filename:
-        raise HTTPException(status_code=404, detail="Фото паспорта не прикреплено к этой брони")
+        raise HTTPException(status_code=404, detail="Фото не прикреплено к этой брони")
     filepath = os.path.join(PASSPORT_DIR, filename)
     if not os.path.exists(filepath):
         raise HTTPException(status_code=404, detail="Файл не найден на диске")
@@ -1555,7 +1563,12 @@ async def get_bookings(admin: Optional[str] = None, authorization: Optional[str]
         pm = load_passport_map()
         for bk in bookings:
             ref = bk.get("username") or str(bk.get("id", ""))
-            bk["has_passport_photo"] = ref in pm
+            entry = pm.get(ref)
+            slots = []
+            if isinstance(entry, dict):
+                slots = [s for s in ("main", "reg1") if entry.get(s)]
+            bk["has_passport_photo"] = bool(slots)
+            bk["passport_photo_slots"] = slots
         return bookings
 
     # Для сайта — только занятые даты (подтверждённые + ожидающие оплаты)
@@ -1658,9 +1671,12 @@ async def create_booking(b: BookingCreate):
         except Exception:
             pass
 
-    if b.passport_photo:
+    if b.passport_photo_main or b.passport_photo_reg1:
         pm = load_passport_map()
-        pm[booking_ref] = b.passport_photo
+        pm[booking_ref] = {
+            "main": b.passport_photo_main,
+            "reg1": b.passport_photo_reg1,
+        }
         save_passport_map(pm)
 
     return {"booking_id": booking_ref, "status": "waiting_payment"}
@@ -2041,8 +2057,18 @@ async def send_notifications():
         hour   = now.hour
         minute = now.minute
         try:
-            # 10:00 НСК — чек-лист гостям кто выезжает сегодня
-            if hour == 10 and minute < 30:
+            settings = get_site_settings_dict()
+            try:
+                checklist_hour = int(str(settings.get("notify_checklist_time", "10:00")).split(":")[0])
+            except Exception:
+                checklist_hour = 10
+            try:
+                review_hour = int(str(settings.get("notify_review_time", "14:00")).split(":")[0])
+            except Exception:
+                review_hour = 14
+
+            # Чек-лист гостям кто выезжает сегодня (время настраивается в админке)
+            if hour == checklist_hour and minute < 30:
                 bookings = get_bookings_checkout_today()
                 for b in bookings:
                     # Email — главный канал
@@ -2074,8 +2100,8 @@ async def send_notifications():
                         except Exception:
                             pass
 
-            # 14:00 НСК — отзыв + промокод гостям кто выехал вчера
-            if hour == 14 and minute < 30:
+            # Отзыв + промокод гостям кто выехал вчера (время настраивается в админке)
+            if hour == review_hour and minute < 30:
                 bookings = get_bookings_checkout_yesterday()
                 for b in bookings:
                     if b.get("guest_email") and not b.get("review_sent"):

@@ -1075,9 +1075,9 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
           </div>
         </div>
         <div class="card">
-          <div class="card-header"><span class="card-title">Часовой пояс</span></div>
+          <div class="card-header"><span class="card-title">Часовой пояс и время рассылок</span></div>
           <div class="card-body">
-            <div class="info-field">
+            <div class="info-field" style="margin-bottom:16px">
               <div class="info-label">Часовой пояс объекта</div>
               <select class="info-input" id="timezoneOffset">
                 <option value="2">Калининград (UTC+2)</option>
@@ -1093,10 +1093,22 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
                 <option value="12">Камчатка (UTC+12)</option>
               </select>
             </div>
-            <div style="font-size:10px;color:var(--text-muted);margin-top:8px;line-height:1.6">
-              По этому времени рассылаются автоматические письма гостям (памятка в день выезда, отзыв на следующий день).
+            <div style="display:flex;gap:16px;margin-bottom:8px" class="flex-2col">
+              <div class="info-field" style="flex:1">
+                <div class="info-label">Чек-лист выезда — время отправки</div>
+                <input type="time" class="info-input" id="notifyChecklistTime" value="10:00">
+              </div>
+              <div class="info-field" style="flex:1">
+                <div class="info-label">Запрос отзыва — время отправки</div>
+                <input type="time" class="info-input" id="notifyReviewTime" value="14:00">
+              </div>
             </div>
-            <button class="btn btn-primary" onclick="saveTimezone()" style="margin-top:8px">Сохранить</button>
+            <div style="font-size:10px;color:var(--text-muted);margin-top:8px;margin-bottom:8px;line-height:1.6">
+              Чек-лист уходит гостю в указанное время в день его выезда. Запрос отзыва (с промокодом на возврат) —
+              в указанное время на следующий день после выезда. Оба — по часовому поясу выше. Договор и памятка
+              с кодом замка отправляются мгновенно при подтверждении оплаты — расписание на них не влияет.
+            </div>
+            <button class="btn btn-primary" onclick="saveTimezone()">Сохранить</button>
           </div>
         </div>
         <div class="card">
@@ -1466,15 +1478,24 @@ async function loadTimezone() {
   try {
     const s = await apiGet('/api/site-settings');
     document.getElementById('timezoneOffset').value = String(s.timezone_offset ?? 7);
+    document.getElementById('notifyChecklistTime').value = s.notify_checklist_time || '10:00';
+    document.getElementById('notifyReviewTime').value = s.notify_review_time || '14:00';
   } catch(e) {}
 }
 
 async function saveTimezone() {
   const offset = parseInt(document.getElementById('timezoneOffset').value, 10);
+  const checklistTime = document.getElementById('notifyChecklistTime').value || '10:00';
+  const reviewTime = document.getElementById('notifyReviewTime').value || '14:00';
   try {
     const current = await apiGet('/api/site-settings');
-    await apiPost('/api/site-settings', {...current, timezone_offset: offset});
-    showToast('Часовой пояс сохранён', 'gold');
+    await apiPost('/api/site-settings', {
+      ...current,
+      timezone_offset: offset,
+      notify_checklist_time: checklistTime,
+      notify_review_time: reviewTime,
+    });
+    showToast('Часовой пояс и расписание сохранены', 'gold');
   } catch(e) {
     showToast('Ошибка сохранения', 'err');
   }
@@ -1671,12 +1692,14 @@ function openBookingModal(encoded) {
   if (b.promo_code) {
     detailRows.push(['Промокод', b.promo_code + ' (−' + (b.discount_percent||0) + '%)']);
   }
+  const SLOT_LABELS = {main: '📄 Разворот', reg1: '🏠 Прописка'};
+  const photoSlots = b.passport_photo_slots || [];
   detailRows.push(
     ['Оплата', b.payment_method||'—'],
     ['Статус', statusBadge(b.status)],
     ['Пожелания', b.notes||'—'],
-    ['Фото паспорта', b.has_passport_photo
-      ? `<button class="btn btn-ghost btn-sm" onclick="viewPassportPhoto('${b.username||b.id}')">🖼 Посмотреть</button>`
+    ['Фото паспорта', photoSlots.length
+      ? photoSlots.map(slot => `<button class="btn btn-ghost btn-sm" onclick="viewPassportPhoto('${b.username||b.id}','${slot}')">${SLOT_LABELS[slot]}</button>`).join(' ')
       : '—'],
   );
   document.getElementById('modalDetails').innerHTML = detailRows
@@ -1692,9 +1715,9 @@ function openBookingModal(encoded) {
   document.getElementById('bookingModal').classList.add('open');
 }
 
-async function viewPassportPhoto(ref) {
+async function viewPassportPhoto(ref, slot) {
   try {
-    const resp = await fetch(`${API_BASE}/api/admin/passport-photo/${ref}`, {
+    const resp = await fetch(`${API_BASE}/api/admin/passport-photo/${ref}/${slot}`, {
       headers: ADMIN_TOKEN ? {'Authorization': 'Bearer ' + ADMIN_TOKEN} : {}
     });
     if(!resp.ok) throw new Error('not found');
@@ -1702,7 +1725,7 @@ async function viewPassportPhoto(ref) {
     const url = URL.createObjectURL(blob);
     window.open(url, '_blank');
   } catch(e) {
-    showToast('Фото паспорта не найдено', 'err');
+    showToast('Фото не найдено', 'err');
   }
 }
 
