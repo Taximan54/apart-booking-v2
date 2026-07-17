@@ -6,6 +6,10 @@ from datetime import date, timedelta
 # ⚠️ ВАЖНО: абсолютный путь совпадает с Railway Volume /data
 DB_PATH = "/data/bookings.db"
 
+# Пока квартира одна — id=1. Готово для расширения на несколько объектов
+# (white-label): при добавлении новых квартир property_id будет разным.
+DEFAULT_PROPERTY_ID = 1
+
 # =====================================================
 # SQLITE LOCK
 # =====================================================
@@ -47,6 +51,8 @@ def init_db():
 
             id INTEGER PRIMARY KEY AUTOINCREMENT,
 
+            property_id INTEGER DEFAULT 1,
+
             user_id INTEGER,
 
             username TEXT,
@@ -75,8 +81,13 @@ def init_db():
 # CHECK DATE OVERLAP
 # =====================================================
 
-def is_dates_available(check_in, check_out):
-
+def is_dates_available(check_in, check_out, property_id=DEFAULT_PROPERTY_ID):
+    """
+    Проверяет, свободны ли даты для конкретной квартиры (property_id).
+    Занятыми считаются все брони кроме отменённых (cancelled) — то есть
+    waiting_payment / payment_pending / confirmed / fully_paid / blocked
+    тоже блокируют даты, как и должно быть по бизнес-логике сайта.
+    """
     with get_connection() as conn:
 
         cursor = conn.cursor()
@@ -87,7 +98,8 @@ def is_dates_available(check_in, check_out):
 
         FROM bookings
 
-        WHERE status IN ('confirmed', 'blocked')
+        WHERE property_id = ?
+        AND status != 'cancelled'
 
         AND (
 
@@ -99,7 +111,7 @@ def is_dates_available(check_in, check_out):
 
         LIMIT 1
 
-        """, (check_in, check_out))
+        """, (property_id, check_in, check_out))
 
         conflict = cursor.fetchone()
 
@@ -172,7 +184,7 @@ def get_all_bookings():
 # GET BOOKED RANGES
 # =====================================================
 
-def get_booked_ranges():
+def get_booked_ranges(property_id=DEFAULT_PROPERTY_ID):
 
     with get_connection() as conn:
 
@@ -184,9 +196,10 @@ def get_booked_ranges():
 
         FROM bookings
 
-        WHERE status IN ('confirmed', 'blocked')
+        WHERE property_id = ?
+        AND status != 'cancelled'
 
-        """)
+        """, (property_id,))
 
         rows = cursor.fetchall()
 
@@ -294,7 +307,7 @@ def delete_booking(booking_id):
 # GET BOOKINGS FOR NOTIFICATIONS (для планировщика)
 # =====================================================
 
-def get_bookings_checkin_tomorrow():
+def get_bookings_checkin_tomorrow(property_id=DEFAULT_PROPERTY_ID):
     """Брони с заездом завтра — для отправки инструкции."""
     tomorrow = (date.today() + timedelta(days=1)).strftime("%Y-%m-%d")
     with get_connection() as conn:
@@ -302,12 +315,13 @@ def get_bookings_checkin_tomorrow():
         cursor.execute("""
         SELECT * FROM bookings
         WHERE status = 'confirmed'
+        AND property_id = ?
         AND check_in = ?
-        """, (tomorrow,))
+        """, (property_id, tomorrow))
         return [dict(row) for row in cursor.fetchall()]
 
 
-def get_bookings_checkin_today():
+def get_bookings_checkin_today(property_id=DEFAULT_PROPERTY_ID):
     """Брони с заездом сегодня — приветствие в 15:00."""
     today = date.today().strftime("%Y-%m-%d")
     with get_connection() as conn:
@@ -315,25 +329,27 @@ def get_bookings_checkin_today():
         cursor.execute("""
         SELECT * FROM bookings
         WHERE status = 'confirmed'
+        AND property_id = ?
         AND check_in = ?
-        """, (today,))
+        """, (property_id, today))
         return [dict(row) for row in cursor.fetchall()]
 
 
-def get_bookings_checkout_today():
-    """Брони с выездом сегодня — чек-лист в 10:00."""
+def get_bookings_checkout_today(property_id=DEFAULT_PROPERTY_ID):
+    """Брони с выездом сегодня — чек-лист в настроенное время."""
     today = date.today().strftime("%Y-%m-%d")
     with get_connection() as conn:
         cursor = conn.cursor()
         cursor.execute("""
         SELECT * FROM bookings
         WHERE status IN ('confirmed', 'fully_paid')
+        AND property_id = ?
         AND check_out = ?
-        """, (today,))
+        """, (property_id, today))
         return [dict(row) for row in cursor.fetchall()]
 
 
-def get_bookings_checkout_yesterday():
+def get_bookings_checkout_yesterday(property_id=DEFAULT_PROPERTY_ID):
     """Брони с выездом вчера — просьба об отзыве."""
     yesterday = (date.today() - timedelta(days=1)).strftime("%Y-%m-%d")
     with get_connection() as conn:
@@ -341,8 +357,9 @@ def get_bookings_checkout_yesterday():
         cursor.execute("""
         SELECT * FROM bookings
         WHERE status IN ('confirmed', 'fully_paid')
+        AND property_id = ?
         AND check_out = ?
-        """, (yesterday,))
+        """, (property_id, yesterday))
         return [dict(row) for row in cursor.fetchall()]
 
 
