@@ -46,6 +46,9 @@ from services.booking_service import (
     get_bookings_checkin_today,
     get_bookings_checkout_today,
     get_bookings_checkout_yesterday,
+    is_dates_available,
+    db_lock,
+    DEFAULT_PROPERTY_ID,
 )
 
 init_db()
@@ -308,6 +311,7 @@ CONTRACTS_DIR    = f"{DATA_DIR}/contracts"
 AUTH_FILE        = f"{DATA_DIR}/admin_auth.json"
 PASSPORT_DIR         = f"{DATA_DIR}/passports"           # ЗАЩИЩЁННАЯ папка — НЕ должна раздаваться nginx как статика!
 PASSPORT_MAP_FILE    = f"{DATA_DIR}/passport_photos.json"  # {booking_ref: {"main":.., "reg1":..}}
+PROPERTIES_FILE      = f"{DATA_DIR}/properties.json"       # реестр квартир (задел на white-label с несколькими объектами)
 DEFAULT_PRICES   = {"weekday": 3500, "weekend": 4500, "cleaning": 1500}
 
 os.makedirs(CONTRACTS_DIR, exist_ok=True)
@@ -1381,6 +1385,28 @@ async def set_photo_label(filename: str, lb: PhotoLabel, _: bool = Depends(requi
         json.dump(order_data, f, ensure_ascii=False)
     return {"ok": True}
 
+def load_properties():
+    """
+    Реестр квартир. Сейчас всегда одна запись (id=1) — структурная готовность
+    на будущее (white-label с несколькими объектами), без лишнего UI пока не нужно.
+    """
+    if os.path.exists(PROPERTIES_FILE):
+        with open(PROPERTIES_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    default = [{
+        "id": 1,
+        "name": "Городская Пауза",
+        "address": "Новосибирск, ул. Дачная, д. 5, кв. 286",
+        "active": True,
+    }]
+    with open(PROPERTIES_FILE, "w", encoding="utf-8") as f:
+        json.dump(default, f, ensure_ascii=False)
+    return default
+
+@app.get("/api/admin/properties")
+async def get_properties(_: bool = Depends(require_admin)):
+    return load_properties()
+
 # =====================================================
 # API — PASSPORT PHOTO (защищённое хранение)
 # =====================================================
@@ -1597,37 +1623,44 @@ async def create_booking(b: BookingCreate):
     if nights_count < 2:
         raise HTTPException(status_code=400, detail="\u041c\u0438\u043d\u0438\u043c\u0430\u043b\u044c\u043d\u044b\u0439 \u0441\u0440\u043e\u043a \u0431\u0440\u043e\u043d\u0438\u0440\u043e\u0432\u0430\u043d\u0438\u044f \u2014 2 \u043d\u043e\u0447\u0438")
 
-    conn = get_db()
-    booking_ref = "GP-" + "".join(random.choices(string.ascii_uppercase + string.digits, k=6))
+    # Защита от двойного бронирования: проверка занятости дат под глобальной
+    # блокировкой, чтобы два гостя не забронировали одни и те же даты одновременно
+    with db_lock:
+        if not is_dates_available(b.check_in, b.check_out, property_id=DEFAULT_PROPERTY_ID):
+            raise HTTPException(status_code=409, detail="К сожалению, эти даты только что забронировали. Пожалуйста, выберите другие даты.")
 
-    # Промокод проверяем на сервере — не доверяем процентам от клиента
-    promo_code_clean = ""
-    discount_percent = 0
-    if b.promo_code:
-        promo_codes_db = {}
-        if os.path.exists(PROMO_FILE):
-            with open(PROMO_FILE, "r", encoding="utf-8") as f:
-                promo_codes_db = json.load(f)
-        code_norm = b.promo_code.strip().upper()
-        if code_norm in promo_codes_db:
-            promo_code_clean = code_norm
-            discount_percent = promo_codes_db[code_norm]
+        conn = get_db()
+        booking_ref = "GP-" + "".join(random.choices(string.ascii_uppercase + string.digits, k=6))
 
-    conn.execute("""
-        INSERT INTO bookings (
-            user_id, username, check_in, check_out, guests, status,
-            guest_name, guest_phone, guest_email, guests_count,
-            notes, passport, payment_method, total_price, nights, source,
-            promo_code, discount_percent
-        ) VALUES (0, ?, ?, ?, ?, 'waiting_payment', ?, ?, ?, ?, ?, ?, ?, ?, ?, 'website', ?, ?)
-    """, (
-        booking_ref, b.check_in, b.check_out, b.guests_count,
-        b.guest_name, b.guest_phone, b.guest_email, b.guests_count,
-        b.notes, b.passport, b.payment_method, b.total_price, b.nights,
-        promo_code_clean, discount_percent
-    ))
-    conn.commit()
-    conn.close()
+        # Промокод проверяем на сервере — не доверяем процентам от клиента
+        promo_code_clean = ""
+        discount_percent = 0
+        if b.promo_code:
+            promo_codes_db = {}
+            if os.path.exists(PROMO_FILE):
+                with open(PROMO_FILE, "r", encoding="utf-8") as f:
+                    promo_codes_db = json.load(f)
+            code_norm = b.promo_code.strip().upper()
+            if code_norm in promo_codes_db:
+                promo_code_clean = code_norm
+                discount_percent = promo_codes_db[code_norm]
+
+        conn.execute("""
+            INSERT INTO bookings (
+                property_id, user_id, username, check_in, check_out, guests, status,
+                guest_name, guest_phone, guest_email, guests_count,
+                notes, passport, payment_method, total_price, nights, source,
+                promo_code, discount_percent
+            ) VALUES (?, 0, ?, ?, ?, ?, 'waiting_payment', ?, ?, ?, ?, ?, ?, ?, ?, ?, 'website', ?, ?)
+        """, (
+            DEFAULT_PROPERTY_ID,
+            booking_ref, b.check_in, b.check_out, b.guests_count,
+            b.guest_name, b.guest_phone, b.guest_email, b.guests_count,
+            b.notes, b.passport, b.payment_method, b.total_price, b.nights,
+            promo_code_clean, discount_percent
+        ))
+        conn.commit()
+        conn.close()
 
     prepay = round(b.total_price * 0.2)
 
@@ -1701,22 +1734,27 @@ async def create_manual_booking(b: ManualBookingCreate, _: bool = Depends(requir
     valid_sources = {"avito", "yandex", "sutochno", "phone", "other"}
     source = b.source if b.source in valid_sources else "other"
 
-    conn = get_db()
-    booking_ref = "GP-" + "".join(random.choices(string.ascii_uppercase + string.digits, k=6))
-    conn.execute("""
-        INSERT INTO bookings (
-            user_id, username, check_in, check_out, guests, status,
-            guest_name, guest_phone, guest_email, guests_count,
-            notes, passport, payment_method, total_price, nights, source,
-            promo_code, discount_percent
-        ) VALUES (0, ?, ?, ?, ?, 'confirmed', ?, ?, ?, ?, ?, ?, 'external', ?, ?, ?, '', 0)
-    """, (
-        booking_ref, b.check_in, b.check_out, b.guests_count,
-        b.guest_name, b.guest_phone, b.guest_email, b.guests_count,
-        b.notes, b.passport, b.total_price, nights_count, source
-    ))
-    conn.commit()
-    conn.close()
+    with db_lock:
+        if not is_dates_available(b.check_in, b.check_out, property_id=DEFAULT_PROPERTY_ID):
+            raise HTTPException(status_code=409, detail="Эти даты уже заняты другой бронью — проверьте календарь")
+
+        conn = get_db()
+        booking_ref = "GP-" + "".join(random.choices(string.ascii_uppercase + string.digits, k=6))
+        conn.execute("""
+            INSERT INTO bookings (
+                property_id, user_id, username, check_in, check_out, guests, status,
+                guest_name, guest_phone, guest_email, guests_count,
+                notes, passport, payment_method, total_price, nights, source,
+                promo_code, discount_percent
+            ) VALUES (?, 0, ?, ?, ?, ?, 'confirmed', ?, ?, ?, ?, ?, ?, 'external', ?, ?, ?, '', 0)
+        """, (
+            DEFAULT_PROPERTY_ID,
+            booking_ref, b.check_in, b.check_out, b.guests_count,
+            b.guest_name, b.guest_phone, b.guest_email, b.guests_count,
+            b.notes, b.passport, b.total_price, nights_count, source
+        ))
+        conn.commit()
+        conn.close()
 
     booking_dict = {
         "username": booking_ref,
