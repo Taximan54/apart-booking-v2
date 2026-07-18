@@ -1699,7 +1699,7 @@ function openBookingModal(encoded) {
   if (b.promo_code) {
     detailRows.push(['Промокод', b.promo_code + ' (−' + (b.discount_percent||0) + '%)']);
   }
-  const SLOT_LABELS = {main: '📄 Разворот', reg1: '🏠 Прописка'};
+  const SLOT_LABELS = {main: '📄 Главная страница', reg1: '🏠 Прописка'};
   const photoSlots = b.passport_photo_slots || [];
   detailRows.push(
     ['Оплата', b.payment_method||'—'],

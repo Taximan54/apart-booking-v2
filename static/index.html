@@ -678,9 +678,9 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
             </div>
 
             <div style="margin-bottom:12px">
-              <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">Главный разворот (фото, ФИО, серия и номер)</div>
+              <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">Главная страница (фото, ФИО, серия и номер)</div>
               <input type="file" id="passportPhotoInput_main" accept="image/*" capture="environment" style="display:none" onchange="uploadPassportPhoto('main')">
-              <button type="button" class="btn-outline-s" onclick="document.getElementById('passportPhotoInput_main').click()" style="width:100%">📎 Прикрепить разворот</button>
+              <button type="button" class="btn-outline-s" onclick="document.getElementById('passportPhotoInput_main').click()" style="width:100%">📎 Прикрепить главную страницу</button>
               <div id="passportPhotoStatus_main" style="font-size:11px;margin-top:6px;color:var(--text-muted)"></div>
             </div>
 
@@ -1632,7 +1632,7 @@ function goS2fromContract(){
 
 function goS3fromContract(){
   if(!uploadedPassportPhotos.main || !uploadedPassportPhotos.reg1){
-    showToast('Необходимо прикрепить оба фото паспорта (разворот и страницу прописки)','err'); return;
+    showToast('Необходимо прикрепить оба фото паспорта (главная страница и страница прописки)','err'); return;
   }
   if(!document.getElementById('contractCheck').checked){
     showToast('Необходимо подписать договор','err'); return;
