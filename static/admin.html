@@ -359,6 +359,18 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
           </div>
         </div>
       </div>
+
+      <div class="card" style="margin-top:24px">
+        <div class="card-header">
+          <span class="card-title">🧹 Ближайшие выезды — планирование уборки</span>
+        </div>
+        <div class="card-body" style="padding:0">
+          <table class="tbl" id="checkoutScheduleTable">
+            <thead><tr><th>Квартира</th><th>Гость</th><th>Дата выезда</th><th>Когда</th></tr></thead>
+            <tbody id="checkoutScheduleBody"><tr><td colspan="4" style="text-align:center;padding:32px;color:var(--text-muted)">Загрузка...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
     </div>
 
     <!-- BOOKINGS -->
@@ -1595,6 +1607,7 @@ function updateDashboard() {
   document.getElementById('sOccupancy').textContent = Math.round(bookedDays/daysInMonth*100) + '%';
 
   if(typeof renderDashStrip === 'function') renderDashStrip();
+  if(typeof renderCheckoutSchedule === 'function') renderCheckoutSchedule();
 
   // Upcoming bookings
   const upcoming = allBookings
@@ -1943,8 +1956,63 @@ function renderDashStrip() {
 }
 
 // ============================================================
-// SETTINGS
+// DASHBOARD — Ближайшие выезды (планирование уборки)
 // ============================================================
+let propertiesCache = null;
+
+async function getPropertiesMap() {
+  if(propertiesCache) return propertiesCache;
+  try {
+    const props = await apiGet('/api/admin/properties');
+    propertiesCache = {};
+    props.forEach(p => propertiesCache[p.id] = p.name);
+  } catch(e) {
+    propertiesCache = {1: 'Городская Пауза'};
+  }
+  return propertiesCache;
+}
+
+function checkoutWhenLabel(checkoutDate) {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const d = new Date(checkoutDate); d.setHours(0,0,0,0);
+  const diffDays = Math.round((d - today) / 86400000);
+  if(diffDays < 0) return 'Просрочено';
+  if(diffDays === 0) return 'Сегодня';
+  if(diffDays === 1) return 'Завтра';
+  return `Через ${diffDays} дн.`;
+}
+
+async function renderCheckoutSchedule() {
+  const tbody = document.getElementById('checkoutScheduleBody');
+  if(!tbody) return;
+  const propsMap = await getPropertiesMap();
+
+  const today = new Date(); today.setHours(0,0,0,0);
+  const upcoming = (allBookings || [])
+    .filter(b => b.status !== 'cancelled' && b.check_out)
+    .filter(b => new Date(b.check_out) >= today)
+    .sort((a,b) => new Date(a.check_out) - new Date(b.check_out))
+    .slice(0, 10);
+
+  if(!upcoming.length) {
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:32px;color:var(--text-muted)">Нет предстоящих выездов</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = upcoming.map(b => {
+    const propName = propsMap[b.property_id] || 'Квартира';
+    const whenLabel = checkoutWhenLabel(b.check_out);
+    const isUrgent = whenLabel === 'Сегодня' || whenLabel === 'Завтра';
+    return `
+      <tr>
+        <td data-label="Квартира">${propName}</td>
+        <td data-label="Гость"><strong style="color:var(--text-primary)">${b.guest_name || '—'}</strong></td>
+        <td data-label="Дата выезда">${fmtDateRu(b.check_out)}</td>
+        <td data-label="Когда"><span style="${isUrgent ? 'color:var(--gold);font-weight:600' : 'color:var(--text-muted)'}">${whenLabel}</span></td>
+      </tr>
+    `;
+  }).join('');
+}
 function saveNotif() { showToast('Настройки уведомлений сохранены', 'gold'); }
 
 function saveApiBase() {
@@ -2008,7 +2076,7 @@ function showPanel(id, el) {
   if(id==='places')      { if(typeof loadPlacesAdmin==='function') loadPlacesAdmin(); }
   if(id==='contacts') { if(typeof loadContacts==='function') loadContacts(); }
   if(id==='photos')   { if(typeof loadPhotosAdmin==='function') loadPhotosAdmin(); }
-  if(id==='dashboard'){ if(typeof renderDashStrip==='function') renderDashStrip(); }
+  if(id==='dashboard'){ if(typeof renderDashStrip==='function') renderDashStrip(); if(typeof renderCheckoutSchedule==='function') renderCheckoutSchedule(); }
 }
 
 function statusBadge(s) {

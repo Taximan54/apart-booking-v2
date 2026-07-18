@@ -1407,6 +1407,19 @@ def load_properties():
 async def get_properties(_: bool = Depends(require_admin)):
     return load_properties()
 
+OWNER_NOTIFY_FILE = f"{DATA_DIR}/owner_notify_log.json"
+
+def get_last_owner_notify_date():
+    """Дата последнего отправленного владельцу уведомления о выездах (чтобы не дублировать в течение дня)."""
+    if os.path.exists(OWNER_NOTIFY_FILE):
+        with open(OWNER_NOTIFY_FILE, "r", encoding="utf-8") as f:
+            return json.load(f).get("last_date", "")
+    return ""
+
+def set_last_owner_notify_date(date_str):
+    with open(OWNER_NOTIFY_FILE, "w", encoding="utf-8") as f:
+        json.dump({"last_date": date_str}, f)
+
 # =====================================================
 # API — PASSPORT PHOTO (защищённое хранение)
 # =====================================================
@@ -2104,6 +2117,26 @@ async def send_notifications():
                 review_hour = int(str(settings.get("notify_review_time", "14:00")).split(":")[0])
             except Exception:
                 review_hour = 14
+
+            # Уведомление владельцу (владельцам) о выездах сегодня — чтобы
+            # спланировать уборку/горничную. Отправляется один раз в день.
+            today_str = now.strftime("%Y-%m-%d")
+            if hour == checklist_hour and minute < 30 and get_last_owner_notify_date() != today_str:
+                checkouts_today = get_bookings_checkout_today()
+                if checkouts_today:
+                    properties_map = {p["id"]: p["name"] for p in load_properties()}
+                    lines = [f"\U0001f9f9 \u0421\u0435\u0433\u043e\u0434\u043d\u044f \u0432\u044b\u0435\u0437\u0436\u0430\u044e\u0442 ({len(checkouts_today)}):"]
+                    for b in checkouts_today:
+                        prop_name = properties_map.get(b.get("property_id", 1), "\u041a\u0432\u0430\u0440\u0442\u0438\u0440\u0430")
+                        guest = b.get("guest_name") or "\u0413\u043e\u0441\u0442\u044c"
+                        lines.append(f"\u2014 {prop_name}: {guest} (\u0434\u043e 12:00)")
+                    owner_message = "\n".join(lines)
+                    for admin_id in ADMIN_IDS:
+                        try:
+                            await asyncio.wait_for(bot.send_message(admin_id, owner_message), timeout=5.0)
+                        except Exception:
+                            pass
+                set_last_owner_notify_date(today_str)
 
             # Чек-лист гостям кто выезжает сегодня (время настраивается в админке)
             if hour == checklist_hour and minute < 30:
