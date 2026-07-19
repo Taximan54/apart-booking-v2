@@ -1127,7 +1127,11 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
           <div class="card-header"><span class="card-title">Уведомления</span></div>
           <div class="card-body">
             <div class="info-field"><div class="info-label">Email для уведомлений</div><input type="email" class="info-input" id="notifEmail" placeholder="admin@example.com"></div>
-            <div class="info-field"><div class="info-label">Telegram Chat ID</div><input type="text" class="info-input" id="notifTg" placeholder="-100xxxxxxxxxx"></div>
+            <div class="info-field"><div class="info-label">Telegram Chat ID</div><input type="text" class="info-input" id="notifTg" placeholder="например 123456789"></div>
+            <div style="font-size:10px;color:var(--text-muted);margin-top:4px;line-height:1.6">
+              Сюда придут уведомления о выездах (для планирования уборки). Работает в дополнение к
+              администраторам, уже прописанным в конфиге бота.
+            </div>
             <button class="btn btn-primary" onclick="saveNotif()" style="margin-top:8px">Сохранить</button>
           </div>
         </div>
@@ -2013,7 +2017,29 @@ async function renderCheckoutSchedule() {
     `;
   }).join('');
 }
-function saveNotif() { showToast('Настройки уведомлений сохранены', 'gold'); }
+async function loadNotif() {
+  try {
+    const s = await apiGet('/api/site-settings');
+    document.getElementById('notifEmail').value = s.notify_email || '';
+    document.getElementById('notifTg').value = s.notify_telegram_chat_id || '';
+  } catch(e) {}
+}
+
+async function saveNotif() {
+  const email = document.getElementById('notifEmail').value.trim();
+  const tgId = document.getElementById('notifTg').value.trim();
+  try {
+    const current = await apiGet('/api/site-settings');
+    await apiPost('/api/site-settings', {
+      ...current,
+      notify_email: email,
+      notify_telegram_chat_id: tgId,
+    });
+    showToast('Настройки уведомлений сохранены', 'gold');
+  } catch(e) {
+    showToast('Ошибка: ' + e.message, 'err');
+  }
+}
 
 function saveApiBase() {
   const v = document.getElementById('apiBaseInput').value.trim();
@@ -2065,7 +2091,7 @@ function showPanel(id, el) {
   closeAdminSidebar();
   const titles = {dashboard:'Дашборд',bookings:'Все брони',manualbooking:'Ручная бронь (внешние площадки)',calendar:'Управление календарём',prices:'Цены',promo:'Промокоды',settings:'Настройки',contract:'Договор',contracts:'Архив договоров',checkin:'Памятка гостю',checkout:'Чек-лист выезда',houserules:'Правила проживания',sitesettings:'Настройки сайта',reviews:'Отзывы',places:'Куда сходить',contacts:'Контакты',photos:'Фотографии'};
   document.getElementById('topbarTitle').textContent = titles[id]||id;
-  if(id==='settings') { loadTimezone(); }
+  if(id==='settings') { loadTimezone(); loadNotif(); }
   if(id==='contract')   { if(typeof loadContractForEditor==='function') loadContractForEditor(); }
   if(id==='contracts')  { if(typeof loadContractsArchive==='function') loadContractsArchive(); }
   if(id==='checkin')     { if(typeof loadCheckinMemo==='function') loadCheckinMemo(); }

@@ -141,6 +141,8 @@ class SiteSettings(BaseModel):
     timezone_offset: float = 7.0    # часовой пояс объекта (UTC+N) — влияет на время автоматических рассылок
     notify_checklist_time: str = "10:00"  # время отправки чек-листа выезда (в день выезда)
     notify_review_time: str = "14:00"     # время отправки запроса отзыва (на след. день после выезда)
+    notify_email: str = ""                # email владельца для уведомлений (о выездах и т.д.)
+    notify_telegram_chat_id: str = ""      # Telegram Chat ID владельца для уведомлений
     amenities: List[Dict[str, str]] = Field(default_factory=lambda: [
         {"icon": "📶", "name": "Wi-Fi 300 Мбит"},
         {"icon": "❄️", "name": "Кондиционер"},
@@ -715,6 +717,34 @@ def email_review_request(guest_name, guest_email, booking_ref, promo_code, disco
                "\u0421\u043f\u0430\u0441\u0438\u0431\u043e \u0437\u0430 \u0432\u0438\u0437\u0438\u0442 \u2014 \u043f\u043e\u0434\u0430\u0440\u043e\u043a \u0434\u043b\u044f \u0432\u0430\u0441",
                html)
 
+def email_owner_checkout_reminder(to_email, checkouts_today, properties_map):
+    """Письмо владельцу — сводка выездов сегодня, для планирования уборки."""
+    rows_html = ""
+    for b in checkouts_today:
+        prop_name = properties_map.get(b.get("property_id", 1), "Квартира")
+        guest = b.get("guest_name") or "Гость"
+        rows_html += (
+            "<tr>"
+            "<td style='padding:8px 0;color:#F0E6C8;font-size:13px'>" + prop_name + "</td>"
+            "<td style='padding:8px 0;color:#A89060;font-size:13px'>" + guest + "</td>"
+            "<td style='padding:8px 0;color:#5A4A30;font-size:12px;text-align:right'>до 12:00</td>"
+            "</tr>"
+        )
+    html = (
+        "<div style='font-family:Arial,sans-serif;max-width:600px;margin:0 auto;"
+        "background:#0A0A0A;color:#F0E6C8;padding:40px'>"
+        "<div style='text-align:center;margin-bottom:32px'>"
+        "<div style='font-size:24px;letter-spacing:2px;color:#C9A84C'>🧹 Выезды сегодня</div>"
+        "</div>"
+        "<div style='background:#141414;border:1px solid #1E1E1E;padding:24px'>"
+        "<table style='width:100%;border-collapse:collapse'>" + rows_html + "</table>"
+        "</div>"
+        "<div style='text-align:center;margin-top:24px;font-size:11px;color:#5A4A30'>"
+        "Не забудьте запланировать уборку / горничную</div>"
+        "</div>"
+    )
+    send_email(to_email, f"Выезды сегодня ({len(checkouts_today)})", html)
+
 def email_booking_created(booking_id, guest_name, guest_email, check_in, check_out, nights, total, prepay):
     """Письмо гостю — бронь создана, ожидаем оплату."""
     html = (
@@ -1153,6 +1183,8 @@ DEFAULT_SETTINGS = {
     "timezone_offset": 7.0,
     "notify_checklist_time": "10:00",
     "notify_review_time": "14:00",
+    "notify_email": "",
+    "notify_telegram_chat_id": "",
     "amenities": [
         {"icon": "📶", "name": "Wi-Fi 300 Мбит"},
         {"icon": "❄️", "name": "Кондиционер"},
@@ -2131,9 +2163,30 @@ async def send_notifications():
                         guest = b.get("guest_name") or "\u0413\u043e\u0441\u0442\u044c"
                         lines.append(f"\u2014 {prop_name}: {guest} (\u0434\u043e 12:00)")
                     owner_message = "\n".join(lines)
-                    for admin_id in ADMIN_IDS:
+
+                    # Telegram: и жёстко прописанные ADMIN_IDS, и Chat ID из настроек (без дублей)
+                    telegram_targets = set(ADMIN_IDS)
+                    configured_chat_id = settings.get("notify_telegram_chat_id", "").strip()
+                    if configured_chat_id:
+                        try:
+                            telegram_targets.add(int(configured_chat_id))
+                        except ValueError:
+                            pass
+                    for admin_id in telegram_targets:
                         try:
                             await asyncio.wait_for(bot.send_message(admin_id, owner_message), timeout=5.0)
+                        except Exception:
+                            pass
+
+                    # Email — на случай если Telegram недоступен/заблокирован
+                    configured_email = settings.get("notify_email", "").strip()
+                    if configured_email:
+                        try:
+                            import threading
+                            threading.Thread(
+                                target=email_owner_checkout_reminder,
+                                args=(configured_email, checkouts_today, properties_map)
+                            ).start()
                         except Exception:
                             pass
                 set_last_owner_notify_date(today_str)
