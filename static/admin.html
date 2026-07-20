@@ -1105,7 +1105,7 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
                 <option value="12">Камчатка (UTC+12)</option>
               </select>
             </div>
-            <div style="display:flex;gap:16px;margin-bottom:8px" class="flex-2col">
+            <div style="display:flex;gap:16px;margin-bottom:8px;flex-wrap:wrap" class="flex-2col">
               <div class="info-field" style="flex:1">
                 <div class="info-label">Чек-лист выезда — время отправки</div>
                 <input type="time" class="info-input" id="notifyChecklistTime" value="10:00">
@@ -1114,10 +1114,15 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
                 <div class="info-label">Запрос отзыва — время отправки</div>
                 <input type="time" class="info-input" id="notifyReviewTime" value="14:00">
               </div>
+              <div class="info-field" style="flex:1">
+                <div class="info-label">Сводка выездов (уборка) — время отправки</div>
+                <input type="time" class="info-input" id="notifyOwnerTime" value="09:00">
+              </div>
             </div>
             <div style="font-size:10px;color:var(--text-muted);margin-top:8px;margin-bottom:8px;line-height:1.6">
               Чек-лист уходит гостю в указанное время в день его выезда. Запрос отзыва (с промокодом на возврат) —
-              в указанное время на следующий день после выезда. Оба — по часовому поясу выше. Договор и памятка
+              в указанное время на следующий день после выезда. Сводка выездов (кому убираться сегодня) — владельцу,
+              в указанное время в день выезда. Все три — по часовому поясу выше. Договор и памятка
               с кодом замка отправляются мгновенно при подтверждении оплаты — расписание на них не влияет.
             </div>
             <button class="btn btn-primary" onclick="saveTimezone()">Сохранить</button>
@@ -1503,6 +1508,7 @@ async function loadTimezone() {
     document.getElementById('timezoneOffset').value = String(s.timezone_offset ?? 7);
     document.getElementById('notifyChecklistTime').value = s.notify_checklist_time || '10:00';
     document.getElementById('notifyReviewTime').value = s.notify_review_time || '14:00';
+    document.getElementById('notifyOwnerTime').value = s.notify_owner_time || '09:00';
   } catch(e) {}
 }
 
@@ -1510,6 +1516,7 @@ async function saveTimezone() {
   const offset = parseInt(document.getElementById('timezoneOffset').value, 10);
   const checklistTime = document.getElementById('notifyChecklistTime').value || '10:00';
   const reviewTime = document.getElementById('notifyReviewTime').value || '14:00';
+  const ownerTime = document.getElementById('notifyOwnerTime').value || '09:00';
   try {
     const current = await apiGet('/api/site-settings');
     await apiPost('/api/site-settings', {
@@ -1517,6 +1524,7 @@ async function saveTimezone() {
       timezone_offset: offset,
       notify_checklist_time: checklistTime,
       notify_review_time: reviewTime,
+      notify_owner_time: ownerTime,
     });
     showToast('Часовой пояс и расписание сохранены', 'gold');
   } catch(e) {
