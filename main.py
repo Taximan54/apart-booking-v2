@@ -141,6 +141,7 @@ class SiteSettings(BaseModel):
     timezone_offset: float = 7.0    # часовой пояс объекта (UTC+N) — влияет на время автоматических рассылок
     notify_checklist_time: str = "10:00"  # время отправки чек-листа выезда (в день выезда)
     notify_review_time: str = "14:00"     # время отправки запроса отзыва (на след. день после выезда)
+    notify_owner_time: str = "09:00"       # время отправки владельцу сводки выездов (планирование уборки)
     notify_email: str = ""                # email владельца для уведомлений (о выездах и т.д.)
     notify_telegram_chat_id: str = ""      # Telegram Chat ID владельца для уведомлений
     amenities: List[Dict[str, str]] = Field(default_factory=lambda: [
@@ -719,28 +720,28 @@ def email_review_request(guest_name, guest_email, booking_ref, promo_code, disco
 
 def email_owner_checkout_reminder(to_email, checkouts_today, properties_map):
     """Письмо владельцу — сводка выездов сегодня, для планирования уборки."""
-    rows_html = ""
+    cards_html = ""
     for b in checkouts_today:
         prop_name = properties_map.get(b.get("property_id", 1), "Квартира")
         guest = b.get("guest_name") or "Гость"
-        rows_html += (
-            "<tr>"
-            "<td style='padding:8px 0;color:#F0E6C8;font-size:13px'>" + prop_name + "</td>"
-            "<td style='padding:8px 0;color:#A89060;font-size:13px'>" + guest + "</td>"
-            "<td style='padding:8px 0;color:#5A4A30;font-size:12px;text-align:right'>до 12:00</td>"
-            "</tr>"
+        phone = b.get("guest_phone") or "—"
+        ref = b.get("username") or str(b.get("id", ""))
+        cards_html += (
+            "<div style='border-left:3px solid #C9A84C;padding:14px 18px;margin-bottom:12px;background:#141414'>"
+            "<div style='font-size:15px;color:#F0E6C8;font-weight:600;margin-bottom:6px'>" + prop_name + "</div>"
+            "<div style='font-size:13px;color:#A89060'>" + guest + " &nbsp;·&nbsp; " + phone + "</div>"
+            "<div style='font-size:11px;color:#5A4A30;margin-top:6px'>Бронь " + ref + " &nbsp;·&nbsp; выезд до 12:00</div>"
+            "</div>"
         )
     html = (
         "<div style='font-family:Arial,sans-serif;max-width:600px;margin:0 auto;"
         "background:#0A0A0A;color:#F0E6C8;padding:40px'>"
         "<div style='text-align:center;margin-bottom:32px'>"
-        "<div style='font-size:24px;letter-spacing:2px;color:#C9A84C'>🧹 Выезды сегодня</div>"
+        "<div style='font-size:24px;letter-spacing:2px;color:#C9A84C'>🧹 Выезды сегодня (" + str(len(checkouts_today)) + ")</div>"
         "</div>"
-        "<div style='background:#141414;border:1px solid #1E1E1E;padding:24px'>"
-        "<table style='width:100%;border-collapse:collapse'>" + rows_html + "</table>"
-        "</div>"
+        + cards_html +
         "<div style='text-align:center;margin-top:24px;font-size:11px;color:#5A4A30'>"
-        "Не забудьте запланировать уборку / горничную</div>"
+        "Не забудьте запланировать уборку / горничную по каждому адресу</div>"
         "</div>"
     )
     send_email(to_email, f"Выезды сегодня ({len(checkouts_today)})", html)
@@ -1183,6 +1184,7 @@ DEFAULT_SETTINGS = {
     "timezone_offset": 7.0,
     "notify_checklist_time": "10:00",
     "notify_review_time": "14:00",
+    "notify_owner_time": "09:00",
     "notify_email": "",
     "notify_telegram_chat_id": "",
     "amenities": [
@@ -2149,11 +2151,15 @@ async def send_notifications():
                 review_hour = int(str(settings.get("notify_review_time", "14:00")).split(":")[0])
             except Exception:
                 review_hour = 14
+            try:
+                owner_hour = int(str(settings.get("notify_owner_time", "09:00")).split(":")[0])
+            except Exception:
+                owner_hour = 9
 
             # Уведомление владельцу (владельцам) о выездах сегодня — чтобы
             # спланировать уборку/горничную. Отправляется один раз в день.
             today_str = now.strftime("%Y-%m-%d")
-            if hour == checklist_hour and minute < 30 and get_last_owner_notify_date() != today_str:
+            if hour == owner_hour and minute < 30 and get_last_owner_notify_date() != today_str:
                 checkouts_today = get_bookings_checkout_today()
                 if checkouts_today:
                     properties_map = {p["id"]: p["name"] for p in load_properties()}
