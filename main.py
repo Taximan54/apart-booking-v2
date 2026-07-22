@@ -1652,11 +1652,16 @@ async def get_bookings(admin: Optional[str] = None, authorization: Optional[str]
             bk["passport_photo_slots"] = slots
         return bookings
 
-    # Для сайта — только занятые даты (подтверждённые + ожидающие оплаты)
+    # Для сайта — занятые даты. ВАЖНО: раньше здесь была отдельная,
+    # отдельно захардкоженная проверка "status in ('confirmed', 'waiting_payment')",
+    # рассинхронизированная с is_dates_available()/get_booked_ranges() — из-за
+    # неё брони со статусами 'blocked', 'fully_paid', 'payment_pending' не
+    # считались занятыми на сайте. Теперь логика одна и та же везде: занято
+    # всё, что не отменено.
     booked = []
     checkout_dates = []
     for b in bookings:
-        if b.get("status") in ("confirmed", "waiting_payment"):
+        if b.get("status") != "cancelled":
             s = datetime.strptime(b["check_in"], "%Y-%m-%d")
             e = datetime.strptime(b["check_out"], "%Y-%m-%d")
             checkout_dates.append(b["check_out"])
