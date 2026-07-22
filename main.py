@@ -279,6 +279,14 @@ class ResendContract(BaseModel):
 class BookingUpdate(BaseModel):
     status: str
 
+class BlockDatesRequest(BaseModel):
+    dates: List[str]
+    reason: str = ""
+
+class UnblockDatesRequest(BaseModel):
+    start: str
+    end: str
+
 class PaymentNotify(BaseModel):
     booking_ref: str
     guest_name: str
@@ -1836,6 +1844,64 @@ async def resend_contract(ref: str, r: ResendContract, _: bool = Depends(require
     booking = dict(row)
     email_manual_contract(booking, r.email)
     return {"ok": True}
+
+# =====================================================
+# API — БЛОКИРОВКА ДАТ АДМИНИСТРАТОРОМ
+# =====================================================
+# ВАЖНО: раньше это хранилось только в localStorage браузера админки и
+# ничего не писало в БД (эндпоинтов /api/blocked-dates и /api/unblock-dates
+# не существовало — ошибка вызова гасилась пустым catch(e){}). Из-за этого
+# "заблокированные" даты не учитывались ни на сайте, ни при проверке
+# занятости, и гости могли забронировать их напрямую. Теперь блокировка —
+# настоящая запись в bookings со статусом 'blocked', которая проходит через
+# ту же защиту db_lock + is_dates_available, что и обычные брони.
+
+@app.post("/api/blocked-dates")
+async def create_blocked_dates(b: BlockDatesRequest, _: bool = Depends(require_admin)):
+    if not b.dates:
+        raise HTTPException(status_code=400, detail="Не выбраны даты")
+    dates_sorted = sorted(b.dates)
+    check_in = dates_sorted[0]
+    check_out = (datetime.strptime(dates_sorted[-1], "%Y-%m-%d").date() + timedelta(days=1)).strftime("%Y-%m-%d")
+    nights = (datetime.strptime(check_out, "%Y-%m-%d").date() - datetime.strptime(check_in, "%Y-%m-%d").date()).days
+
+    with db_lock:
+        if not is_dates_available(check_in, check_out, property_id=DEFAULT_PROPERTY_ID):
+            raise HTTPException(status_code=409, detail="На эти даты уже есть бронь или блокировка")
+
+        conn = get_db()
+        booking_ref = "BLOCK-" + "".join(random.choices(string.ascii_uppercase + string.digits, k=6))
+        conn.execute("""
+            INSERT INTO bookings (
+                property_id, user_id, username, check_in, check_out, guests, status,
+                guest_name, notes, total_price, nights, source
+            ) VALUES (?, 0, ?, ?, ?, 0, 'blocked', 'Заблокировано администратором', ?, 0, ?, 'admin_block')
+        """, (
+            DEFAULT_PROPERTY_ID, booking_ref, check_in, check_out, b.reason, nights
+        ))
+        conn.commit()
+        conn.close()
+
+    return {"ok": True, "blocked_days": len(dates_sorted)}
+
+@app.post("/api/unblock-dates")
+async def remove_blocked_dates(u: UnblockDatesRequest, _: bool = Depends(require_admin)):
+    """Отменяет (status='cancelled') записи-блокировки ('blocked'), пересекающиеся с диапазоном."""
+    end_exclusive = (datetime.strptime(u.end, "%Y-%m-%d").date() + timedelta(days=1)).strftime("%Y-%m-%d")
+
+    conn = get_db()
+    rows = conn.execute("""
+        SELECT id FROM bookings
+        WHERE property_id = ? AND status = 'blocked'
+        AND check_in < ? AND check_out > ?
+    """, (DEFAULT_PROPERTY_ID, end_exclusive, u.start)).fetchall()
+    ids = [row["id"] for row in rows]
+    if ids:
+        conn.executemany("UPDATE bookings SET status='cancelled' WHERE id=?", [(i,) for i in ids])
+        conn.commit()
+    conn.close()
+
+    return {"ok": True, "unblocked": len(ids)}
 
 @app.put("/api/bookings/{booking_id}")
 async def update_booking(booking_id: str, u: BookingUpdate, _: bool = Depends(require_admin)):

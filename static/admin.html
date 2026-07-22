@@ -1254,8 +1254,17 @@ const DEMO_BOOKINGS = [
   { id:'AUR-M3N4O5', guest_name:'Ольга Новикова', guest_phone:'+7 905 678-90-12', guest_email:'olga@gmail.com', check_in:'2026-05-20', check_out:'2026-05-23', nights:3, total_price:10500, payment_method:'card', status:'confirmed', guests_count:2, notes:'' },
 ];
 
-// Admin-blocked dates (stored locally)
-let adminBlocked = JSON.parse(localStorage.getItem('gorodskaya-pauza_blocked') || '[]');
+// Заблокированные администратором даты — теперь считаются из реального
+// списка броней (allBookings, status === 'blocked'), а не из localStorage
+// браузера. См. blockedRealSet().
+function blockedRealSet() {
+  const s = new Set();
+  (allBookings || []).filter(b => b.status === 'blocked').forEach(b => {
+    const start = new Date(b.check_in), end = new Date(b.check_out);
+    for (let d = new Date(start); d < end; d.setDate(d.getDate() + 1)) s.add(fmtDate(d));
+  });
+  return s;
+}
 
 // ============================================================
 // INIT
@@ -1551,24 +1560,22 @@ async function saveDesc() {
   }
 }
 
-// BLOCKED DATES
+// BLOCKED DATES — реальные записи в БД (см. /api/blocked-dates, /api/unblock-dates)
 async function blockDates() {
   if (!adminSelStart) return showToast('Выберите даты', 'err');
   const end = adminSelEnd || adminSelStart;
   const dates = [];
   const s = new Date(adminSelStart), e = new Date(end);
-  for (let d = new Date(s); d <= e; d.setDate(d.getDate()+1)) {
-    const ds = fmtDate(d);
-    if (!adminBlocked.includes(ds)) {
-      adminBlocked.push(ds);
-      dates.push(ds);
-    }
-  }
-  localStorage.setItem('gorodskaya-pauza_blocked', JSON.stringify(adminBlocked));
+  for (let d = new Date(s); d <= e; d.setDate(d.getDate()+1)) dates.push(fmtDate(d));
+
   try {
     await apiPost('/api/blocked-dates', { dates, reason: document.getElementById('blockReason').value });
-  } catch(e) {}
+  } catch(e) {
+    showToast(e.message || 'Не удалось заблокировать даты', 'err');
+    return;
+  }
   adminSelStart = null; adminSelEnd = null;
+  await loadBookings();
   renderAdminCal();
   showToast(`Заблокировано ${dates.length} дней`, 'gold');
 }
@@ -1576,16 +1583,15 @@ async function blockDates() {
 async function unblockDates() {
   if (!adminSelStart) return showToast('Выберите даты', 'err');
   const end = adminSelEnd || adminSelStart;
-  const s = new Date(adminSelStart), e = new Date(end);
-  for (let d = new Date(s); d <= e; d.setDate(d.getDate()+1)) {
-    const ds = fmtDate(d);
-    adminBlocked = adminBlocked.filter(x => x !== ds);
-  }
-  localStorage.setItem('gorodskaya-pauza_blocked', JSON.stringify(adminBlocked));
+
   try {
     await apiPost('/api/unblock-dates', { start: adminSelStart, end: end });
-  } catch(e) {}
+  } catch(e) {
+    showToast(e.message || 'Не удалось разблокировать даты', 'err');
+    return;
+  }
   adminSelStart = null; adminSelEnd = null;
+  await loadBookings();
   renderAdminCal();
   showToast('Даты разблокированы', 'gold');
 }
@@ -1844,12 +1850,13 @@ function renderAdminCal() {
   const today = new Date(); today.setHours(0,0,0,0);
   const todayS = fmtDate(today);
 
-  // Collect client-booked dates
+  // Collect client-booked dates (реальные брони гостей, без блокировок)
   const clientBooked = new Set();
-  allBookings.filter(b=>b.status!=='cancelled').forEach(b=>{
+  allBookings.filter(b=>b.status!=='cancelled' && b.status!=='blocked').forEach(b=>{
     const s=new Date(b.check_in), e=new Date(b.check_out);
     for(let d=new Date(s);d<e;d.setDate(d.getDate()+1)) clientBooked.add(fmtDate(d));
   });
+  const adminBlocked = blockedRealSet();
 
   for(let i=0;i<offset;i++){const e=document.createElement('div');e.className='aday empty';grid.appendChild(e);}
 
@@ -1862,7 +1869,7 @@ function renderAdminCal() {
     const isPast = new Date(adminCalYear,adminCalMonth,d) < today;
     if(isPast) el.classList.add('past');
     else if(clientBooked.has(ds)) el.classList.add('booked-client');
-    else if(adminBlocked.includes(ds)) el.classList.add('blocked-admin');
+    else if(adminBlocked.has(ds)) el.classList.add('blocked-admin');
 
     if(adminSelStart && adminSelEnd && ds>=adminSelStart && ds<=adminSelEnd) el.classList.add('selected-admin');
     else if(adminSelStart && !adminSelEnd && ds===adminSelStart) el.classList.add('selected-admin');
@@ -1910,10 +1917,11 @@ function renderDashStrip() {
   const isMobileNow = window.matchMedia('(max-width:768px)').matches;
 
   const clientBooked = new Set();
-  (allBookings || []).filter(b => b.status !== 'cancelled').forEach(b => {
+  (allBookings || []).filter(b => b.status !== 'cancelled' && b.status !== 'blocked').forEach(b => {
     const s = new Date(b.check_in), e = new Date(b.check_out);
     for(let d = new Date(s); d < e; d.setDate(d.getDate() + 1)) clientBooked.add(fmtDate(d));
   });
+  const adminBlocked = blockedRealSet();
 
   function makeDayCell(d) {
     const dateObj = new Date(year, month, d);
@@ -1932,7 +1940,7 @@ function renderDashStrip() {
     } else if(clientBooked.has(ds)) {
       cell.style.background = 'var(--red)';
       cell.style.color = '#fff';
-    } else if((adminBlocked || []).includes(ds)) {
+    } else if(adminBlocked.has(ds)) {
       cell.style.background = 'var(--text-muted)';
       cell.style.color = 'var(--black)';
     } else {
