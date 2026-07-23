@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Подписание договора — Городская Пауза</title>
+<style>
+  :root{
+    --black:#0A0A0A; --panel:#141414; --border:#1E1E1E;
+    --gold:#C9A84C; --text:#F0E6C8; --muted:#A89060; --red:#c0392b;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--black);color:var(--text);font-family:Arial,sans-serif;padding:24px 16px 60px}
+  .wrap{max-width:600px;margin:0 auto}
+  .logo{text-align:center;font-size:24px;letter-spacing:4px;color:var(--gold);margin-bottom:28px}
+  .card{background:var(--panel);border:1px solid var(--border);padding:24px;margin-bottom:20px;border-radius:2px}
+  .label{font-size:11px;color:var(--gold);letter-spacing:.08em;text-transform:uppercase;margin-bottom:12px}
+  .doc{white-space:pre-wrap;font-family:'Courier New',monospace;font-size:12px;line-height:1.6;color:var(--muted);
+    max-height:320px;overflow-y:auto;padding-right:6px;border-top:1px solid var(--border);margin-top:12px;padding-top:12px}
+  .btn{display:block;width:100%;background:var(--gold);color:var(--black);border:none;padding:14px;
+    font-size:13px;font-weight:bold;letter-spacing:.04em;cursor:pointer;border-radius:2px;margin-top:14px}
+  .btn:disabled{opacity:.5;cursor:default}
+  .msg{font-size:12px;line-height:1.6;color:var(--muted);margin-top:10px}
+  .err{color:var(--red)}
+  .ok{color:var(--gold)}
+  .hidden{display:none}
+  .center{text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="logo">ГОРОДСКАЯ ПАУЗА</div>
+
+  <div id="loading" class="card center">Загрузка…</div>
+
+  <div id="content" class="hidden">
+    <div class="card">
+      <div class="label">Договор аренды — <span id="bookingRef"></span></div>
+      <div id="contractText" class="doc"></div>
+    </div>
+
+    <div class="card">
+      <div class="label">Согласие на обработку персональных данных</div>
+      <div id="consentText" class="doc"></div>
+    </div>
+
+    <div id="signBlock" class="card">
+      <div class="label">Подписание</div>
+      <div class="msg">Нажимая «Подписать», вы подтверждаете, что ознакомились с текстом
+        договора и согласия выше и принимаете их условия. Это является простой электронной
+        подписью (ПЭП) в соответствии с 63-ФЗ «Об электронной подписи».</div>
+      <button class="btn" id="signBtn" onclick="signNow()">Подписать договор</button>
+      <div id="signMsg" class="msg"></div>
+    </div>
+  </div>
+
+  <div id="alreadySigned" class="card center hidden">
+    <div class="label">✅ Договор уже подписан</div>
+    <div class="msg" id="signedAtText"></div>
+  </div>
+
+  <div id="notFound" class="card center hidden">
+    <div class="msg err">Ссылка недействительна или устарела. Свяжитесь с администратором.</div>
+  </div>
+</div>
+
+<script>
+const token = window.location.pathname.split('/').filter(Boolean).pop();
+
+async function init() {
+  try {
+    const r = await fetch(`/api/sign/${token}`);
+    if (!r.ok) throw new Error('not_found');
+    const data = await r.json();
+    document.getElementById('loading').classList.add('hidden');
+
+    if (data.already_signed) {
+      document.getElementById('alreadySigned').classList.remove('hidden');
+      document.getElementById('signedAtText').textContent = `Дата подписания: ${data.signed_at}`;
+      return;
+    }
+
+    document.getElementById('content').classList.remove('hidden');
+    document.getElementById('bookingRef').textContent = data.booking_ref || '';
+    document.getElementById('contractText').textContent = data.contract_text || '';
+    document.getElementById('consentText').textContent = data.consent_text || '';
+  } catch (e) {
+    document.getElementById('loading').classList.add('hidden');
+    document.getElementById('notFound').classList.remove('hidden');
+  }
+}
+
+async function signNow() {
+  const btn = document.getElementById('signBtn');
+  const msg = document.getElementById('signMsg');
+  btn.disabled = true;
+  msg.textContent = ''; msg.className = 'msg';
+
+  try {
+    const r = await fetch(`/api/sign/${token}/confirm`, { method: 'POST' });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.detail || 'Не удалось подписать договор');
+
+    document.getElementById('signBlock').innerHTML =
+      `<div class="label">✅ Договор подписан</div>
+       <div class="msg ok">Дата подписания: ${data.signed_at}. Подписанный договор и
+       согласие на обработку персональных данных отправлены вам на email.</div>`;
+  } catch (e) {
+    msg.textContent = e.message;
+    msg.className = 'msg err';
+    btn.disabled = false;
+  }
+}
+
+init();
+</script>
+</body>
+</html>

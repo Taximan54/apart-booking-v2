@@ -26,7 +26,7 @@ from reportlab.lib.styles import ParagraphStyle
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 
-from fastapi import FastAPI, HTTPException, Header, Depends, UploadFile, File, Form
+from fastapi import FastAPI, HTTPException, Header, Depends, UploadFile, File, Form, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, PlainTextResponse, FileResponse
@@ -35,7 +35,7 @@ from pydantic import BaseModel, Field
 from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
 
-from config import BOT_TOKEN, ADMIN_IDS
+from config import BOT_TOKEN, ADMIN_IDS, BASE_URL
 from handlers.user import router as user_router
 from handlers.admin import router as admin_router
 from handlers.admin import load_door_code
@@ -564,6 +564,129 @@ def generate_contract_pdf(contract_text, booking_ref):
     doc.build(story)
     return path
 
+# =====================================================
+# СОГЛАСИЕ НА ОБРАБОТКУ ПЕРСОНАЛЬНЫХ ДАННЫХ
+# =====================================================
+
+CONSENT_FILE   = f"{DATA_DIR}/consent_template.txt"
+CONSENT_STATIC = "static/consent_template.txt"
+
+def load_consent_template():
+    if os.path.exists(CONSENT_FILE):
+        with open(CONSENT_FILE, "r", encoding="utf-8") as f:
+            return f.read()
+    if os.path.exists(CONSENT_STATIC):
+        with open(CONSENT_STATIC, "r", encoding="utf-8") as f:
+            return f.read()
+    return ""
+
+def generate_consent(booking):
+    """Генерирует текст согласия на обработку ПД по тому же принципу, что и generate_contract()."""
+    today = now_nsk().strftime("%d.%m.%Y")
+    template = load_consent_template()
+    if not template:
+        return "Shablon soglasiya ne nayden."
+    return fill_contract(template, {
+        "ДАТА_ДОГОВОРА": today,
+        "ФИО":           booking.get("guest_name", ""),
+        "ПАСПОРТ":       booking.get("passport", "не указано"),
+        "EMAIL":         booking.get("guest_email", ""),
+        "НОМЕР_БРОНИ":   str(booking.get("username") or booking.get("id", "")),
+    })
+
+# =====================================================
+# ПОДПИСАНИЕ ДОГОВОРА (ПЭП по 63-ФЗ, по образцу ОкиДоки)
+# =====================================================
+# Подписание — по персональной ссылке из письма на email гостя (без SMS):
+# сам факт перехода по уникальной, известной только гостю ссылке и нажатия
+# кнопки «Подписать» является простой электронной подписью.
+
+LANDLORD_EMAIL = "citypause@mail.ru"
+# Телефон арендодателя для блока подписи — задать в .env (LANDLORD_PHONE),
+# иначе используется значение по умолчанию.
+LANDLORD_PHONE = os.getenv("LANDLORD_PHONE", "+70000000000")
+
+def _sig_hash(*parts) -> str:
+    """Короткий детерминированный хэш для блока электронной подписи."""
+    return hashlib.sha256("|".join(str(p) for p in parts).encode()).hexdigest()[:24]
+
+# Хэш арендодателя одинаковый для всех документов (не меняется от брони к брони,
+# как и полагается подписи стороны, чьи контактные данные фиксированы).
+LANDLORD_SIGN_HASH = _sig_hash(LANDLORD_EMAIL, LANDLORD_PHONE, "Городская Пауза")
+
+def _signature_block(booking, doc_type):
+    """
+    Блок электронной подписи (ПЭП), одинаковый по структуре для любого
+    документа (договор, согласие на ПД) — doc_type только меняет идентификатор
+    документа, чтобы у разных документов одной брони были разные ID.
+    """
+    booking_ref = str(booking.get("username") or booking.get("id", ""))
+    doc_id = _sig_hash(booking_ref, doc_type, booking.get("check_in", ""), booking.get("check_out", ""))
+    guest_hash = _sig_hash(booking_ref, doc_type, booking.get("guest_phone", ""), booking.get("signed_at", ""))
+    return (
+        "\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+        "Документ подписан с использованием почты и номера телефона "
+        "Арендодателя и Арендатора в качестве простой электронной подписи "
+        "(ПЭП) в соответствии со ст. 4 ФЗ №63 «Об электронной подписи»\n\n"
+        f"Идентификатор документа: {doc_id}\n\n"
+        "Подпись Арендодателя:\n"
+        f"{LANDLORD_SIGN_HASH}\n"
+        "Городская Пауза\n"
+        f"Email: {LANDLORD_EMAIL}\n"
+        f"Телефон: {LANDLORD_PHONE}\n\n"
+        "Подпись Арендатора:\n"
+        f"{guest_hash}\n"
+        f"{booking.get('guest_name', '')}\n"
+        f"Паспорт: {booking.get('passport', '')}\n"
+        f"Email: {booking.get('guest_email', '')}\n"
+        f"Телефон: {booking.get('guest_phone', '')}\n\n"
+        f"Дата подписания документа: {booking.get('signed_at', '')}\n"
+    )
+
+def generate_signed_contract_pdf(booking):
+    """Договор + блок ПЭП — вызывается только после подписания гостем."""
+    booking_ref = str(booking.get("username") or booking.get("id", ""))
+    text = generate_contract(booking) + _signature_block(booking, "contract")
+    return generate_contract_pdf(text, booking_ref + "_podpisan")
+
+def generate_signed_consent_pdf(booking):
+    """Согласие на обработку ПД + блок ПЭП — тот же принцип, что и с договором."""
+    booking_ref = str(booking.get("username") or booking.get("id", ""))
+    text = generate_consent(booking) + _signature_block(booking, "consent")
+    return generate_contract_pdf(text, booking_ref + "_soglasie_pd")
+
+def email_contract_signed(booking):
+    """Письмо гостю с подписанным договором + согласием на ПД (оба с блоком ПЭП) — после подписания по ссылке."""
+    booking_ref = str(booking.get("username") or booking.get("id", ""))
+    guest_email = booking.get("guest_email", "")
+    if not guest_email:
+        return
+
+    contract_pdf = generate_signed_contract_pdf(booking)
+    consent_pdf  = generate_signed_consent_pdf(booking)
+
+    html = (
+        "<div style='font-family:Arial,sans-serif;max-width:600px;margin:0 auto;"
+        "background:#0A0A0A;color:#F0E6C8;padding:40px'>"
+        "<div style='text-align:center;margin-bottom:32px'>"
+        "<div style='font-size:28px;letter-spacing:4px;color:#C9A84C'>ГОРОДСКАЯ ПАУЗА</div></div>"
+        "<div style='background:#141414;border:1px solid rgba(201,168,76,0.3);padding:32px;margin-bottom:24px'>"
+        "<div style='font-size:16px;color:#C9A84C;margin-bottom:12px'>✅ Договор подписан</div>"
+        f"<div style='font-size:13px;color:#A89060;margin-bottom:16px'>Бронь {booking_ref}</div>"
+        "<div style='font-size:12px;color:#A89060;line-height:1.7'>"
+        f"Договор подписан {booking.get('signed_at','')} — это простая электронная "
+        "подпись (ПЭП) в соответствии с 63-ФЗ. Подписанный экземпляр договора и "
+        "согласие на обработку персональных данных приложены к этому письму.</div></div>"
+        "<div style='text-align:center;font-size:11px;color:#5A4A30'>citypause@mail.ru | citypause.ru</div></div>"
+    )
+    send_email(
+        guest_email, f"Договор подписан — {booking_ref}", html,
+        attachments=[
+            {"filename": f"dogovor_{booking_ref}_podpisan.pdf", "filepath": contract_pdf},
+            {"filename": f"soglasie_pd_{booking_ref}.pdf", "filepath": consent_pdf},
+        ]
+    )
+
 def email_manual_contract(booking, target_email):
     """
     Письмо с договором для броней с внешних площадок (Авито и т.п.) или
@@ -809,7 +932,7 @@ def email_booking_created(booking_id, guest_name, guest_email, check_in, check_o
                html)
 
 def email_booking_confirmed(booking, door_code=None):
-    """Письмо гостю — предоплата подтверждена, договор + инструкция по остатку."""
+    """Письмо гостю — предоплата подтверждена, ссылка на подписание договора + инструкция по остатку."""
     guest_email  = booking.get("guest_email", "")
     guest_name   = booking.get("guest_name", "")
     booking_ref  = str(booking.get("username") or booking.get("id", ""))
@@ -818,11 +941,14 @@ def email_booking_confirmed(booking, door_code=None):
     total_price  = booking.get("total_price", 0)
     prepay       = round(total_price * 0.2)
     remainder    = total_price - prepay
+    sign_token   = booking.get("sign_token", "")
+    sign_link    = f"{BASE_URL}/sign/{sign_token}" if sign_token else ""
 
+    # PDF гостю пока не отправляем — только текст сохраняем в архив для админки.
+    # Готовый (подписанный) PDF гость получит одним письмом после подписания
+    # по ссылке — см. email_contract_signed().
     contract_text = generate_contract(booking)
     save_contract(booking_ref, contract_text)
-    pdf_path = generate_contract_pdf(contract_text, booking_ref)
-    contract_filename = f"dogovor_{booking_ref}.pdf"
 
     html = (
         "<div style='font-family:Arial,sans-serif;max-width:600px;margin:0 auto;"
@@ -862,15 +988,22 @@ def email_booking_confirmed(booking, door_code=None):
         "<div style='font-size:11px;color:#C9A84C;margin-bottom:12px'>"
         "\u0414\u041e\u0413\u041e\u0412\u041e\u0420 \u0410\u0420\u0415\u041d\u0414\u042b</div>"
         "<div style='font-size:12px;color:#A89060;line-height:1.7'>"
-        "\u041f\u043e\u043b\u043d\u044b\u0439 \u0442\u0435\u043a\u0441\u0442 \u0434\u043e\u0433\u043e\u0432\u043e\u0440\u0430 \u043f\u0440\u0438\u043b\u043e\u0436\u0435\u043d \u043a \u044d\u0442\u043e\u043c\u0443 \u043f\u0438\u0441\u044c\u043c\u0443 \u043e\u0442\u0434\u0435\u043b\u044c\u043d\u044b\u043c \u0444\u0430\u0439\u043b\u043e\u043c " + contract_filename + ".</div>"
+        "\u041f\u0440\u043e\u0441\u044c\u0431\u0430 \u043e\u0437\u043d\u0430\u043a\u043e\u043c\u0438\u0442\u044c\u0441\u044f \u0441 \u0442\u0435\u043a\u0441\u0442\u043e\u043c \u0434\u043e\u0433\u043e\u0432\u043e\u0440\u0430 \u0438 \u043f\u043e\u0434\u043f\u0438\u0441\u0430\u0442\u044c \u0435\u0433\u043e \u043f\u043e \u0441\u0441\u044b\u043b\u043a\u0435 \u043d\u0438\u0436\u0435 \u2014 \u044d\u0442\u043e \u0437\u0430\u0439\u043c\u0451\u0442 \u043c\u0435\u043d\u044c\u0448\u0435 \u043c\u0438\u043d\u0443\u0442\u044b. \u041f\u043e\u0441\u043b\u0435 \u043f\u043e\u0434\u043f\u0438\u0441\u0430\u043d\u0438\u044f \u0433\u043e\u0442\u043e\u0432\u044b\u0439 \u0434\u043e\u0433\u043e\u0432\u043e\u0440 \u0438 \u0441\u043e\u0433\u043b\u0430\u0441\u0438\u0435 \u043d\u0430 \u043e\u0431\u0440\u0430\u0431\u043e\u0442\u043a\u0443 \u043f\u0435\u0440\u0441\u043e\u043d\u0430\u043b\u044c\u043d\u044b\u0445 \u0434\u0430\u043d\u043d\u044b\u0445 \u043f\u0440\u0438\u0434\u0443\u0442 \u0432\u0430\u043c \u043d\u0430 \u044d\u0442\u0443 \u0436\u0435 \u043f\u043e\u0447\u0442\u0443.</div>"
+        + (
+            "<div style='text-align:center;margin-top:20px'>"
+            f"<a href='{sign_link}' style='display:inline-block;background:#C9A84C;color:#0A0A0A;"
+            "text-decoration:none;padding:12px 28px;font-size:12px;letter-spacing:0.05em;font-weight:bold'>"
+            "\u041e\u0437\u043d\u0430\u043a\u043e\u043c\u0438\u0442\u044c\u0441\u044f \u0438 \u043f\u043e\u0434\u043f\u0438\u0441\u0430\u0442\u044c \u0434\u043e\u0433\u043e\u0432\u043e\u0440</a></div>"
+            if sign_link else ""
+        ) +
         "</div>"
         "<div style='text-align:center;font-size:11px;color:#5A4A30'>"
         "citypause@mail.ru | citypause.ru</div></div>"
     )
     send_email(guest_email,
                "\u0411\u0440\u043e\u043d\u044c \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0430 \u2014 " + booking_ref,
-               html,
-               attachments=[{"filename": contract_filename, "filepath": pdf_path}])
+               html)
+
 
 def email_admin_new_booking(booking_id, guest_name, guest_phone, guest_email,
                              check_in, check_out, nights, total,
@@ -964,6 +1097,9 @@ def get_db():
         "fully_paid_at":  "TEXT DEFAULT ''",
         "checklist_sent": "INTEGER DEFAULT 0",
         "review_sent":    "INTEGER DEFAULT 0",
+        "sign_token": "TEXT DEFAULT ''",
+        "signed_at":  "TEXT DEFAULT ''",
+        "sign_ip":    "TEXT DEFAULT ''",
     }.items():
         try:
             conn.execute("ALTER TABLE bookings ADD COLUMN " + col + " " + col_type)
@@ -1937,10 +2073,13 @@ async def confirm_booking(booking_ref: str, _: bool = Depends(require_admin)):
 
     booking = dict(row)
 
+    # Токен для ссылки на страницу SMS-подписания
+    sign_token = secrets.token_urlsafe(24)
+
     # Меняем статус на confirmed
     conn.execute(
-        "UPDATE bookings SET status='confirmed', confirmed_at=? WHERE id=?",
-        (datetime.now().isoformat(), booking["id"])
+        "UPDATE bookings SET status='confirmed', confirmed_at=?, sign_token=? WHERE id=?",
+        (datetime.now().isoformat(), sign_token, booking["id"])
     )
     conn.commit()
     conn.close()
@@ -1951,6 +2090,7 @@ async def confirm_booking(booking_ref: str, _: bool = Depends(require_admin)):
 
     # Обновляем данные брони
     booking["status"] = "confirmed"
+    booking["sign_token"] = sign_token
 
     # Отправляем email с договором и кодом замка
     guest_email = booking.get("guest_email", "")
@@ -2154,6 +2294,66 @@ async def get_contract(booking_ref: str, _: bool = Depends(require_admin)):
     if not row:
         raise HTTPException(status_code=404, detail="Booking not found")
     return PlainTextResponse(generate_contract(dict(row)))
+
+# =====================================================
+# API — ПОДПИСАНИЕ ДОГОВОРА (ПЭП, публичные эндпоинты по токену)
+# =====================================================
+# Подписание — по персональной ссылке из письма (без SMS-кода): переход
+# по уникальной ссылке и нажатие кнопки «Подписать» на этой странице и
+# есть простая электронная подпись (ссылка известна только гостю, т.к.
+# отправлена на его собственный email).
+
+@app.get("/sign/{token}", response_class=HTMLResponse)
+async def sign_page(token: str):
+    """Публичная страница подписания — статика, токен разбирается на клиенте из URL."""
+    path = os.path.join("static", "sign.html")
+    if os.path.exists(path):
+        with open(path, "r", encoding="utf-8") as f:
+            return HTMLResponse(f.read())
+    return HTMLResponse("<h1>Страница не найдена</h1>", status_code=404)
+
+@app.get("/api/sign/{token}")
+async def get_sign_info(token: str):
+    conn = get_db()
+    row = conn.execute("SELECT * FROM bookings WHERE sign_token=?", (token,)).fetchone()
+    conn.close()
+    if not row:
+        raise HTTPException(status_code=404, detail="Ссылка недействительна")
+    booking = dict(row)
+    if booking.get("signed_at"):
+        return {"already_signed": True, "signed_at": booking["signed_at"]}
+    return {
+        "already_signed": False,
+        "booking_ref": booking.get("username"),
+        "guest_name": booking.get("guest_name"),
+        "contract_text": generate_contract(booking),
+        "consent_text": generate_consent(booking),
+    }
+
+@app.post("/api/sign/{token}/confirm")
+async def confirm_sign(token: str, request: Request):
+    conn = get_db()
+    row = conn.execute("SELECT * FROM bookings WHERE sign_token=?", (token,)).fetchone()
+    if not row:
+        conn.close()
+        raise HTTPException(status_code=404, detail="Ссылка недействительна")
+    booking = dict(row)
+    if booking.get("signed_at"):
+        conn.close()
+        raise HTTPException(status_code=400, detail="Договор уже подписан")
+
+    signed_at = now_nsk().strftime("%Y-%m-%d %H:%M:%S")
+    client_ip = request.client.host if request.client else ""
+    conn.execute("UPDATE bookings SET signed_at=?, sign_ip=? WHERE id=?", (signed_at, client_ip, booking["id"]))
+    conn.commit()
+    conn.close()
+
+    booking["signed_at"] = signed_at
+    booking["sign_ip"] = client_ip
+    import threading
+    threading.Thread(target=email_contract_signed, args=(booking,)).start()
+
+    return {"ok": True, "signed_at": signed_at}
 
 # =====================================================
 # CALLBACKS (Telegram)
