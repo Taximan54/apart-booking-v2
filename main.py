@@ -858,13 +858,15 @@ def email_manual_contract(booking, target_email):
     )
 
 def load_checkin_memo(door_code=""):
-    """Загружает памятку гостю, подставляет код замка."""
+    """Загружает памятку гостю, подставляет код замка и телефон хозяина из раздела «Контакты»."""
     if os.path.exists(CHECKIN_FILE):
         with open(CHECKIN_FILE, "r", encoding="utf-8") as f:
             text = f.read()
     else:
         text = DEFAULT_CHECKIN_MEMO
-    return text.replace("{{КОД_ЗАМКА}}", str(door_code))
+    return (text
+            .replace("{{КОД_ЗАМКА}}", str(door_code))
+            .replace("{{ТЕЛЕФОН_ХОЗЯИНА}}", get_landlord_phone()))
 
 def load_checkout_checklist():
     """Загружает чек-лист выезда."""
