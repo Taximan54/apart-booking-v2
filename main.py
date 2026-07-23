@@ -21,7 +21,7 @@ from xml.sax.saxutils import escape as xml_escape
 
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import mm
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image as RLImage
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image as RLImage, PageBreak, KeepTogether
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
@@ -562,30 +562,43 @@ def generate_contract_pdf(contract_text, booking_ref, extra_blocks=None):
     )
     max_img_width = A4[0] - 40 * mm
 
-    def _add_text_block(text, story):
+    def _add_text_block(text, story, break_before_appendix=False):
         for raw_line in text.split("\n"):
             line = raw_line.strip()
             if not line:
                 story.append(Spacer(1, 8))
                 continue
+            if break_before_appendix and line.startswith("Приложение N 1"):
+                story.append(PageBreak())
             story.append(Paragraph(xml_escape(line), style))
 
     story = []
-    _add_text_block(contract_text, story)
+    _add_text_block(contract_text, story, break_before_appendix=True)
 
-    for block in (extra_blocks or []):
+    i = 0
+    blocks = extra_blocks or []
+    while i < len(blocks):
+        block = blocks[i]
         if isinstance(block, str):
-            story.append(Spacer(1, 10))
+            # Текстовый блок (например, блок подписи) — всегда с новой страницы
+            story.append(PageBreak())
             _add_text_block(block, story)
+            i += 1
         else:
-            # PIL.Image — фото паспорта с наложенной защитной сеткой
-            iw, ih = block.size
-            scale = max_img_width / iw
-            buf = io.BytesIO()
-            block.save(buf, format="JPEG", quality=88)
-            buf.seek(0)
-            story.append(Spacer(1, 12))
-            story.append(RLImage(buf, width=max_img_width, height=ih * scale))
+            # Группа идущих подряд фото — держим вместе на одной странице
+            img_group = []
+            while i < len(blocks) and not isinstance(blocks[i], str):
+                img = blocks[i]
+                iw, ih = img.size
+                scale = max_img_width / iw
+                buf = io.BytesIO()
+                img.save(buf, format="JPEG", quality=88)
+                buf.seek(0)
+                img_group.append(RLImage(buf, width=max_img_width, height=ih * scale))
+                img_group.append(Spacer(1, 12))
+                i += 1
+            story.append(PageBreak())
+            story.append(KeepTogether(img_group))
 
     doc.build(story)
     return path
@@ -628,17 +641,23 @@ def generate_consent(booking):
 # кнопки «Подписать» является простой электронной подписью.
 
 LANDLORD_EMAIL = "citypause@mail.ru"
-# Телефон арендодателя для блока подписи — задать в .env (LANDLORD_PHONE),
-# иначе используется значение по умолчанию.
-LANDLORD_PHONE = os.getenv("LANDLORD_PHONE", "+70000000000")
+
+def get_landlord_phone():
+    """Телефон арендодателя для блока подписи — берётся из раздела «Контакты» в админке (тот же файл, что и /api/contacts)."""
+    if os.path.exists(CONTACTS_FILE):
+        try:
+            with open(CONTACTS_FILE, "r", encoding="utf-8") as f:
+                saved = json.load(f)
+            phone = saved.get("phone", "").strip()
+            if phone:
+                return phone
+        except Exception:
+            pass
+    return "не указан"
 
 def _sig_hash(*parts) -> str:
     """Короткий детерминированный хэш для блока электронной подписи."""
     return hashlib.sha256("|".join(str(p) for p in parts).encode()).hexdigest()[:24]
-
-# Хэш арендодателя одинаковый для всех документов (не меняется от брони к брони,
-# как и полагается подписи стороны, чьи контактные данные фиксированы).
-LANDLORD_SIGN_HASH = _sig_hash(LANDLORD_EMAIL, LANDLORD_PHONE, "Городская Пауза")
 
 def _signature_block(booking, doc_type):
     """
@@ -646,6 +665,10 @@ def _signature_block(booking, doc_type):
     документа (договор, согласие на ПД) — doc_type только меняет идентификатор
     документа, чтобы у разных документов одной брони были разные ID.
     """
+    landlord_phone = get_landlord_phone()
+    # Хэш арендодателя одинаковый для всех документов, пока не меняется телефон в контактах.
+    landlord_sign_hash = _sig_hash(LANDLORD_EMAIL, landlord_phone, "Городская Пауза")
+
     booking_ref = str(booking.get("username") or booking.get("id", ""))
     doc_id = _sig_hash(booking_ref, doc_type, booking.get("check_in", ""), booking.get("check_out", ""))
     guest_hash = _sig_hash(booking_ref, doc_type, booking.get("guest_phone", ""), booking.get("signed_at", ""))
@@ -656,10 +679,10 @@ def _signature_block(booking, doc_type):
         "(ПЭП) в соответствии со ст. 4 ФЗ №63 «Об электронной подписи»\n\n"
         f"Идентификатор документа: {doc_id}\n\n"
         "Подпись Арендодателя:\n"
-        f"{LANDLORD_SIGN_HASH}\n"
+        f"{landlord_sign_hash}\n"
         "Городская Пауза\n"
         f"Email: {LANDLORD_EMAIL}\n"
-        f"Телефон: {LANDLORD_PHONE}\n\n"
+        f"Телефон: {landlord_phone}\n\n"
         "Подпись Арендатора:\n"
         f"{guest_hash}\n"
         f"{booking.get('guest_name', '')}\n"
