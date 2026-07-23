@@ -21,7 +21,7 @@ from xml.sax.saxutils import escape as xml_escape
 
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import mm
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image as RLImage
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
@@ -30,7 +30,7 @@ from fastapi import FastAPI, HTTPException, Header, Depends, UploadFile, File, F
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, PlainTextResponse, FileResponse
-from PIL import Image
+from PIL import Image, ImageDraw
 from pydantic import BaseModel, Field
 from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
@@ -541,8 +541,14 @@ def _register_cyrillic_font():
     _CYRILLIC_FONT_NAME = "Helvetica"
     return _CYRILLIC_FONT_NAME
 
-def generate_contract_pdf(contract_text, booking_ref):
-    """Рендерит уже заполненный текст договора в PDF-файл и сохраняет в архив."""
+def generate_contract_pdf(contract_text, booking_ref, extra_blocks=None):
+    """
+    Рендерит текст в PDF и сохраняет в архив.
+    extra_blocks — необязательный список элементов, которые добавляются
+    ПОСЛЕ основного текста: либо строка (текст), либо PIL.Image
+    (вставляется как картинка, отмасштабированная по ширине страницы) —
+    используется для фото паспорта в подписанном договоре.
+    """
     font_name = _register_cyrillic_font()
     path = os.path.join(CONTRACTS_DIR, booking_ref + ".pdf")
     doc = SimpleDocTemplate(
@@ -554,13 +560,33 @@ def generate_contract_pdf(contract_text, booking_ref):
     style = ParagraphStyle(
         "contract", fontName=font_name, fontSize=10.5, leading=15, spaceAfter=4,
     )
+    max_img_width = A4[0] - 40 * mm
+
+    def _add_text_block(text, story):
+        for raw_line in text.split("\n"):
+            line = raw_line.strip()
+            if not line:
+                story.append(Spacer(1, 8))
+                continue
+            story.append(Paragraph(xml_escape(line), style))
+
     story = []
-    for raw_line in contract_text.split("\n"):
-        line = raw_line.strip()
-        if not line:
-            story.append(Spacer(1, 8))
-            continue
-        story.append(Paragraph(xml_escape(line), style))
+    _add_text_block(contract_text, story)
+
+    for block in (extra_blocks or []):
+        if isinstance(block, str):
+            story.append(Spacer(1, 10))
+            _add_text_block(block, story)
+        else:
+            # PIL.Image — фото паспорта с наложенной защитной сеткой
+            iw, ih = block.size
+            scale = max_img_width / iw
+            buf = io.BytesIO()
+            block.save(buf, format="JPEG", quality=88)
+            buf.seek(0)
+            story.append(Spacer(1, 12))
+            story.append(RLImage(buf, width=max_img_width, height=ih * scale))
+
     doc.build(story)
     return path
 
@@ -643,11 +669,85 @@ def _signature_block(booking, doc_type):
         f"Дата подписания документа: {booking.get('signed_at', '')}\n"
     )
 
+EDO_AGREEMENT_TEXT = """СОГЛАШЕНИЕ ОБ ЭЛЕКТРОННОМ ДОКУМЕНТООБОРОТЕ
+
+Настоящее Соглашение включено в состав электронного документа (в том
+числе отдельным файлом в формате PDF) и считается оформленным в
+письменной форме; им выражается согласие сторон на применение простой
+электронной подписи в смысле Федерального закона от 06.04.2011 №63-ФЗ
+«Об электронной подписи».
+
+Стороны придали письменную форму настоящему Документу путём составления
+одного электронного документа, подписав его электронной подписью.
+Стороны согласны, что электронная форма настоящего Документа имеет
+такую же юридическую силу, как документ, составленный и подписанный в
+бумажном виде или на ином материальном носителе. В целях определения
+актуальной (действующей) редакции Документа в случае его обсуждения
+Сторонами каждая новая редакция Документа обозначается новым
+(уникальным) идентификатором. Актуальной (действующей) редакцией
+Документа является редакция, утверждённая Сторонами посредством
+подтверждения подписания по персональной ссылке, направленной на
+электронную почту Арендатора в системе бронирования citypause.ru,
+и отправки данной редакции на его электронную почту.
+
+Электронный документ считается подписанным аналогом собственноручной
+подписи, если он соответствует совокупности следующих требований:
+
+ - Электронный документ подписан с использованием системы бронирования
+   citypause.ru путём перехода Арендатора по персональной ссылке,
+   направленной на указанный им адрес электронной почты, и подтверждения
+   подписания на соответствующей странице;
+ - В текст электронного документа включены электронная почта, номер
+   телефона и паспортные (или иные идентифицирующие) данные Арендатора
+   и Арендодателя;
+ - В текст электронного документа включён идентификатор электронного
+   документа, сгенерированный системой citypause.ru.
+"""
+
+def _passport_photos_with_grid(booking_ref):
+    """
+    Загружает прикреплённые фото паспорта гостя (main/reg1) и накладывает
+    полупрозрачную защитную сетку — для вставки в подписанный договор
+    (сами оригиналы в PASSPORT_DIR остаются без изменений).
+    """
+    pm = load_passport_map()
+    entry = pm.get(booking_ref)
+    if not isinstance(entry, dict):
+        return []
+    images = []
+    for slot in ("main", "reg1"):
+        filename = entry.get(slot)
+        if not filename:
+            continue
+        filepath = os.path.join(PASSPORT_DIR, filename)
+        if not os.path.exists(filepath):
+            continue
+        try:
+            img = Image.open(filepath).convert("RGB")
+            overlay = Image.new("RGBA", img.size, (0, 0, 0, 0))
+            draw = ImageDraw.Draw(overlay)
+            step = 45
+            color = (201, 168, 76, 90)  # золотой, полупрозрачный
+            w, h = img.size
+            for x in range(-h, w, step):
+                draw.line([(x, 0), (x + h, h)], fill=color, width=2)
+                draw.line([(x, h), (x + h, 0)], fill=color, width=2)
+            images.append(Image.alpha_composite(img.convert("RGBA"), overlay).convert("RGB"))
+        except Exception as e:
+            print(f"WARNING: не удалось наложить сетку на фото паспорта {filename}: {e}")
+    return images
+
 def generate_signed_contract_pdf(booking):
-    """Договор + блок ПЭП — вызывается только после подписания гостем."""
+    """
+    Итоговый подписанный документ: договор (с приложениями и актом) +
+    соглашение об электронном документообороте + фото паспорта гостя
+    (с защитной сеткой) + блок ПЭП — вызывается только после подписания.
+    """
     booking_ref = str(booking.get("username") or booking.get("id", ""))
-    text = generate_contract(booking) + _signature_block(booking, "contract")
-    return generate_contract_pdf(text, booking_ref + "_podpisan")
+    main_text = generate_contract(booking) + "\n\n" + EDO_AGREEMENT_TEXT
+    photos = _passport_photos_with_grid(booking_ref)
+    signature_text = _signature_block(booking, "contract")
+    return generate_contract_pdf(main_text, booking_ref + "_podpisan", extra_blocks=photos + [signature_text])
 
 def generate_signed_consent_pdf(booking):
     """Согласие на обработку ПД + блок ПЭП — тот же принцип, что и с договором."""
@@ -675,8 +775,9 @@ def email_contract_signed(booking):
         f"<div style='font-size:13px;color:#A89060;margin-bottom:16px'>Бронь {booking_ref}</div>"
         "<div style='font-size:12px;color:#A89060;line-height:1.7'>"
         f"Договор подписан {booking.get('signed_at','')} — это простая электронная "
-        "подпись (ПЭП) в соответствии с 63-ФЗ. Подписанный экземпляр договора и "
-        "согласие на обработку персональных данных приложены к этому письму.</div></div>"
+        "подпись (ПЭП) в соответствии с 63-ФЗ. Подписанный экземпляр договора "
+        "(вместе с соглашением об электронном документообороте) и согласие на "
+        "обработку персональных данных приложены к этому письму.</div></div>"
         "<div style='text-align:center;font-size:11px;color:#5A4A30'>citypause@mail.ru | citypause.ru</div></div>"
     )
     send_email(
