@@ -82,6 +82,8 @@ class Prices(BaseModel):
     weekday: int
     weekend: int
     cleaning: int
+    included_guests: int = 1      # сколько гостей включено в базовую цену без доплаты
+    extra_guest_price: int = 100  # доплата за каждого гостя сверх included_guests (₽/сутки)
 
 class PromoCodes(BaseModel):
     codes: Dict[str, int]   # {"SUMMER10": 10} — код -> процент скидки
@@ -323,7 +325,7 @@ AUTH_FILE        = f"{DATA_DIR}/admin_auth.json"
 PASSPORT_DIR         = f"{DATA_DIR}/passports"           # ЗАЩИЩЁННАЯ папка — НЕ должна раздаваться nginx как статика!
 PASSPORT_MAP_FILE    = f"{DATA_DIR}/passport_photos.json"  # {booking_ref: {"main":.., "reg1":..}}
 PROPERTIES_FILE      = f"{DATA_DIR}/properties.json"       # реестр квартир (задел на white-label с несколькими объектами)
-DEFAULT_PRICES   = {"weekday": 3500, "weekend": 4500, "cleaning": 1500}
+DEFAULT_PRICES   = {"weekday": 3500, "weekend": 4500, "cleaning": 1500, "included_guests": 1, "extra_guest_price": 100}
 
 os.makedirs(CONTRACTS_DIR, exist_ok=True)
 
@@ -1279,7 +1281,8 @@ async def change_password(cp: ChangePassword, _: bool = Depends(require_admin)):
 async def get_prices():
     if os.path.exists(PRICE_FILE):
         with open(PRICE_FILE, "r") as f:
-            return json.load(f)
+            saved = json.load(f)
+        return {**DEFAULT_PRICES, **saved}
     return DEFAULT_PRICES
 
 @app.post("/api/prices")

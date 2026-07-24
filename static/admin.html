@@ -553,11 +553,22 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
               <div class="pib-label">Доп. уборка по запросу (₽)</div>
               <input type="number" class="pib-input" id="pCleaning" value="1500">
             </div>
+            <div class="price-input-box">
+              <div class="pib-label">Гостей включено в базовую цену</div>
+              <input type="number" class="pib-input" id="pIncludedGuests" value="1" min="1">
+            </div>
+            <div class="price-input-box">
+              <div class="pib-label">Доплата за доп. гостя (₽/сутки)</div>
+              <input type="number" class="pib-input" id="pExtraGuestPrice" value="100" min="0">
+            </div>
           </div>
           <div style="font-size:10px;color:var(--text-muted);margin-top:8px;max-width:500px;line-height:1.6">
-            Это платная услуга по запросу гостя (например, смена белья + уборка при длительном
-            проживании) — не входит в стоимость автоматически. Базовая уборка после выезда
-            остаётся включённой в проживание бесплатно.
+            Уборка по запросу — платная услуга по запросу гостя (например, смена белья + уборка
+            при длительном проживании) — не входит в стоимость автоматически. Базовая уборка
+            после выезда остаётся включённой в проживание бесплатно.<br><br>
+            Доплата за доп. гостя начисляется на сайте при бронировании, если гость выбирает
+            количество человек больше указанного здесь лимита — на главной странице сайта
+            эта доплата отдельно не афишируется, только пересчитывает итог при выборе гостей.
           </div>
           <div style="margin-top:20px;display:flex;gap:12px">
             <button class="btn btn-primary" onclick="savePrices()">Сохранить цены</button>
@@ -1240,7 +1251,7 @@ if (ADMIN_TOKEN) {
 // DATA STATE
 // ============================================================
 let allBookings = [];
-let config = { weekday: 3500, weekend: 4500, cleaning: 1500, door_code: '0000' };
+let config = { weekday: 3500, weekend: 4500, cleaning: 1500, included_guests: 1, extra_guest_price: 100, door_code: '0000' };
 let adminCalYear, adminCalMonth;
 let adminSelStart = null, adminSelEnd = null;
 let selectedBookingId = null;
@@ -1406,10 +1417,14 @@ async function loadPrices() {
     config.weekday  = data.weekday  || data.weekday_price  || config.weekday;
     config.weekend  = data.weekend  || data.weekend_price  || config.weekend;
     config.cleaning = data.cleaning || data.cleaning_price || config.cleaning;
+    config.included_guests   = data.included_guests   ?? config.included_guests   ?? 1;
+    config.extra_guest_price = data.extra_guest_price ?? config.extra_guest_price ?? 100;
   } catch(e) {}
   document.getElementById('pWeekday').value  = config.weekday;
   document.getElementById('pWeekend').value  = config.weekend;
   document.getElementById('pCleaning').value = config.cleaning;
+  document.getElementById('pIncludedGuests').value   = config.included_guests;
+  document.getElementById('pExtraGuestPrice').value  = config.extra_guest_price;
 }
 
 async function savePrices() {
@@ -1417,6 +1432,8 @@ async function savePrices() {
     weekday:   parseInt(document.getElementById('pWeekday').value),
     weekend:   parseInt(document.getElementById('pWeekend').value),
     cleaning:  parseInt(document.getElementById('pCleaning').value),
+    included_guests:   parseInt(document.getElementById('pIncludedGuests').value),
+    extra_guest_price: parseInt(document.getElementById('pExtraGuestPrice').value),
   };
   try {
     await apiPost('/api/prices', payload);

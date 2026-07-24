@@ -610,6 +610,10 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
               </span>
               <span class="val" id="pbClean">—</span>
             </label>
+            <div class="pbrow" id="pbExtraGuestRow" style="display:none">
+              <span class="lbl" id="pbExtraGuestLbl">Доп. гости</span>
+              <span class="val" id="pbExtraGuestVal">—</span>
+            </div>
             <div id="promoRow" style="display:flex;gap:8px;margin:4px 0">
               <input type="text" id="promoInput" placeholder="Промокод" style="flex:1;background:var(--black-card);border:1px solid var(--black-border);color:var(--text-primary);padding:10px 12px;font-family:'Montserrat',sans-serif;font-size:12px;outline:none;text-transform:uppercase">
               <button type="button" id="promoBtn" onclick="applyPromoCode()" style="flex:0 0 100px;background:transparent;border:1px solid rgba(201,168,76,.3);color:var(--text-secondary);font-family:'Montserrat',sans-serif;font-size:10px;letter-spacing:.1em;text-transform:uppercase;cursor:pointer">Применить</button>
@@ -644,8 +648,8 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
           <div class="fgroup"><label class="flabel">Email</label><input type="email" class="finput" id="gEmail" placeholder="your@email.com"></div>
           <div class="fgroup">
             <label class="flabel">Количество гостей</label>
-            <select class="finput" id="gCount" style="background:var(--black-card);cursor:pointer">
-              <option value="1">1 гость</option><option value="2" selected>2 гостя</option><option value="3">3 гостя</option><option value="4">4 гостя</option>
+            <select class="finput" id="gCount" style="background:var(--black-card);cursor:pointer" onchange="updatePanel()">
+              <option value="1" selected>1 гость</option><option value="2">2 гостя</option><option value="3">3 гостя</option><option value="4">4 гостя</option>
             </select>
           </div>
           <div class="fgroup"><label class="flabel">Серия и номер паспорта</label><input type="text" class="finput" id="gPassport" placeholder="0000 000000"></div>
@@ -851,7 +855,7 @@ const API = {
 // ============================================================
 // STATE
 // ============================================================
-let CONFIG = { weekday:3500, weekend:4500, cleaning:1500, doorCode:'0000', bookedDates:[], checkoutDates:[] };
+let CONFIG = { weekday:3500, weekend:4500, cleaning:1500, includedGuests:1, extraGuestPrice:100, doorCode:'0000', bookedDates:[], checkoutDates:[] };
 let selStart=null, selEnd=null, hoverDate=null;
 const _now=new Date(); let curYear=_now.getFullYear(), curMonth=_now.getMonth();
 let payMethod='card';
@@ -880,6 +884,8 @@ async function init() {
     CONFIG.weekday  = p.weekday  || p.weekday_price  || 3500;
     CONFIG.weekend  = p.weekend  || p.weekend_price  || 4500;
     CONFIG.cleaning = p.cleaning || p.cleaning_price || 1500;
+    CONFIG.includedGuests   = p.included_guests   ?? 1;
+    CONFIG.extraGuestPrice  = p.extra_guest_price ?? 0;
     document.getElementById('priceWeekday').textContent  = CONFIG.weekday.toLocaleString('ru');
     document.getElementById('priceWeekend').textContent  = CONFIG.weekend.toLocaleString('ru');
     document.getElementById('priceCleaning').textContent = CONFIG.cleaning.toLocaleString('ru');
@@ -1385,7 +1391,10 @@ function updatePanel(){
   }
   const cleaningChecked = document.getElementById('pbCleanCheckbox')?.checked || false;
   const cleaningCost = cleaningChecked ? CONFIG.cleaning : 0;
-  const subtotal = cost + cleaningCost;
+  const guestsSelected = parseInt(document.getElementById('gCount')?.value || CONFIG.includedGuests);
+  const extraGuests = Math.max(0, guestsSelected - CONFIG.includedGuests);
+  const extraGuestCost = extraGuests * CONFIG.extraGuestPrice * nights;
+  const subtotal = cost + cleaningCost + extraGuestCost;
   let discount = 0;
   if(appliedPromo){
     discount = Math.round(subtotal * appliedPromo.percent / 100);
@@ -1396,6 +1405,16 @@ function updatePanel(){
   document.getElementById('pbNightsLbl').textContent  = nights + ' ' + nw(nights) + ' × тариф';
   document.getElementById('pbNightsCost').textContent = '₽' + cost.toLocaleString('ru');
   document.getElementById('pbClean').textContent      = (cleaningChecked ? '+' : '') + '₽' + CONFIG.cleaning.toLocaleString('ru');
+  const extraGuestRow = document.getElementById('pbExtraGuestRow');
+  if(extraGuestRow){
+    if(extraGuests > 0){
+      extraGuestRow.style.display = 'flex';
+      document.getElementById('pbExtraGuestLbl').textContent = 'Доп. гости (' + extraGuests + ')';
+      document.getElementById('pbExtraGuestVal').textContent = '+₽' + extraGuestCost.toLocaleString('ru');
+    } else {
+      extraGuestRow.style.display = 'none';
+    }
+  }
   if(appliedPromo){
     document.getElementById('pbPromoRow').style.display = 'flex';
     document.getElementById('pbPromoLbl').textContent = 'Промокод ' + appliedPromo.code + ' (−' + appliedPromo.percent + '%)';
