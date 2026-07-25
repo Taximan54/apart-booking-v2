@@ -21,16 +21,18 @@ from xml.sax.saxutils import escape as xml_escape
 
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import mm
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image as RLImage, PageBreak, KeepTogether
+from reportlab.lib import colors
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image as RLImage, PageBreak, KeepTogether, Table, TableStyle
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.pdfgen.canvas import Canvas as _PDFCanvas
 
 from fastapi import FastAPI, HTTPException, Header, Depends, UploadFile, File, Form, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, PlainTextResponse, FileResponse
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFont
 from pydantic import BaseModel, Field
 from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
@@ -543,13 +545,69 @@ def _register_cyrillic_font():
     _CYRILLIC_FONT_NAME = "Helvetica"
     return _CYRILLIC_FONT_NAME
 
-def generate_contract_pdf(contract_text, booking_ref, extra_blocks=None):
+_CYRILLIC_FONT_PATH_CANDIDATES = [
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+    "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+    "/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf",
+    "/usr/share/fonts/truetype/msttcorefonts/Arial.ttf",
+]
+
+def _get_cyrillic_ttf_path():
+    """Путь к TTF-файлу с кириллицей для наложения текста на изображения через PIL (не через reportlab)."""
+    for path in _CYRILLIC_FONT_PATH_CANDIDATES:
+        if os.path.exists(path):
+            return path
+    return None
+
+def _make_numbered_canvas(header_text, font_name):
+    """
+    Canvas с шапкой на каждой странице: "header_text · N / M" (как у ОкиДоки).
+    Общее число страниц (M) известно только после полной вёрстки, поэтому
+    используется двухпроходная схема: сначала копим состояния всех страниц,
+    затем при save() дорисовываем шапку с уже известным общим количеством.
+    """
+    class NumberedCanvas(_PDFCanvas):
+        def __init__(self, *args, **kwargs):
+            _PDFCanvas.__init__(self, *args, **kwargs)
+            self._saved_page_states = []
+
+        def showPage(self):
+            self._saved_page_states.append(dict(self.__dict__))
+            self._startPage()
+
+        def save(self):
+            total = len(self._saved_page_states)
+            for state in self._saved_page_states:
+                self.__dict__.update(state)
+                self._draw_header(total)
+                _PDFCanvas.showPage(self)
+            _PDFCanvas.save(self)
+
+        def _draw_header(self, total):
+            self.saveState()
+            try:
+                self.setFont(font_name, 8.5)
+            except Exception:
+                self.setFont("Helvetica", 8.5)
+            self.setFillColor(colors.HexColor("#9a8148"))
+            text = f"{header_text}. {self._pageNumber} / {total}"
+            self.drawRightString(A4[0] - 20 * mm, 12 * mm, text)
+            self.restoreState()
+
+    return NumberedCanvas
+
+def generate_contract_pdf(contract_text, booking_ref, extra_blocks=None, header_text=None):
     """
     Рендерит текст в PDF и сохраняет в архив.
     extra_blocks — необязательный список элементов, которые добавляются
     ПОСЛЕ основного текста: либо строка (текст), либо PIL.Image
     (вставляется как картинка, отмасштабированная по ширине страницы) —
     используется для фото паспорта в подписанном договоре.
+    header_text — если задан, на каждой странице сверху справа печатается
+    "header_text · N / M" (как у ОкиДоки) — используется для подписанных
+    документов, где header_text это "Городская Пауза · <идентификатор>".
+    Строки между маркерами [[SIGNATURE_BOX_START]]/[[SIGNATURE_BOX_END]]
+    оформляются отдельной рамкой с золотой обводкой и логотипом сверху.
     """
     font_name = _register_cyrillic_font()
     path = os.path.join(CONTRACTS_DIR, booking_ref + ".pdf")
@@ -562,11 +620,48 @@ def generate_contract_pdf(contract_text, booking_ref, extra_blocks=None):
     style = ParagraphStyle(
         "contract", fontName=font_name, fontSize=10.5, leading=15, spaceAfter=4,
     )
+    box_style = ParagraphStyle(
+        "sigbox", fontName=font_name, fontSize=9.5, leading=14, spaceAfter=3,
+        textColor=colors.HexColor("#3a3226"),
+    )
+    logo_style = ParagraphStyle(
+        "logo", fontName=font_name, fontSize=15, leading=18,
+        textColor=colors.HexColor("#9a8148"), alignment=1,  # центр
+    )
     max_img_width = A4[0] - 40 * mm
+    max_box_width = A4[0] - 44 * mm  # чуть уже полей, чтобы была видна рамка
 
     def _add_text_block(text, story, break_before_appendix=False):
+        in_box = False
+        box_lines = []
         for raw_line in text.split("\n"):
             line = raw_line.strip()
+            if line == "[[SIGNATURE_BOX_START]]":
+                in_box = True
+                box_lines = []
+                continue
+            if line == "[[SIGNATURE_BOX_END]]":
+                in_box = False
+                box_flow = [Paragraph("Г О Р О Д С К А Я   П А У З А", logo_style), Spacer(1, 10)]
+                for bl in box_lines:
+                    if not bl:
+                        box_flow.append(Spacer(1, 6))
+                    else:
+                        box_flow.append(Paragraph(xml_escape(bl), box_style))
+                tbl = Table([[box_flow]], colWidths=[max_box_width])
+                tbl.setStyle(TableStyle([
+                    ("BOX", (0, 0), (-1, -1), 1.1, colors.HexColor("#C9A84C")),
+                    ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#FCFAF3")),
+                    ("LEFTPADDING", (0, 0), (-1, -1), 16),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 16),
+                    ("TOPPADDING", (0, 0), (-1, -1), 14),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 14),
+                ]))
+                story.append(KeepTogether([tbl]))
+                continue
+            if in_box:
+                box_lines.append(line)
+                continue
             if not line:
                 story.append(Spacer(1, 8))
                 continue
@@ -602,7 +697,10 @@ def generate_contract_pdf(contract_text, booking_ref, extra_blocks=None):
             story.append(PageBreak())
             story.append(KeepTogether(img_group))
 
-    doc.build(story)
+    if header_text:
+        doc.build(story, canvasmaker=_make_numbered_canvas(header_text, font_name))
+    else:
+        doc.build(story)
     return path
 
 # =====================================================
@@ -661,21 +759,26 @@ def _sig_hash(*parts) -> str:
     """Короткий детерминированный хэш для блока электронной подписи."""
     return hashlib.sha256("|".join(str(p) for p in parts).encode()).hexdigest()[:24]
 
-def _signature_block(booking, doc_type):
+def _doc_id_for(booking, doc_type):
+    """Идентификатор документа — вычисляется один раз и используется и в шапке страниц, и в блоке подписи."""
+    booking_ref = str(booking.get("username") or booking.get("id", ""))
+    return _sig_hash(booking_ref, doc_type, booking.get("check_in", ""), booking.get("check_out", ""))
+
+def _signature_block(booking, doc_type, doc_id):
     """
-    Блок электронной подписи (ПЭП), одинаковый по структуре для любого
-    документа (договор, согласие на ПД) — doc_type только меняет идентификатор
-    документа, чтобы у разных документов одной брони были разные ID.
+    Блок электронной подписи (ПЭП) в рамке с логотипом «Городская Пауза» —
+    одинаковый по структуре для любого документа (договор, согласие на ПД).
+    doc_id передаётся снаружи, чтобы совпадать с тем, что показан в шапке
+    каждой страницы документа.
     """
     landlord_phone = get_landlord_phone()
     # Хэш арендодателя одинаковый для всех документов, пока не меняется телефон в контактах.
     landlord_sign_hash = _sig_hash(LANDLORD_EMAIL, landlord_phone, "Городская Пауза")
 
     booking_ref = str(booking.get("username") or booking.get("id", ""))
-    doc_id = _sig_hash(booking_ref, doc_type, booking.get("check_in", ""), booking.get("check_out", ""))
     guest_hash = _sig_hash(booking_ref, doc_type, booking.get("guest_phone", ""), booking.get("signed_at", ""))
     return (
-        "\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+        "\n\n[[SIGNATURE_BOX_START]]\n"
         "Документ подписан с использованием почты и номера телефона "
         "Арендодателя и Арендатора в качестве простой электронной подписи "
         "(ПЭП) в соответствии со ст. 4 ФЗ №63 «Об электронной подписи»\n\n"
@@ -692,6 +795,7 @@ def _signature_block(booking, doc_type):
         f"Email: {booking.get('guest_email', '')}\n"
         f"Телефон: {booking.get('guest_phone', '')}\n\n"
         f"Дата подписания документа: {booking.get('signed_at', '')}\n"
+        "[[SIGNATURE_BOX_END]]\n"
     )
 
 EDO_AGREEMENT_TEXT = """СОГЛАШЕНИЕ ОБ ЭЛЕКТРОННОМ ДОКУМЕНТООБОРОТЕ
@@ -732,13 +836,19 @@ EDO_AGREEMENT_TEXT = """СОГЛАШЕНИЕ ОБ ЭЛЕКТРОННОМ ДОК�
 def _passport_photos_with_grid(booking_ref):
     """
     Загружает прикреплённые фото паспорта гостя (main/reg1) и накладывает
-    полупрозрачную защитную сетку — для вставки в подписанный договор
-    (сами оригиналы в PASSPORT_DIR остаются без изменений).
+    защитный водяной знак — повторяющуюся диагональную надпись
+    "Запрещено копировать и использовать отдельно от данного документа" —
+    для вставки в подписанный договор (сами оригиналы в PASSPORT_DIR
+    остаются без изменений).
     """
     pm = load_passport_map()
     entry = pm.get(booking_ref)
     if not isinstance(entry, dict):
         return []
+
+    ttf_path = _get_cyrillic_ttf_path()
+    watermark_text = "ЗАПРЕЩЕНО КОПИРОВАТЬ И ИСПОЛЬЗОВАТЬ ОТДЕЛЬНО ОТ ДАННОГО ДОКУМЕНТА  •  "
+
     images = []
     for slot in ("main", "reg1"):
         filename = entry.get(slot)
@@ -749,36 +859,68 @@ def _passport_photos_with_grid(booking_ref):
             continue
         try:
             img = Image.open(filepath).convert("RGB")
-            overlay = Image.new("RGBA", img.size, (0, 0, 0, 0))
-            draw = ImageDraw.Draw(overlay)
-            step = 45
-            color = (201, 168, 76, 90)  # золотой, полупрозрачный
             w, h = img.size
-            for x in range(-h, w, step):
-                draw.line([(x, 0), (x + h, h)], fill=color, width=2)
-                draw.line([(x, h), (x + h, 0)], fill=color, width=2)
-            images.append(Image.alpha_composite(img.convert("RGBA"), overlay).convert("RGB"))
+
+            # Диагональная плашка с повторяющимся текстом рисуется на отдельном,
+            # заведомо большом холсте, затем поворачивается на 30° и накладывается
+            # поверх фото — так надпись покрывает всё изображение по диагонали.
+            diag = int((w ** 2 + h ** 2) ** 0.5) + 40
+            tile = Image.new("RGBA", (diag, 60), (0, 0, 0, 0))
+            tdraw = ImageDraw.Draw(tile)
+            font = None
+            if ttf_path:
+                try:
+                    font = ImageFont.truetype(ttf_path, 16)
+                except Exception:
+                    font = None
+            if font is None:
+                font = ImageFont.load_default()
+            full_line = watermark_text * max(3, diag // max(1, tdraw.textlength(watermark_text, font=font) or 1) + 2)
+            tdraw.text((0, 18), full_line, font=font, fill=(201, 168, 76, 130))
+
+            overlay = Image.new("RGBA", (diag, diag), (0, 0, 0, 0))
+            step_y = 70
+            for y in range(0, diag, step_y):
+                row = tile.copy()
+                overlay.paste(row, (0, y), row)
+            overlay = overlay.rotate(30, expand=False)
+
+            # Обрезаем повёрнутый водяной знак по размеру фото и накладываем по центру
+            ox = (overlay.width - w) // 2
+            oy = (overlay.height - h) // 2
+            overlay_cropped = overlay.crop((ox, oy, ox + w, oy + h))
+
+            images.append(Image.alpha_composite(img.convert("RGBA"), overlay_cropped).convert("RGB"))
         except Exception as e:
-            print(f"WARNING: не удалось наложить сетку на фото паспорта {filename}: {e}")
+            print(f"WARNING: не удалось наложить водяной знак на фото паспорта {filename}: {e}")
     return images
 
 def generate_signed_contract_pdf(booking):
     """
     Итоговый подписанный документ: договор (с приложениями и актом) +
     соглашение об электронном документообороте + фото паспорта гостя
-    (с защитной сеткой) + блок ПЭП — вызывается только после подписания.
+    (с водяным знаком) + блок ПЭП — вызывается только после подписания.
     """
     booking_ref = str(booking.get("username") or booking.get("id", ""))
+    doc_id = _doc_id_for(booking, "contract")
     main_text = generate_contract(booking) + "\n\n" + EDO_AGREEMENT_TEXT
     photos = _passport_photos_with_grid(booking_ref)
-    signature_text = _signature_block(booking, "contract")
-    return generate_contract_pdf(main_text, booking_ref + "_podpisan", extra_blocks=photos + [signature_text])
+    signature_text = _signature_block(booking, "contract", doc_id)
+    return generate_contract_pdf(
+        main_text, booking_ref + "_podpisan",
+        extra_blocks=photos + [signature_text],
+        header_text=f"Городская Пауза {doc_id}",
+    )
 
 def generate_signed_consent_pdf(booking):
     """Согласие на обработку ПД + блок ПЭП — тот же принцип, что и с договором."""
     booking_ref = str(booking.get("username") or booking.get("id", ""))
-    text = generate_consent(booking) + _signature_block(booking, "consent")
-    return generate_contract_pdf(text, booking_ref + "_soglasie_pd")
+    doc_id = _doc_id_for(booking, "consent")
+    text = generate_consent(booking) + _signature_block(booking, "consent", doc_id)
+    return generate_contract_pdf(
+        text, booking_ref + "_soglasie_pd",
+        header_text=f"Городская Пауза {doc_id}",
+    )
 
 def email_contract_signed(booking):
     """Письмо гостю с подписанным договором + согласием на ПД (оба с блоком ПЭП) — после подписания по ссылке."""
