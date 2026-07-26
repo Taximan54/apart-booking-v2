@@ -444,19 +444,25 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
               <input type="text" class="info-input" id="mbPhone" placeholder="+7 900 000-00-00" style="width:100%">
             </div>
             <div class="info-field" style="flex:1">
-              <div class="info-label">Email (на него уйдёт договор)</div>
-              <input type="email" class="info-input" id="mbEmail" placeholder="guest@mail.ru" style="width:100%">
+              <div class="info-label">Email гостя (обязательно — на него уйдёт ссылка на подписание)</div>
+              <input type="email" class="info-input" id="mbEmail" placeholder="guest@mail.ru" style="width:100%" required>
             </div>
           </div>
 
           <div class="info-field" style="margin-bottom:16px">
-            <div class="info-label">Паспортные данные</div>
-            <input type="text" class="info-input" id="mbPassport" placeholder="серия, номер, кем и когда выдан" style="width:100%">
+            <div class="info-label">Паспортные данные (оставь пустым — гость введёт сам по ссылке)</div>
+            <input type="text" class="info-input" id="mbPassport" placeholder="серия, номер — необязательно" style="width:100%">
           </div>
 
-          <div class="info-field" style="margin-bottom:16px">
-            <div class="info-label">Итоговая сумма, ₽</div>
-            <input type="number" class="info-input" id="mbTotal" placeholder="0" style="width:100%">
+          <div class="flex-2col" style="display:flex;gap:16px;margin-bottom:16px">
+            <div class="info-field" style="flex:1">
+              <div class="info-label">Итоговая сумма, ₽</div>
+              <input type="number" class="info-input" id="mbTotal" placeholder="0" style="width:100%">
+            </div>
+            <div class="info-field" style="flex:1">
+              <div class="info-label">Депозит, ₽ (по умолчанию — из Тарифов)</div>
+              <input type="number" class="info-input" id="mbDeposit" placeholder="6000" style="width:100%">
+            </div>
           </div>
 
           <div class="info-field" style="margin-bottom:24px">
@@ -464,7 +470,7 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
             <input type="text" class="info-input" id="mbNotes" placeholder="Например: оплачено на Avito полностью" style="width:100%">
           </div>
 
-          <button class="btn btn-primary" onclick="createManualBooking()">Создать бронь и отправить договор</button>
+          <button class="btn btn-primary" onclick="createManualBooking()">Создать бронь и отправить ссылку на подписание</button>
         </div>
       </div>
 
@@ -560,6 +566,10 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
             <div class="price-input-box">
               <div class="pib-label">Доплата за доп. гостя (₽/сутки)</div>
               <input type="number" class="pib-input" id="pExtraGuestPrice" value="100" min="0">
+            </div>
+            <div class="price-input-box">
+              <div class="pib-label">Депозит по умолчанию (₽)</div>
+              <input type="number" class="pib-input" id="pDeposit" value="6000" min="0">
             </div>
           </div>
           <div style="font-size:10px;color:var(--text-muted);margin-top:8px;max-width:500px;line-height:1.6">
@@ -1251,7 +1261,7 @@ if (ADMIN_TOKEN) {
 // DATA STATE
 // ============================================================
 let allBookings = [];
-let config = { weekday: 3500, weekend: 4500, cleaning: 1500, included_guests: 1, extra_guest_price: 100, door_code: '0000' };
+let config = { weekday: 3500, weekend: 4500, cleaning: 1500, included_guests: 1, extra_guest_price: 100, deposit: 6000, door_code: '0000' };
 let adminCalYear, adminCalMonth;
 let adminSelStart = null, adminSelEnd = null;
 let selectedBookingId = null;
@@ -1419,12 +1429,16 @@ async function loadPrices() {
     config.cleaning = data.cleaning || data.cleaning_price || config.cleaning;
     config.included_guests   = data.included_guests   ?? config.included_guests   ?? 1;
     config.extra_guest_price = data.extra_guest_price ?? config.extra_guest_price ?? 100;
+    config.deposit = data.deposit ?? config.deposit ?? 6000;
   } catch(e) {}
   document.getElementById('pWeekday').value  = config.weekday;
   document.getElementById('pWeekend').value  = config.weekend;
   document.getElementById('pCleaning').value = config.cleaning;
   document.getElementById('pIncludedGuests').value   = config.included_guests;
   document.getElementById('pExtraGuestPrice').value  = config.extra_guest_price;
+  document.getElementById('pDeposit').value = config.deposit;
+  const mbDeposit = document.getElementById('mbDeposit');
+  if (mbDeposit && !mbDeposit.value) mbDeposit.placeholder = config.deposit;
 }
 
 async function savePrices() {
@@ -1434,6 +1448,7 @@ async function savePrices() {
     cleaning:  parseInt(document.getElementById('pCleaning').value),
     included_guests:   parseInt(document.getElementById('pIncludedGuests').value),
     extra_guest_price: parseInt(document.getElementById('pExtraGuestPrice').value),
+    deposit: parseInt(document.getElementById('pDeposit').value),
   };
   try {
     await apiPost('/api/prices', payload);
@@ -2392,6 +2407,7 @@ async function createManualBooking() {
     guests_count: parseInt(document.getElementById('mbGuests').value) || 2,
     passport:     document.getElementById('mbPassport').value.trim(),
     total_price:  parseInt(document.getElementById('mbTotal').value) || 0,
+    deposit:      parseInt(document.getElementById('mbDeposit').value) || 0,
     notes:        document.getElementById('mbNotes').value.trim(),
   };
   if(!payload.check_in || !payload.check_out) {
@@ -2402,10 +2418,14 @@ async function createManualBooking() {
     showToast('Укажите ФИО гостя', 'err');
     return;
   }
+  if(!payload.guest_email) {
+    showToast('Укажите email гостя — на него уйдёт ссылка на подписание', 'err');
+    return;
+  }
   try {
     const res = await apiPost('/api/admin/manual-booking', payload);
-    showToast(`Бронь ${res.booking_ref} создана` + (payload.guest_email ? ', договор отправлен' : ''), 'gold');
-    ['mbGuestName','mbPhone','mbEmail','mbPassport','mbTotal','mbNotes','mbCheckIn','mbCheckOut'].forEach(id => {
+    showToast(`Бронь ${res.booking_ref} создана, ссылка на подписание отправлена`, 'gold');
+    ['mbGuestName','mbPhone','mbEmail','mbPassport','mbTotal','mbDeposit','mbNotes','mbCheckIn','mbCheckOut'].forEach(id => {
       document.getElementById(id).value = '';
     });
     document.getElementById('mbGuests').value = 2;
