@@ -86,6 +86,7 @@ class Prices(BaseModel):
     cleaning: int
     included_guests: int = 1      # сколько гостей включено в базовую цену без доплаты
     extra_guest_price: int = 100  # доплата за каждого гостя сверх included_guests (₽/сутки)
+    deposit: int = 6000           # депозит по умолчанию (₽) — можно переопределить для конкретной ручной брони
 
 class PromoCodes(BaseModel):
     codes: Dict[str, int]   # {"SUMMER10": 10} — код -> процент скидки
@@ -271,11 +272,12 @@ class ManualBookingCreate(BaseModel):
     check_out: str
     guest_name: str
     guest_phone: str = ""
-    guest_email: str = ""
+    guest_email: str
     guests_count: int = 2
     notes: str = ""
-    passport: str = ""
+    passport: str = ""      # если заполнено админом — гостю не нужно будет вводить его самому
     total_price: int = 0
+    deposit: int = 0        # 0 = использовать значение по умолчанию из Тарифов
 
 class ResendContract(BaseModel):
     email: str
@@ -327,7 +329,7 @@ AUTH_FILE        = f"{DATA_DIR}/admin_auth.json"
 PASSPORT_DIR         = f"{DATA_DIR}/passports"           # ЗАЩИЩЁННАЯ папка — НЕ должна раздаваться nginx как статика!
 PASSPORT_MAP_FILE    = f"{DATA_DIR}/passport_photos.json"  # {booking_ref: {"main":.., "reg1":..}}
 PROPERTIES_FILE      = f"{DATA_DIR}/properties.json"       # реестр квартир (задел на white-label с несколькими объектами)
-DEFAULT_PRICES   = {"weekday": 3500, "weekend": 4500, "cleaning": 1500, "included_guests": 1, "extra_guest_price": 100}
+DEFAULT_PRICES   = {"weekday": 3500, "weekend": 4500, "cleaning": 1500, "included_guests": 1, "extra_guest_price": 100, "deposit": 6000}
 
 os.makedirs(CONTRACTS_DIR, exist_ok=True)
 
@@ -490,7 +492,7 @@ def generate_contract(booking):
         "ГОСТЕЙ":         str(booking.get("guests_count", booking.get("guests", 2))),
         "ЦЕНА_В_СУТКИ":   str(per_night),
         "ИТОГО":          str(total),
-        "ДЕПОЗИТ":        "6 000",
+        "ДЕПОЗИТ":        str(booking.get("deposit") or get_default_deposit()),
         "EMAIL":          "citypause@mail.ru",
         "САЙТ":           "citypause.ru",
         "НОМЕР_БРОНИ":    str(booking.get("username") or booking.get("id", "")),
@@ -755,6 +757,17 @@ def get_landlord_phone():
             pass
     return "не указан"
 
+def get_default_deposit():
+    """Депозит по умолчанию — из раздела «Тарифы» в админке (PRICE_FILE), с фолбэком на DEFAULT_PRICES."""
+    if os.path.exists(PRICE_FILE):
+        try:
+            with open(PRICE_FILE, "r") as f:
+                saved = json.load(f)
+            return int(saved.get("deposit", DEFAULT_PRICES["deposit"]))
+        except Exception:
+            pass
+    return DEFAULT_PRICES["deposit"]
+
 def _sig_hash(*parts) -> str:
     """Короткий детерминированный хэш для блока электронной подписи."""
     return hashlib.sha256("|".join(str(p) for p in parts).encode()).hexdigest()[:24]
@@ -1000,6 +1013,55 @@ def email_manual_contract(booking, target_email):
         html,
         attachments=[{"filename": contract_filename, "filepath": pdf_path}]
     )
+
+def email_complete_data_request(booking):
+    """
+    Письмо гостю по ручной брони (Авито и т.п.) — ссылка на страницу, где он
+    донабирает недостающие паспортные данные (если админ их не указал),
+    обязательно прикрепляет фото паспорта и подписывает договор. После
+    подписания гостю отдельным письмом уходит уже готовый подписанный PDF
+    (см. email_contract_signed).
+    """
+    booking_ref = str(booking.get("username") or booking.get("id", ""))
+    guest_email = booking.get("guest_email", "")
+    if not guest_email:
+        return
+    check_in_fmt  = datetime.strptime(booking["check_in"],  "%Y-%m-%d").strftime("%d.%m.%Y")
+    check_out_fmt = datetime.strptime(booking["check_out"], "%Y-%m-%d").strftime("%d.%m.%Y")
+    sign_token = booking.get("sign_token", "")
+    complete_link = f"{BASE_URL}/complete/{sign_token}" if sign_token else ""
+
+    html = f"""
+    <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#0A0A0A;color:#F0E6C8;padding:40px">
+      <div style="text-align:center;margin-bottom:32px">
+        <div style="font-size:28px;letter-spacing:4px;color:#C9A84C">ГОРОДСКАЯ ПАУЗА</div>
+      </div>
+      <div style="background:#141414;border:1px solid #1E1E1E;padding:32px;margin-bottom:24px">
+        <div style="font-size:16px;color:#C9A84C;margin-bottom:16px">Бронирование подтверждено</div>
+        <div style="font-size:13px;color:#A89060;margin-bottom:24px">Бронь {booking_ref}</div>
+        <table style="width:100%;border-collapse:collapse">
+          <tr><td style="padding:8px 0;color:#5A4A30;font-size:12px">Заезд</td>
+              <td style="color:#F0E6C8;font-size:12px">{check_in_fmt} с 15:00</td></tr>
+          <tr><td style="padding:8px 0;color:#5A4A30;font-size:12px">Выезд</td>
+              <td style="color:#F0E6C8;font-size:12px">{check_out_fmt} до 12:00</td></tr>
+        </table>
+      </div>
+      <div style="background:#141414;border:1px solid rgba(201,168,76,0.3);padding:24px;margin-bottom:24px">
+        <div style="font-size:12px;color:#A89060;line-height:1.7">
+          Для оформления договора аренды, пожалуйста, перейдите по ссылке ниже —
+          там нужно будет прикрепить фото паспорта (и указать паспортные данные,
+          если этого ещё не сделали) и подписать договор. Это займёт пару минут.
+        </div>
+        <div style="text-align:center;margin-top:20px">
+          <a href="{complete_link}" style="display:inline-block;background:#C9A84C;color:#0A0A0A;
+             text-decoration:none;padding:12px 28px;font-size:12px;letter-spacing:0.05em;font-weight:bold">
+            Заполнить данные и подписать договор</a>
+        </div>
+      </div>
+      <div style="text-align:center;font-size:11px;color:#5A4A30">citypause@mail.ru &nbsp;|&nbsp; citypause.ru</div>
+    </div>
+    """
+    send_email(guest_email, f"Бронирование подтверждено — {booking_ref}", html)
 
 def load_checkin_memo(door_code=""):
     """Загружает памятку гостю, подставляет код замка и телефон хозяина из раздела «Контакты»."""
@@ -1370,6 +1432,7 @@ def get_db():
         "sign_token": "TEXT DEFAULT ''",
         "signed_at":  "TEXT DEFAULT ''",
         "sign_ip":    "TEXT DEFAULT ''",
+        "deposit":    "INTEGER DEFAULT 0",
     }.items():
         try:
             conn.execute("ALTER TABLE bookings ADD COLUMN " + col + " " + col_type)
@@ -2186,9 +2249,15 @@ async def create_manual_booking(b: ManualBookingCreate, _: bool = Depends(requir
     """
     Ручное создание брони для внешних площадок (Авито, Яндекс.Путешествия,
     Суточно.ру и т.д.), которые оформлены не через сайт. Бронь сразу
-    подтверждена, блокирует даты в календаре, и гостю уходит договор
-    на почту (если email указан).
+    подтверждена и блокирует даты в календаре. Гостю на email уходит
+    ссылка на страницу, где он донабирает недостающее (паспортные данные,
+    если админ их не указал, и обязательно — фото паспорта) и подписывает
+    договор — после чего ему приходит готовый подписанный PDF, как и при
+    бронировании через сайт.
     """
+    if not b.guest_email.strip():
+        raise HTTPException(status_code=400, detail="Email гостя обязателен — на него уйдёт ссылка для заполнения данных и подписания")
+
     try:
         d_in  = datetime.strptime(b.check_in,  "%Y-%m-%d").date()
         d_out = datetime.strptime(b.check_out, "%Y-%m-%d").date()
@@ -2200,6 +2269,8 @@ async def create_manual_booking(b: ManualBookingCreate, _: bool = Depends(requir
 
     valid_sources = {"avito", "yandex", "sutochno", "phone", "other"}
     source = b.source if b.source in valid_sources else "other"
+    deposit = b.deposit or get_default_deposit()
+    sign_token = secrets.token_urlsafe(24)
 
     with db_lock:
         if not is_dates_available(b.check_in, b.check_out, property_id=DEFAULT_PROPERTY_ID):
@@ -2212,13 +2283,14 @@ async def create_manual_booking(b: ManualBookingCreate, _: bool = Depends(requir
                 property_id, user_id, username, check_in, check_out, guests, status,
                 guest_name, guest_phone, guest_email, guests_count,
                 notes, passport, payment_method, total_price, nights, source,
-                promo_code, discount_percent
-            ) VALUES (?, 0, ?, ?, ?, ?, 'confirmed', ?, ?, ?, ?, ?, ?, 'external', ?, ?, ?, '', 0)
+                promo_code, discount_percent, deposit, sign_token
+            ) VALUES (?, 0, ?, ?, ?, ?, 'confirmed', ?, ?, ?, ?, ?, ?, 'external', ?, ?, ?, '', 0, ?, ?)
         """, (
             DEFAULT_PROPERTY_ID,
             booking_ref, b.check_in, b.check_out, b.guests_count,
             b.guest_name, b.guest_phone, b.guest_email, b.guests_count,
-            b.notes, b.passport, b.total_price, nights_count, source
+            b.notes, b.passport, b.total_price, nights_count, source,
+            deposit, sign_token
         ))
         conn.commit()
         conn.close()
@@ -2226,35 +2298,58 @@ async def create_manual_booking(b: ManualBookingCreate, _: bool = Depends(requir
     booking_dict = {
         "username": booking_ref,
         "guest_name": b.guest_name,
+        "guest_email": b.guest_email,
+        "guest_phone": b.guest_phone,
         "passport": b.passport,
         "check_in": b.check_in,
         "check_out": b.check_out,
         "nights": nights_count,
         "guests_count": b.guests_count,
         "total_price": b.total_price,
+        "deposit": deposit,
         "discount_percent": 0,
+        "sign_token": sign_token,
     }
 
-    if b.guest_email:
-        import threading
-        threading.Thread(target=email_manual_contract, args=(booking_dict, b.guest_email)).start()
-    else:
-        # Даже без email — сохраняем текст договора в архив, чтобы можно
-        # было скачать/отправить позже вручную
-        save_contract(booking_ref, generate_contract(booking_dict))
+    # Сохраняем черновик текста договора в архив (для админки — там уже будет
+    # актуальный текст, даже до того как гость донаполнит паспортные данные)
+    save_contract(booking_ref, generate_contract(booking_dict))
+
+    import threading
+    threading.Thread(target=email_complete_data_request, args=(booking_dict,)).start()
 
     return {"ok": True, "booking_ref": booking_ref}
 
 @app.post("/api/admin/bookings/{ref}/resend-contract")
 async def resend_contract(ref: str, r: ResendContract, _: bool = Depends(require_admin)):
-    """Повторная (или ручная) отправка договора на указанный email по номеру брони."""
+    """
+    Повторная отправка на указанный email:
+    — если договор уже подписан гостем — уходят готовые подписанные PDF
+      (договор + согласие на ПД), как обычно;
+    — если ещё не подписан — повторно уходит ссылка на заполнение данных
+      и подписание (на новый email, если гость его сменил).
+    """
     conn = get_db()
     row = conn.execute("SELECT * FROM bookings WHERE username = ?", (ref,)).fetchone()
     conn.close()
     if not row:
         raise HTTPException(status_code=404, detail="Бронь не найдена")
     booking = dict(row)
-    email_manual_contract(booking, r.email)
+
+    if booking.get("signed_at"):
+        booking["guest_email"] = r.email or booking.get("guest_email", "")
+        email_contract_signed(booking)
+    else:
+        if not booking.get("sign_token"):
+            # На случай очень старых броней без токена (созданных до этой функции)
+            conn = get_db()
+            sign_token = secrets.token_urlsafe(24)
+            conn.execute("UPDATE bookings SET sign_token=? WHERE id=?", (sign_token, booking["id"]))
+            conn.commit()
+            conn.close()
+            booking["sign_token"] = sign_token
+        booking["guest_email"] = r.email or booking.get("guest_email", "")
+        email_complete_data_request(booking)
     return {"ok": True}
 
 # =====================================================
@@ -2612,6 +2707,127 @@ async def confirm_sign(token: str, request: Request):
     if booking.get("signed_at"):
         conn.close()
         raise HTTPException(status_code=400, detail="Договор уже подписан")
+
+    signed_at = now_nsk().strftime("%Y-%m-%d %H:%M:%S")
+    client_ip = request.client.host if request.client else ""
+    conn.execute("UPDATE bookings SET signed_at=?, sign_ip=? WHERE id=?", (signed_at, client_ip, booking["id"]))
+    conn.commit()
+    conn.close()
+
+    booking["signed_at"] = signed_at
+    booking["sign_ip"] = client_ip
+    import threading
+    threading.Thread(target=email_contract_signed, args=(booking,)).start()
+
+    return {"ok": True, "signed_at": signed_at}
+
+# =====================================================
+# API — ДОЗАПОЛНЕНИЕ ДАННЫХ И ПОДПИСАНИЕ РУЧНОЙ БРОНИ
+# =====================================================
+# Используется, когда бронь создана администратором вручную (Авито и т.п.):
+# гость по ссылке донабирает недостающее (паспорт, если админ не указал его
+# сам — вариант "гость заполняет всё сам"; если указал — просит только фото)
+# и подписывает, точно так же как и на сайте.
+
+class CompleteSubmit(BaseModel):
+    passport: str = ""
+
+@app.get("/complete/{token}", response_class=HTMLResponse)
+async def complete_page(token: str):
+    path = os.path.join("static", "complete.html")
+    if os.path.exists(path):
+        with open(path, "r", encoding="utf-8") as f:
+            return HTMLResponse(f.read())
+    return HTMLResponse("<h1>Страница не найдена</h1>", status_code=404)
+
+@app.get("/api/complete/{token}")
+async def get_complete_info(token: str):
+    conn = get_db()
+    row = conn.execute("SELECT * FROM bookings WHERE sign_token=?", (token,)).fetchone()
+    conn.close()
+    if not row:
+        raise HTTPException(status_code=404, detail="Ссылка недействительна")
+    booking = dict(row)
+    if booking.get("signed_at"):
+        return {"already_signed": True, "signed_at": booking["signed_at"]}
+
+    booking_ref = str(booking.get("username") or booking.get("id", ""))
+    pm = load_passport_map()
+    entry = pm.get(booking_ref, {}) if isinstance(pm.get(booking_ref), dict) else {}
+    return {
+        "already_signed": False,
+        "booking_ref": booking_ref,
+        "guest_name": booking.get("guest_name"),
+        "passport_needed": not bool((booking.get("passport") or "").strip()),
+        "photos_uploaded": {"main": bool(entry.get("main")), "reg1": bool(entry.get("reg1"))},
+        "contract_text": generate_contract(booking),
+        "consent_text": generate_consent(booking),
+    }
+
+@app.post("/api/complete/{token}/upload-photo")
+async def upload_complete_photo(token: str, slot: str = Form(...), file: UploadFile = File(...)):
+    if slot not in ("main", "reg1"):
+        raise HTTPException(status_code=400, detail="Некорректный слот фото")
+    conn = get_db()
+    row = conn.execute("SELECT * FROM bookings WHERE sign_token=?", (token,)).fetchone()
+    conn.close()
+    if not row:
+        raise HTTPException(status_code=404, detail="Ссылка недействительна")
+    booking = dict(row)
+    if booking.get("signed_at"):
+        raise HTTPException(status_code=400, detail="Договор уже подписан")
+
+    content = await file.read()
+    if len(content) > 20 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="Файл слишком большой (макс. 20МБ)")
+    try:
+        compressed = compress_passport_image(content)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Не удалось обработать изображение — попробуйте другое фото")
+
+    booking_ref = str(booking.get("username") or booking.get("id", ""))
+    os.makedirs(PASSPORT_DIR, exist_ok=True)
+    filename = f"passport_{secrets.token_hex(12)}.jpg"
+    with open(os.path.join(PASSPORT_DIR, filename), "wb") as f:
+        f.write(compressed)
+
+    pm = load_passport_map()
+    entry = pm.get(booking_ref)
+    if not isinstance(entry, dict):
+        entry = {}
+    entry[slot] = filename
+    pm[booking_ref] = entry
+    save_passport_map(pm)
+
+    return {"ok": True}
+
+@app.post("/api/complete/{token}/submit")
+async def submit_complete(token: str, body: CompleteSubmit, request: Request):
+    conn = get_db()
+    row = conn.execute("SELECT * FROM bookings WHERE sign_token=?", (token,)).fetchone()
+    if not row:
+        conn.close()
+        raise HTTPException(status_code=404, detail="Ссылка недействительна")
+    booking = dict(row)
+    if booking.get("signed_at"):
+        conn.close()
+        raise HTTPException(status_code=400, detail="Договор уже подписан")
+
+    booking_ref = str(booking.get("username") or booking.get("id", ""))
+    passport_needed = not bool((booking.get("passport") or "").strip())
+    if passport_needed and not body.passport.strip():
+        conn.close()
+        raise HTTPException(status_code=400, detail="Укажите паспортные данные")
+
+    pm = load_passport_map()
+    entry = pm.get(booking_ref, {}) if isinstance(pm.get(booking_ref), dict) else {}
+    if not entry.get("main") or not entry.get("reg1"):
+        conn.close()
+        raise HTTPException(status_code=400, detail="Прикрепите оба фото паспорта")
+
+    if passport_needed:
+        conn.execute("UPDATE bookings SET passport=? WHERE id=?", (body.passport.strip(), booking["id"]))
+        booking["passport"] = body.passport.strip()
 
     signed_at = now_nsk().strftime("%Y-%m-%d %H:%M:%S")
     client_ip = request.client.host if request.client else ""
