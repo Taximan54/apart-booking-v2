@@ -5,6 +5,7 @@ import json
 import sqlite3
 import smtplib
 import random
+import re
 import string
 import hmac
 import hashlib
@@ -2142,6 +2143,20 @@ async def get_bookings(admin: Optional[str] = None, authorization: Optional[str]
     return {"booked_dates": booked, "checkout_dates": checkout_dates}
 
 @app.post("/api/bookings")
+def _phone_digits_ok(phone: str) -> bool:
+    """Ровно 10 цифр после кода +7 (итого 11 цифр, начиная с 7)."""
+    digits = re.sub(r"\D", "", phone or "")
+    if digits.startswith("7"):
+        digits = digits[1:]
+    elif digits.startswith("8"):
+        digits = digits[1:]
+    return len(digits) == 10
+
+def _passport_digits_ok(passport: str) -> bool:
+    """Ровно 4 цифры серии + 6 цифр номера = 10 цифр."""
+    digits = re.sub(r"\D", "", passport or "")
+    return len(digits) == 10
+
 async def create_booking(b: BookingCreate):
     # Проверка минимального срока бронирования
     try:
@@ -2152,6 +2167,10 @@ async def create_booking(b: BookingCreate):
         raise HTTPException(status_code=400, detail="\u041d\u0435\u0432\u0435\u0440\u043d\u044b\u0439 \u0444\u043e\u0440\u043c\u0430\u0442 \u0434\u0430\u0442")
     if nights_count < 2:
         raise HTTPException(status_code=400, detail="\u041c\u0438\u043d\u0438\u043c\u0430\u043b\u044c\u043d\u044b\u0439 \u0441\u0440\u043e\u043a \u0431\u0440\u043e\u043d\u0438\u0440\u043e\u0432\u0430\u043d\u0438\u044f \u2014 2 \u043d\u043e\u0447\u0438")
+    if not _phone_digits_ok(b.guest_phone):
+        raise HTTPException(status_code=400, detail="Некорректный номер телефона — должно быть 10 цифр после +7")
+    if not _passport_digits_ok(b.passport):
+        raise HTTPException(status_code=400, detail="Некорректные паспортные данные — серия (4 цифры) и номер (6 цифр)")
 
     # Защита от двойного бронирования: проверка занятости дат под глобальной
     # блокировкой, чтобы два гостя не забронировали одни и те же даты одновременно
@@ -2815,9 +2834,9 @@ async def submit_complete(token: str, body: CompleteSubmit, request: Request):
 
     booking_ref = str(booking.get("username") or booking.get("id", ""))
     passport_needed = not bool((booking.get("passport") or "").strip())
-    if passport_needed and not body.passport.strip():
+    if passport_needed and not _passport_digits_ok(body.passport):
         conn.close()
-        raise HTTPException(status_code=400, detail="Укажите паспортные данные")
+        raise HTTPException(status_code=400, detail="Укажите паспортные данные полностью — серия (4 цифры) и номер (6 цифр)")
 
     pm = load_passport_map()
     entry = pm.get(booking_ref, {}) if isinstance(pm.get(booking_ref), dict) else {}

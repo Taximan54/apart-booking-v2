@@ -644,16 +644,16 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
             <div class="fgroup"><label class="flabel">Фамилия</label><input type="text" class="finput" id="gSurname" placeholder="Фамилия"></div>
           </div>
           <div class="fgroup"><label class="flabel">Отчество (если есть)</label><input type="text" class="finput" id="gPatronymic" placeholder="Отчество"></div>
-          <div class="fgroup"><label class="flabel">Телефон</label><input type="tel" class="finput" id="gPhone" placeholder="+7 (___) ___-__-__"></div>
+          <div class="fgroup"><label class="flabel">Телефон</label><input type="tel" class="finput" id="gPhone" value="+7" oninput="formatPhoneInput(this)" placeholder="+7 (___) ___-__-__"></div>
           <div class="fgroup"><label class="flabel">Email</label><input type="email" class="finput" id="gEmail" placeholder="your@email.com"></div>
           <div class="fgroup">
             <label class="flabel">Количество гостей</label>
-            <select class="finput" id="gCount" style="background:var(--black-card);cursor:pointer" onchange="updatePanel()">
+            <select class="finput" id="gCount" style="background:var(--black-card);cursor:pointer" onchange="updatePanel();updateGuestHint()">
               <option value="1" selected>1 гость</option><option value="2">2 гостя</option><option value="3">3 гостя</option><option value="4">4 гостя</option>
             </select>
+            <div id="guestSurchargeHint" style="font-size:11px;color:var(--text-muted);margin-top:6px"></div>
           </div>
-          <div class="fgroup"><label class="flabel">Серия и номер паспорта</label><input type="text" class="finput" id="gPassport" placeholder="0000 000000"></div>
-          <div class="fgroup"><label class="flabel">Пожелания (необязательно)</label><input type="text" class="finput" id="gNotes" placeholder="Особые пожелания..."></div>
+          <div class="fgroup"><label class="flabel">Серия и номер паспорта</label><input type="text" class="finput" id="gPassport" oninput="formatPassportInput(this)" placeholder="0000 000000" maxlength="11"></div>
           <div style="margin-top:16px;padding:16px;background:rgba(201,168,76,.04);border:1px solid rgba(201,168,76,.1)">
             <label style="display:flex;align-items:flex-start;gap:12px;cursor:pointer">
               <input type="checkbox" id="privacyCheck" style="margin-top:3px;accent-color:var(--gold);width:16px;height:16px;flex-shrink:0">
@@ -895,6 +895,7 @@ async function init() {
     document.getElementById('priceWeekend').textContent  = CONFIG.weekend.toLocaleString('ru');
     document.getElementById('priceCleaning').textContent = CONFIG.cleaning.toLocaleString('ru');
   }
+  updateGuestHint();
 
   // Занятые даты
   try {
@@ -1622,9 +1623,62 @@ async function uploadPassportPhoto(slot) {
   }
 }
 
+// Телефон: фиксированный код +7, ровно 10 цифр после него
+function formatPhoneInput(el){
+  let digits = el.value.replace(/\D/g, '');
+  if(digits.startsWith('7')) digits = digits.slice(1);
+  else if(digits.startsWith('8')) digits = digits.slice(1);
+  digits = digits.slice(0, 10);
+  let out = '+7';
+  if(digits.length) out += ' (' + digits.slice(0,3);
+  if(digits.length >= 3) out += ')';
+  if(digits.length > 3) out += ' ' + digits.slice(3,6);
+  if(digits.length > 6) out += '-' + digits.slice(6,8);
+  if(digits.length > 8) out += '-' + digits.slice(8,10);
+  el.value = out;
+}
+function isPhoneComplete(id){
+  let digits = (document.getElementById(id).value.match(/\d/g) || []).join('');
+  if(digits.startsWith('7')) digits = digits.slice(1);
+  return digits.length === 10;
+}
+
+// Паспорт: ровно 4 цифры серии + пробел + 6 цифр номера
+function formatPassportInput(el){
+  let digits = el.value.replace(/\D/g, '').slice(0, 10);
+  let out = digits.slice(0,4);
+  if(digits.length > 4) out += ' ' + digits.slice(4,10);
+  el.value = out;
+}
+function isPassportComplete(id){
+  const digits = document.getElementById(id).value.replace(/\D/g, '');
+  return digits.length === 10;
+}
+
+// Подсказка о доплате за гостей сверх включённых в базовую цену
+function updateGuestHint(){
+  const hintEl = document.getElementById('guestSurchargeHint');
+  if(!hintEl) return;
+  const guests = parseInt(document.getElementById('gCount')?.value || CONFIG.includedGuests);
+  const extra = Math.max(0, guests - CONFIG.includedGuests);
+  if(CONFIG.extraGuestPrice > 0 && extra > 0){
+    hintEl.textContent = `За ${guests} ${guests===1?'гостя':'гостей'}: доплата ${extra * CONFIG.extraGuestPrice} ₽/сутки (включено ${CONFIG.includedGuests} без доплаты)`;
+    hintEl.style.color = 'var(--gold)';
+  } else {
+    hintEl.textContent = `Базовая цена включает ${CONFIG.includedGuests} ${CONFIG.includedGuests===1?'гостя':'гостей'}. За каждого дополнительного — доплата ${CONFIG.extraGuestPrice} ₽/сутки.`;
+    hintEl.style.color = 'var(--text-muted)';
+  }
+}
+
 async function goToContract(){
   if(!document.getElementById('gName').value.trim()||!document.getElementById('gPhone').value.trim()||!document.getElementById('gEmail').value.trim()){
     showToast('Заполните все обязательные поля','err'); return;
+  }
+  if(!isPhoneComplete('gPhone')){
+    showToast('Введите телефон полностью — 10 цифр после +7','err'); return;
+  }
+  if(!isPassportComplete('gPassport')){
+    showToast('Введите серию и номер паспорта полностью (4 + 6 цифр)','err'); return;
   }
   if(!document.getElementById('privacyCheck').checked){
     showToast('Необходимо согласие на обработку персональных данных','err'); return;
@@ -1688,6 +1742,8 @@ function goS2back(){
 
 function goS3(){
   if(!document.getElementById('gName').value.trim()||!document.getElementById('gPhone').value.trim()||!document.getElementById('gEmail').value.trim()){showToast('Заполните все обязательные поля','err');return;}
+  if(!isPhoneComplete('gPhone')){showToast('Введите телефон полностью — 10 цифр после +7','err');return;}
+  if(!isPassportComplete('gPassport')){showToast('Введите серию и номер паспорта полностью (4 + 6 цифр)','err');return;}
   if(!document.getElementById('privacyCheck').checked){showToast('Необходимо согласие на обработку персональных данных','err');return;}
   setStep(3);
   document.getElementById('panelTitle').textContent='Оплата';
@@ -1737,7 +1793,7 @@ async function submitBooking(){
     guest_phone:  document.getElementById('gPhone').value.trim(),
     guest_email:  document.getElementById('gEmail').value.trim(),
     guests_count: parseInt(document.getElementById('gCount').value),
-    notes:        document.getElementById('gNotes').value.trim(),
+    notes:        '',
     passport:     document.getElementById('gPassport').value.trim(),
     passport_photo_main: uploadedPassportPhotos.main,
     passport_photo_reg1: uploadedPassportPhotos.reg1,

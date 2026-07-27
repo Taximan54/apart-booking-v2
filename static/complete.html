@@ -62,7 +62,7 @@
 
       <div id="passportField" class="hidden">
         <div class="field-label">Паспортные данные (серия, номер)</div>
-        <input type="text" id="passportInput" placeholder="0000 000000">
+        <input type="text" id="passportInput" placeholder="0000 000000" maxlength="11" oninput="formatPassportInput(this)">
       </div>
 
       <div class="photo-row">
@@ -109,9 +109,20 @@ const token = window.location.pathname.split('/').filter(Boolean).pop();
 let photosState = { main: false, reg1: false };
 let passportNeeded = false;
 
+function formatPassportInput(el){
+  let digits = el.value.replace(/\D/g, '').slice(0, 10);
+  let out = digits.slice(0,4);
+  if(digits.length > 4) out += ' ' + digits.slice(4,10);
+  el.value = out;
+}
+function isPassportComplete(el){
+  const digits = el.value.replace(/\D/g, '');
+  return digits.length === 10;
+}
+
 function updateSignButton() {
   const btn = document.getElementById('signBtn');
-  const passportOk = !passportNeeded || document.getElementById('passportInput').value.trim().length > 0;
+  const passportOk = !passportNeeded || isPassportComplete(document.getElementById('passportInput'));
   const photosOk = photosState.main && photosState.reg1;
   const checksOk = document.getElementById('privacyCheck').checked && document.getElementById('contractCheck').checked;
   btn.disabled = !(passportOk && photosOk && checksOk);
