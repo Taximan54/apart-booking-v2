@@ -444,8 +444,8 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
               <input type="text" class="info-input" id="mbPhone" placeholder="+7 900 000-00-00" style="width:100%">
             </div>
             <div class="info-field" style="flex:1">
-              <div class="info-label">Email гостя (обязательно — на него уйдёт ссылка на подписание)</div>
-              <input type="email" class="info-input" id="mbEmail" placeholder="guest@mail.ru" style="width:100%" required>
+              <div class="info-label">Email гостя (необязательно — если площадка вроде Авито не даёт email, оставь пустым, ссылку скопируешь и отправишь в чат)</div>
+              <input type="email" class="info-input" id="mbEmail" placeholder="guest@mail.ru" style="width:100%">
             </div>
           </div>
 
@@ -470,7 +470,16 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
             <input type="text" class="info-input" id="mbNotes" placeholder="Например: оплачено на Avito полностью" style="width:100%">
           </div>
 
-          <button class="btn btn-primary" onclick="createManualBooking()">Создать бронь и отправить ссылку на подписание</button>
+          <button class="btn btn-primary" onclick="createManualBooking()">Создать бронь и получить ссылку на подписание</button>
+
+          <div id="mbLinkBox" style="display:none;margin-top:18px;padding:16px;background:rgba(201,168,76,.06);border:1px solid rgba(201,168,76,.25)">
+            <div style="font-size:11px;color:var(--gold);letter-spacing:.05em;margin-bottom:8px">ССЫЛКА НА ЗАПОЛНЕНИЕ ДАННЫХ И ПОДПИСАНИЕ</div>
+            <div style="display:flex;gap:8px">
+              <input type="text" id="mbLinkInput" readonly style="flex:1;background:var(--black);border:1px solid var(--border);color:var(--text-primary);padding:10px;font-size:12px">
+              <button class="btn btn-outline" style="white-space:nowrap" onclick="copyMbLink()">Копировать</button>
+            </div>
+            <div id="mbLinkNote" style="font-size:11px;color:var(--text-muted);margin-top:8px"></div>
+          </div>
         </div>
       </div>
 
@@ -1199,6 +1208,7 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
     <div style="display:flex;gap:10px;flex-wrap:wrap" id="modalBtns">
       <button class="btn btn-primary" id="btnConfirm" onclick="confirmBooking()">✓ Подтвердить</button>
       <button class="btn btn-primary" id="btnFullPay" onclick="fullPaymentBooking()" style="background:#2D6A4F;display:none">✓ Полная оплата получена</button>
+      <button class="btn btn-outline" id="btnCopySignLink" onclick="copySignLinkForSelected()">🔗 Скопировать ссылку на подписание</button>
       <button class="btn btn-ghost" onclick="closeModal()">Закрыть</button>
       <button class="btn btn-danger" onclick="cancelBooking()">✕ Отменить</button>
     </div>
@@ -1796,6 +1806,28 @@ async function viewPassportPhoto(ref, slot) {
     window.open(url, '_blank');
   } catch(e) {
     showToast('Фото не найдено', 'err');
+  }
+}
+
+async function copySignLinkForSelected() {
+  if (!selectedBookingId) return;
+  const b = allBookings.find(x => x.id == selectedBookingId || x.username == selectedBookingId);
+  const ref = b ? (b.username || b.id) : selectedBookingId;
+  try {
+    const data = await apiGet(`/api/admin/bookings/${ref}/sign-link`);
+    try {
+      await navigator.clipboard.writeText(data.sign_link);
+    } catch(e) {
+      const tmp = document.createElement('input');
+      document.body.appendChild(tmp);
+      tmp.value = data.sign_link;
+      tmp.select();
+      document.execCommand('copy');
+      document.body.removeChild(tmp);
+    }
+    showToast(data.already_signed ? 'Ссылка скопирована (договор уже подписан)' : 'Ссылка скопирована', 'gold');
+  } catch(e) {
+    showToast('Не удалось получить ссылку: ' + e.message, 'err');
   }
 }
 
@@ -2418,13 +2450,16 @@ async function createManualBooking() {
     showToast('Укажите ФИО гостя', 'err');
     return;
   }
-  if(!payload.guest_email) {
-    showToast('Укажите email гостя — на него уйдёт ссылка на подписание', 'err');
-    return;
-  }
   try {
     const res = await apiPost('/api/admin/manual-booking', payload);
-    showToast(`Бронь ${res.booking_ref} создана, ссылка на подписание отправлена`, 'gold');
+    showToast(`Бронь ${res.booking_ref} создана`, 'gold');
+
+    document.getElementById('mbLinkBox').style.display = 'block';
+    document.getElementById('mbLinkInput').value = res.sign_link;
+    document.getElementById('mbLinkNote').textContent = res.email_sent
+      ? 'Ссылка также отправлена гостю на email.'
+      : 'Email не указан — скопируй ссылку и отправь гостю вручную (например, в чат Авито).';
+
     ['mbGuestName','mbPhone','mbEmail','mbPassport','mbTotal','mbDeposit','mbNotes','mbCheckIn','mbCheckOut'].forEach(id => {
       document.getElementById(id).value = '';
     });
@@ -2432,6 +2467,17 @@ async function createManualBooking() {
   } catch(e) {
     showToast('Ошибка: ' + e.message, 'err');
   }
+}
+
+function copyMbLink() {
+  const input = document.getElementById('mbLinkInput');
+  input.select();
+  navigator.clipboard?.writeText(input.value).then(() => {
+    showToast('Ссылка скопирована', 'gold');
+  }).catch(() => {
+    document.execCommand('copy');
+    showToast('Ссылка скопирована', 'gold');
+  });
 }
 
 async function resendContractManual() {

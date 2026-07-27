@@ -273,7 +273,8 @@ class ManualBookingCreate(BaseModel):
     check_out: str
     guest_name: str
     guest_phone: str = ""
-    guest_email: str
+    guest_email: str = ""   # необязательно — если площадка (Авито и т.п.) не даёт email/телефон,
+                            # ссылку на подписание можно скопировать и отправить в чат вручную
     guests_count: int = 2
     notes: str = ""
     passport: str = ""      # если заполнено админом — гостю не нужно будет вводить его самому
@@ -2268,15 +2269,13 @@ async def create_manual_booking(b: ManualBookingCreate, _: bool = Depends(requir
     """
     Ручное создание брони для внешних площадок (Авито, Яндекс.Путешествия,
     Суточно.ру и т.д.), которые оформлены не через сайт. Бронь сразу
-    подтверждена и блокирует даты в календаре. Гостю на email уходит
-    ссылка на страницу, где он донабирает недостающее (паспортные данные,
-    если админ их не указал, и обязательно — фото паспорта) и подписывает
-    договор — после чего ему приходит готовый подписанный PDF, как и при
-    бронировании через сайт.
+    подтверждена и блокирует даты в календаре. Если email указан —
+    гостю на почту уходит ссылка на страницу, где он донабирает недостающее
+    (паспортные данные, если админ их не указал, и обязательно — фото
+    паспорта) и подписывает договор. Если email не указан (площадки типа
+    Авито часто не дают контакты гостя) — ссылка возвращается в ответе,
+    чтобы админ скопировал её и отправил гостю вручную через чат площадки.
     """
-    if not b.guest_email.strip():
-        raise HTTPException(status_code=400, detail="Email гостя обязателен — на него уйдёт ссылка для заполнения данных и подписания")
-
     try:
         d_in  = datetime.strptime(b.check_in,  "%Y-%m-%d").date()
         d_out = datetime.strptime(b.check_out, "%Y-%m-%d").date()
@@ -2334,10 +2333,34 @@ async def create_manual_booking(b: ManualBookingCreate, _: bool = Depends(requir
     # актуальный текст, даже до того как гость донаполнит паспортные данные)
     save_contract(booking_ref, generate_contract(booking_dict))
 
-    import threading
-    threading.Thread(target=email_complete_data_request, args=(booking_dict,)).start()
+    sign_link = f"{BASE_URL}/complete/{sign_token}"
+    if b.guest_email.strip():
+        import threading
+        threading.Thread(target=email_complete_data_request, args=(booking_dict,)).start()
 
-    return {"ok": True, "booking_ref": booking_ref}
+    return {"ok": True, "booking_ref": booking_ref, "sign_link": sign_link, "email_sent": bool(b.guest_email.strip())}
+
+@app.get("/api/admin/bookings/{ref}/sign-link")
+async def get_sign_link(ref: str, _: bool = Depends(require_admin)):
+    """Возвращает ссылку на страницу заполнения/подписания для брони — чтобы скопировать и отправить гостю вручную (например, в чат Авито)."""
+    conn = get_db()
+    row = conn.execute("SELECT sign_token, signed_at FROM bookings WHERE username = ?", (ref,)).fetchone()
+    conn.close()
+    if not row:
+        raise HTTPException(status_code=404, detail="Бронь не найдена")
+    booking = dict(row)
+    if not booking.get("sign_token"):
+        # На случай очень старых броней без токена
+        conn = get_db()
+        sign_token = secrets.token_urlsafe(24)
+        conn.execute("UPDATE bookings SET sign_token=? WHERE username=?", (sign_token, ref))
+        conn.commit()
+        conn.close()
+        booking["sign_token"] = sign_token
+    return {
+        "sign_link": f"{BASE_URL}/complete/{booking['sign_token']}",
+        "already_signed": bool(booking.get("signed_at")),
+    }
 
 @app.post("/api/admin/bookings/{ref}/resend-contract")
 async def resend_contract(ref: str, r: ResendContract, _: bool = Depends(require_admin)):
