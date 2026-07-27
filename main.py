@@ -271,7 +271,7 @@ class ManualBookingCreate(BaseModel):
     source: str = "avito"   # avito / yandex / sutochno / phone / other
     check_in: str
     check_out: str
-    guest_name: str
+    guest_name: str = ""    # необязательно — если площадка не даёт ФИО, гость впишет сам по ссылке
     guest_phone: str = ""
     guest_email: str = ""   # необязательно — если площадка (Авито и т.п.) не даёт email/телефон,
                             # ссылку на подписание можно скопировать и отправить в чат вручную
@@ -2773,6 +2773,9 @@ async def confirm_sign(token: str, request: Request):
 
 class CompleteSubmit(BaseModel):
     passport: str = ""
+    guest_name: str = ""
+    guest_phone: str = ""
+    guest_email: str = ""
 
 @app.get("/complete/{token}", response_class=HTMLResponse)
 async def complete_page(token: str):
@@ -2800,6 +2803,9 @@ async def get_complete_info(token: str):
         "already_signed": False,
         "booking_ref": booking_ref,
         "guest_name": booking.get("guest_name"),
+        "name_needed": not bool((booking.get("guest_name") or "").strip()),
+        "phone_needed": not bool((booking.get("guest_phone") or "").strip()),
+        "email_needed": not bool((booking.get("guest_email") or "").strip()),
         "passport_needed": not bool((booking.get("passport") or "").strip()),
         "photos_uploaded": {"main": bool(entry.get("main")), "reg1": bool(entry.get("reg1"))},
         "contract_text": generate_contract(booking),
@@ -2856,7 +2862,20 @@ async def submit_complete(token: str, body: CompleteSubmit, request: Request):
         raise HTTPException(status_code=400, detail="Договор уже подписан")
 
     booking_ref = str(booking.get("username") or booking.get("id", ""))
+    name_needed = not bool((booking.get("guest_name") or "").strip())
+    phone_needed = not bool((booking.get("guest_phone") or "").strip())
+    email_needed = not bool((booking.get("guest_email") or "").strip())
     passport_needed = not bool((booking.get("passport") or "").strip())
+
+    if name_needed and not body.guest_name.strip():
+        conn.close()
+        raise HTTPException(status_code=400, detail="Укажите ФИО")
+    if phone_needed and not _phone_digits_ok(body.guest_phone):
+        conn.close()
+        raise HTTPException(status_code=400, detail="Укажите телефон полностью — 10 цифр после +7")
+    if email_needed and "@" not in body.guest_email.strip():
+        conn.close()
+        raise HTTPException(status_code=400, detail="Укажите корректный email")
     if passport_needed and not _passport_digits_ok(body.passport):
         conn.close()
         raise HTTPException(status_code=400, detail="Укажите паспортные данные полностью — серия (4 цифры) и номер (6 цифр)")
@@ -2867,6 +2886,15 @@ async def submit_complete(token: str, body: CompleteSubmit, request: Request):
         conn.close()
         raise HTTPException(status_code=400, detail="Прикрепите оба фото паспорта")
 
+    if name_needed:
+        conn.execute("UPDATE bookings SET guest_name=? WHERE id=?", (body.guest_name.strip(), booking["id"]))
+        booking["guest_name"] = body.guest_name.strip()
+    if phone_needed:
+        conn.execute("UPDATE bookings SET guest_phone=? WHERE id=?", (body.guest_phone.strip(), booking["id"]))
+        booking["guest_phone"] = body.guest_phone.strip()
+    if email_needed:
+        conn.execute("UPDATE bookings SET guest_email=? WHERE id=?", (body.guest_email.strip(), booking["id"]))
+        booking["guest_email"] = body.guest_email.strip()
     if passport_needed:
         conn.execute("UPDATE bookings SET passport=? WHERE id=?", (body.passport.strip(), booking["id"]))
         booking["passport"] = body.passport.strip()

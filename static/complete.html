@@ -60,6 +60,29 @@
     <div id="formCard" class="card">
       <div class="label">Ваши данные</div>
 
+      <div id="nameField" class="hidden">
+        <div class="field-label">Фамилия и имя</div>
+        <input type="text" id="surnameInput" placeholder="Фамилия">
+        <input type="text" id="firstNameInput" placeholder="Имя" style="margin-top:8px">
+        <div style="display:flex;gap:10px;align-items:center;margin-top:8px">
+          <input type="text" id="patronymicInput" placeholder="Отчество" style="flex:1">
+          <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);white-space:nowrap;cursor:pointer;flex-shrink:0">
+            <input type="checkbox" id="noPatronymicCheck" style="accent-color:var(--gold);width:15px;height:15px">
+            отсутствует
+          </label>
+        </div>
+      </div>
+
+      <div id="phoneField" class="hidden">
+        <div class="field-label">Телефон</div>
+        <input type="tel" id="phoneInput" value="+7" oninput="formatPhoneInput(this)" placeholder="+7 (___) ___-__-__">
+      </div>
+
+      <div id="emailField" class="hidden">
+        <div class="field-label">Email (на него придёт подписанный договор)</div>
+        <input type="email" id="emailInput" placeholder="your@email.com">
+      </div>
+
       <div id="passportField" class="hidden">
         <div class="field-label">Паспортные данные (серия, номер)</div>
         <input type="text" id="passportInput" placeholder="0000 000000" maxlength="11" oninput="formatPassportInput(this)">
@@ -107,7 +130,7 @@
 <script>
 const token = window.location.pathname.split('/').filter(Boolean).pop();
 let photosState = { main: false, reg1: false };
-let passportNeeded = false;
+let passportNeeded = false, nameNeeded = false, phoneNeeded = false, emailNeeded = false;
 
 function formatPassportInput(el){
   let digits = el.value.replace(/\D/g, '').slice(0, 10);
@@ -120,12 +143,43 @@ function isPassportComplete(el){
   return digits.length === 10;
 }
 
+function formatPhoneInput(el){
+  let digits = el.value.replace(/\D/g, '');
+  if(digits.startsWith('7')) digits = digits.slice(1);
+  else if(digits.startsWith('8')) digits = digits.slice(1);
+  digits = digits.slice(0, 10);
+  let out = '+7';
+  if(digits.length) out += ' (' + digits.slice(0,3);
+  if(digits.length >= 3) out += ')';
+  if(digits.length > 3) out += ' ' + digits.slice(3,6);
+  if(digits.length > 6) out += '-' + digits.slice(6,8);
+  if(digits.length > 8) out += '-' + digits.slice(8,10);
+  el.value = out;
+}
+function isPhoneComplete(el){
+  let digits = el.value.replace(/\D/g, '');
+  if(digits.startsWith('7')) digits = digits.slice(1);
+  return digits.length === 10;
+}
+
+function isPatronymicOk(){
+  if(document.getElementById('noPatronymicCheck').checked) return true;
+  return document.getElementById('patronymicInput').value.trim().length > 0;
+}
+
 function updateSignButton() {
   const btn = document.getElementById('signBtn');
+  const nameOk = !nameNeeded || (
+    document.getElementById('surnameInput').value.trim().length > 0 &&
+    document.getElementById('firstNameInput').value.trim().length > 0 &&
+    isPatronymicOk()
+  );
+  const phoneOk = !phoneNeeded || isPhoneComplete(document.getElementById('phoneInput'));
+  const emailOk = !emailNeeded || document.getElementById('emailInput').value.includes('@');
   const passportOk = !passportNeeded || isPassportComplete(document.getElementById('passportInput'));
   const photosOk = photosState.main && photosState.reg1;
   const checksOk = document.getElementById('privacyCheck').checked && document.getElementById('contractCheck').checked;
-  btn.disabled = !(passportOk && photosOk && checksOk);
+  btn.disabled = !(nameOk && phoneOk && emailOk && passportOk && photosOk && checksOk);
 }
 
 async function init() {
@@ -146,7 +200,13 @@ async function init() {
     document.getElementById('contractText').textContent = data.contract_text || '';
     document.getElementById('consentText').textContent = data.consent_text || '';
 
+    nameNeeded = !!data.name_needed;
+    phoneNeeded = !!data.phone_needed;
+    emailNeeded = !!data.email_needed;
     passportNeeded = !!data.passport_needed;
+    if (nameNeeded) document.getElementById('nameField').classList.remove('hidden');
+    if (phoneNeeded) document.getElementById('phoneField').classList.remove('hidden');
+    if (emailNeeded) document.getElementById('emailField').classList.remove('hidden');
     if (passportNeeded) document.getElementById('passportField').classList.remove('hidden');
 
     photosState.main = !!(data.photos_uploaded && data.photos_uploaded.main);
@@ -154,7 +214,14 @@ async function init() {
     if (photosState.main) { document.getElementById('statusMain').textContent = 'Загружено ✓'; document.getElementById('statusMain').className = 'photo-status done'; }
     if (photosState.reg1) { document.getElementById('statusReg1').textContent = 'Загружено ✓'; document.getElementById('statusReg1').className = 'photo-status done'; }
 
-    document.getElementById('passportInput').addEventListener('input', updateSignButton);
+    ['surnameInput','firstNameInput','patronymicInput','phoneInput','emailInput','passportInput'].forEach(id => {
+      document.getElementById(id).addEventListener('input', updateSignButton);
+    });
+    document.getElementById('noPatronymicCheck').addEventListener('change', () => {
+      document.getElementById('patronymicInput').disabled = document.getElementById('noPatronymicCheck').checked;
+      if (document.getElementById('noPatronymicCheck').checked) document.getElementById('patronymicInput').value = '';
+      updateSignButton();
+    });
     document.getElementById('privacyCheck').addEventListener('change', updateSignButton);
     document.getElementById('contractCheck').addEventListener('change', updateSignButton);
     updateSignButton();
@@ -195,11 +262,20 @@ async function signNow() {
   btn.disabled = true;
   msg.textContent = ''; msg.className = 'msg';
 
+  const guestName = nameNeeded
+    ? [document.getElementById('surnameInput').value.trim(), document.getElementById('firstNameInput').value.trim(), document.getElementById('patronymicInput').value.trim()].filter(Boolean).join(' ')
+    : '';
+
   try {
     const r = await fetch(`/api/complete/${token}/submit`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ passport: document.getElementById('passportInput').value.trim() })
+      body: JSON.stringify({
+        passport: document.getElementById('passportInput').value.trim(),
+        guest_name: guestName,
+        guest_phone: document.getElementById('phoneInput').value.trim(),
+        guest_email: document.getElementById('emailInput').value.trim(),
+      })
     });
     const data = await r.json();
     if (!r.ok) throw new Error(data.detail || 'Не удалось подписать договор');

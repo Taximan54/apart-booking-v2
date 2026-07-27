@@ -434,8 +434,8 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
           </div>
 
           <div class="info-field" style="margin-bottom:16px">
-            <div class="info-label">ФИО гостя</div>
-            <input type="text" class="info-input" id="mbGuestName" placeholder="Иванов Иван Иванович" style="width:100%">
+            <div class="info-label">ФИО гостя (оставь пустым — гость впишет сам по ссылке)</div>
+            <input type="text" class="info-input" id="mbGuestName" placeholder="Иванов Иван Иванович — необязательно" style="width:100%">
           </div>
 
           <div class="flex-2col" style="display:flex;gap:16px;margin-bottom:16px">
@@ -2444,10 +2444,6 @@ async function createManualBooking() {
   };
   if(!payload.check_in || !payload.check_out) {
     showToast('Укажите даты заезда и выезда', 'err');
-    return;
-  }
-  if(!payload.guest_name) {
-    showToast('Укажите ФИО гостя', 'err');
     return;
   }
   try {
