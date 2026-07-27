@@ -1671,7 +1671,7 @@ function updateGuestHint(){
 }
 
 async function goToContract(){
-  if(!document.getElementById('gName').value.trim()||!document.getElementById('gPhone').value.trim()||!document.getElementById('gEmail').value.trim()){
+  if(!document.getElementById('gName').value.trim()||!document.getElementById('gSurname').value.trim()||!document.getElementById('gPhone').value.trim()||!document.getElementById('gEmail').value.trim()){
     showToast('Заполните все обязательные поля','err'); return;
   }
   if(!isPhoneComplete('gPhone')){
@@ -1741,7 +1741,7 @@ function goS2back(){
 }
 
 function goS3(){
-  if(!document.getElementById('gName').value.trim()||!document.getElementById('gPhone').value.trim()||!document.getElementById('gEmail').value.trim()){showToast('Заполните все обязательные поля','err');return;}
+  if(!document.getElementById('gName').value.trim()||!document.getElementById('gSurname').value.trim()||!document.getElementById('gPhone').value.trim()||!document.getElementById('gEmail').value.trim()){showToast('Заполните все обязательные поля','err');return;}
   if(!isPhoneComplete('gPhone')){showToast('Введите телефон полностью — 10 цифр после +7','err');return;}
   if(!isPassportComplete('gPassport')){showToast('Введите серию и номер паспорта полностью (4 + 6 цифр)','err');return;}
   if(!document.getElementById('privacyCheck').checked){showToast('Необходимо согласие на обработку персональных данных','err');return;}
