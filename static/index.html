@@ -643,7 +643,16 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
             <div class="fgroup"><label class="flabel">Имя</label><input type="text" class="finput" id="gName" placeholder="Ваше имя"></div>
             <div class="fgroup"><label class="flabel">Фамилия</label><input type="text" class="finput" id="gSurname" placeholder="Фамилия"></div>
           </div>
-          <div class="fgroup"><label class="flabel">Отчество (если есть)</label><input type="text" class="finput" id="gPatronymic" placeholder="Отчество"></div>
+          <div class="fgroup">
+            <label class="flabel">Отчество</label>
+            <div style="display:flex;gap:10px;align-items:center">
+              <input type="text" class="finput" id="gPatronymic" placeholder="Отчество" style="flex:1" oninput="updatePatronymicState()">
+              <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-muted);white-space:nowrap;cursor:pointer;flex-shrink:0">
+                <input type="checkbox" id="gNoPatronymic" style="accent-color:var(--gold);width:15px;height:15px" onchange="updatePatronymicState()">
+                отсутствует
+              </label>
+            </div>
+          </div>
           <div class="fgroup"><label class="flabel">Телефон</label><input type="tel" class="finput" id="gPhone" value="+7" oninput="formatPhoneInput(this)" placeholder="+7 (___) ___-__-__"></div>
           <div class="fgroup"><label class="flabel">Email</label><input type="email" class="finput" id="gEmail" placeholder="your@email.com"></div>
           <div class="fgroup">
@@ -1670,6 +1679,19 @@ function updateGuestHint(){
   }
 }
 
+// Отчество: если стоит галочка "отсутствует" — поле блокируется и очищается,
+// иначе оно обязательно к заполнению
+function updatePatronymicState(){
+  const input = document.getElementById('gPatronymic');
+  const noPatronymic = document.getElementById('gNoPatronymic').checked;
+  input.disabled = noPatronymic;
+  if(noPatronymic) input.value = '';
+}
+function isPatronymicOk(){
+  if(document.getElementById('gNoPatronymic').checked) return true;
+  return document.getElementById('gPatronymic').value.trim().length > 0;
+}
+
 async function goToContract(){
   if(!document.getElementById('gName').value.trim()||!document.getElementById('gSurname').value.trim()||!document.getElementById('gPhone').value.trim()||!document.getElementById('gEmail').value.trim()){
     showToast('Заполните все обязательные поля','err'); return;
@@ -1679,6 +1701,9 @@ async function goToContract(){
   }
   if(!isPassportComplete('gPassport')){
     showToast('Введите серию и номер паспорта полностью (4 + 6 цифр)','err'); return;
+  }
+  if(!isPatronymicOk()){
+    showToast('Укажите отчество или отметьте, что оно отсутствует','err'); return;
   }
   if(!document.getElementById('privacyCheck').checked){
     showToast('Необходимо согласие на обработку персональных данных','err'); return;
@@ -1744,6 +1769,7 @@ function goS3(){
   if(!document.getElementById('gName').value.trim()||!document.getElementById('gSurname').value.trim()||!document.getElementById('gPhone').value.trim()||!document.getElementById('gEmail').value.trim()){showToast('Заполните все обязательные поля','err');return;}
   if(!isPhoneComplete('gPhone')){showToast('Введите телефон полностью — 10 цифр после +7','err');return;}
   if(!isPassportComplete('gPassport')){showToast('Введите серию и номер паспорта полностью (4 + 6 цифр)','err');return;}
+  if(!isPatronymicOk()){showToast('Укажите отчество или отметьте, что оно отсутствует','err');return;}
   if(!document.getElementById('privacyCheck').checked){showToast('Необходимо согласие на обработку персональных данных','err');return;}
   setStep(3);
   document.getElementById('panelTitle').textContent='Оплата';
