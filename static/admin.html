@@ -733,6 +733,11 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
             <div class="info-label">MAX (мессенджер)</div>
             <input type="text" class="info-input" id="contactsMax" placeholder="+7 (383) 000-00-00">
           </div>
+          <div class="info-field" style="margin-bottom:24px">
+            <div class="info-label">Ссылка для оплаты по СБП (из банковского приложения — «Получить оплату по QR/ссылке»)</div>
+            <input type="text" class="info-input" id="contactsSbpLink" placeholder="https://qr.nspk.ru/... или ссылка вашего банка">
+            <div style="font-size:10px;color:var(--text-muted);margin-top:6px">На сайте по ней сгенерируется QR-код и кнопка «Оплатить по СБП» — вместо перехода на страницу входа в личный кабинет банка. Если оставить пустым — гостю покажется только номер телефона для перевода.</div>
+          </div>
           <div style="font-size:10px;color:var(--text-muted);margin-bottom:16px">Незаполненные поля не показываются на сайте</div>
           <button class="btn btn-primary" onclick="saveContacts()">Сохранить контакты</button>
         </div>
@@ -2500,6 +2505,7 @@ async function loadContacts() {
     document.getElementById('contactsTelegram').value = c.telegram || '';
     document.getElementById('contactsWhatsapp').value = c.whatsapp || '';
     document.getElementById('contactsMax').value      = c.max      || '';
+    document.getElementById('contactsSbpLink').value  = c.sbp_link || '';
   } catch(e) {}
 }
 
@@ -2510,6 +2516,7 @@ async function saveContacts() {
     telegram: document.getElementById('contactsTelegram').value.trim().replace(/^@/, ''),
     whatsapp: document.getElementById('contactsWhatsapp').value.trim(),
     max:      document.getElementById('contactsMax').value.trim(),
+    sbp_link: document.getElementById('contactsSbpLink').value.trim(),
   };
   try {
     await apiPost('/api/contacts', payload);

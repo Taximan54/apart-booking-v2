@@ -112,6 +112,7 @@ class Contacts(BaseModel):
     telegram: str = ""
     whatsapp: str = ""
     max: str = ""
+    sbp_link: str = ""   # ссылка на приём оплаты по СБП (из банковского приложения) — для QR-кода на сайте
 
 class SiteSettings(BaseModel):
     hero_photo: str = ""        # имя файла из /data/photos/
@@ -1757,7 +1758,7 @@ async def delete_place(place_id: str, _: bool = Depends(require_admin)):
 # API — CONTACTS
 # =====================================================
 
-DEFAULT_CONTACTS = {"phone": "", "email": "", "telegram": "", "whatsapp": "", "max": ""}
+DEFAULT_CONTACTS = {"phone": "", "email": "", "telegram": "", "whatsapp": "", "max": "", "sbp_link": ""}
 
 @app.get("/api/contacts")
 async def get_contacts():
