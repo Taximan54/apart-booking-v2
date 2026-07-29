@@ -864,7 +864,7 @@ const API = {
 // ============================================================
 // STATE
 // ============================================================
-let CONFIG = { weekday:3500, weekend:4500, cleaning:1500, includedGuests:1, extraGuestPrice:100, doorCode:'0000', sbpLink:'', landlordPhone:'', bookedDates:[], checkoutDates:[] };
+let CONFIG = { weekday:3500, weekend:4500, cleaning:1500, includedGuests:1, extraGuestPrice:100, doorCode:'0000', sbpLink:'', sbpPhone:'', qrUploaded:false, bookedDates:[], checkoutDates:[] };
 let selStart=null, selEnd=null, hoverDate=null;
 const _now=new Date(); let curYear=_now.getFullYear(), curMonth=_now.getMonth();
 let payMethod='card';
@@ -932,6 +932,7 @@ async function init() {
 
   // Контакты
   loadContacts();
+  loadPaymentSettings();
 
   // Правила проживания
   try {
@@ -1160,6 +1161,18 @@ function showContactBox(id, textId, value, hrefFn) {
   }
 }
 
+async function loadPaymentSettings() {
+  try {
+    const r = await fetch(`${API.BASE}/api/payment-settings`);
+    const p = await r.json();
+    CONFIG.sbpLink = p.sbp_link || '';
+    CONFIG.sbpPhone = p.sbp_phone || '';
+    CONFIG.qrUploaded = !!p.qr_uploaded;
+  } catch(e) {
+    console.warn('Payment settings unavailable');
+  }
+}
+
 async function loadContacts() {
   try {
     const r = await fetch(`${API.BASE}/api/contacts`);
@@ -1169,8 +1182,6 @@ async function loadContacts() {
     const telegram = c.telegram || '';
     const whatsapp = c.whatsapp || '';
     const maxMsg   = c.max      || '';
-    CONFIG.landlordPhone = phone;
-    CONFIG.sbpLink = c.sbp_link || '';
 
     // Футер
     const fEmail = document.getElementById('footerEmail');
@@ -1857,32 +1868,40 @@ async function submitBooking(){
 }
 
 function showPaymentStep(bookingRef, prepay){
-  // Меняем кнопки на флоу оплаты по СБП
+  // Меняем кнопки на флоу оплаты по СБП — 3 независимых варианта: свой QR
+  // (или сгенерированный из ссылки, если своего нет), ссылка, номер телефона
   const sbpLink = CONFIG.sbpLink || '';
-  const phone = CONFIG.landlordPhone || '';
+  const sbpPhone = CONFIG.sbpPhone || '';
+  const qrUploaded = !!CONFIG.qrUploaded;
   let payHtml = '';
 
-  if (sbpLink) {
-    const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' + encodeURIComponent(sbpLink);
+  if (qrUploaded || sbpLink) {
+    const qrSrc = qrUploaded
+      ? `${API.BASE}/api/payment-qr`
+      : 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' + encodeURIComponent(sbpLink);
     payHtml += `
       <div style="text-align:center;margin-bottom:16px">
-        <img src="${qrUrl}" alt="QR-код СБП" style="width:180px;height:180px;border:1px solid var(--black-border);border-radius:4px;background:#fff;padding:8px">
+        <img src="${qrSrc}" alt="QR-код для оплаты" style="width:180px;height:180px;border:1px solid var(--black-border);border-radius:4px;background:#fff;padding:8px">
         <div style="font-size:11px;color:var(--text-muted);margin-top:8px">Отсканируйте камерой телефона (СБП) — откроется приложение вашего банка</div>
       </div>
+    `;
+  }
+  if (sbpLink) {
+    payHtml += `
       <a href="${sbpLink}" target="_blank" class="btn-gold-w" style="display:flex;text-align:center;text-decoration:none;align-items:center;justify-content:center;gap:8px;margin-bottom:10px">
         📱 Открыть ссылку для оплаты по СБП
       </a>
     `;
   }
-  if (phone) {
+  if (sbpPhone) {
     payHtml += `
-      <div style="font-size:11px;color:var(--text-muted);text-align:center;margin-top:${sbpLink ? '4px' : '0'}">
-        ${sbpLink ? 'Не открылось? ' : ''}Переведите по СБП на номер телефона (любой банк):<br>
-        <span style="color:var(--gold);font-size:15px;letter-spacing:.05em">${phone}</span>
+      <div style="font-size:11px;color:var(--text-muted);text-align:center;margin-top:${(sbpLink || qrUploaded) ? '4px' : '0'}">
+        ${(sbpLink || qrUploaded) ? 'Не получилось? ' : ''}Переведите по СБП на номер телефона (любой банк):<br>
+        <span style="color:var(--gold);font-size:15px;letter-spacing:.05em">${sbpPhone}</span>
       </div>
     `;
   }
-  if (!sbpLink && !phone) {
+  if (!sbpLink && !sbpPhone && !qrUploaded) {
     payHtml = `<div style="font-size:12px;color:var(--text-muted);text-align:center">Свяжитесь с администратором для оплаты — реквизиты пока не настроены.</div>`;
   }
 

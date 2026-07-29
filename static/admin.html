@@ -733,15 +733,46 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
             <div class="info-label">MAX (мессенджер)</div>
             <input type="text" class="info-input" id="contactsMax" placeholder="+7 (383) 000-00-00">
           </div>
-          <div class="info-field" style="margin-bottom:24px">
-            <div class="info-label">Ссылка для оплаты по СБП (из банковского приложения — «Получить оплату по QR/ссылке»)</div>
-            <input type="text" class="info-input" id="contactsSbpLink" placeholder="https://qr.nspk.ru/... или ссылка вашего банка">
-            <div style="font-size:10px;color:var(--text-muted);margin-top:6px">На сайте по ней сгенерируется QR-код и кнопка «Оплатить по СБП» — вместо перехода на страницу входа в личный кабинет банка. Если оставить пустым — гостю покажется только номер телефона для перевода.</div>
-          </div>
           <div style="font-size:10px;color:var(--text-muted);margin-bottom:16px">Незаполненные поля не показываются на сайте</div>
           <button class="btn btn-primary" onclick="saveContacts()">Сохранить контакты</button>
         </div>
       </div>
+
+      <div class="card" style="max-width:600px;margin-top:24px">
+        <div class="card-header">
+          <span class="card-title">Оплата (СБП)</span>
+        </div>
+        <div class="card-body">
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:20px">
+          Отдельно от контактов для связи — это реквизиты именно для приёма оплаты.
+          Гостю на сайте покажутся все заполненные варианты сразу: ссылка, QR-код и/или номер телефона.
+        </div>
+
+        <div class="info-field" style="margin-bottom:24px">
+          <div class="info-label">Ссылка для оплаты по СБП (из банковского приложения — «Получить оплату по QR/ссылке»)</div>
+          <input type="text" class="info-input" id="paySbpLink" placeholder="https://qr.nspk.ru/... или ссылка вашего банка">
+        </div>
+
+        <div class="info-field" style="margin-bottom:24px">
+          <div class="info-label">Телефон для перевода по СБП (может отличаться от контактного)</div>
+          <input type="text" class="info-input" id="paySbpPhone" placeholder="+7 900 000-00-00">
+        </div>
+
+        <div class="info-field" style="margin-bottom:16px">
+          <div class="info-label">Свой QR-код (картинка из банковского приложения)</div>
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+            <img id="paymentQrPreview" style="display:none;width:100px;height:100px;object-fit:contain;background:#fff;border-radius:4px;padding:6px">
+            <label class="btn btn-ghost" for="paymentQrFile" style="cursor:pointer;margin:0">Загрузить QR-код</label>
+            <input type="file" id="paymentQrFile" accept="image/*" style="display:none" onchange="uploadPaymentQr(this)">
+            <button class="btn btn-ghost" id="paymentQrDeleteBtn" style="display:none" onclick="deletePaymentQr()">Удалить</button>
+          </div>
+        </div>
+
+        <button class="btn btn-primary" onclick="savePaymentSettings()">Сохранить настройки оплаты</button>
+        </div>
+      </div>
+    </div>
+
     </div>
 
     <!-- PLACES -->
@@ -2505,8 +2536,8 @@ async function loadContacts() {
     document.getElementById('contactsTelegram').value = c.telegram || '';
     document.getElementById('contactsWhatsapp').value = c.whatsapp || '';
     document.getElementById('contactsMax').value      = c.max      || '';
-    document.getElementById('contactsSbpLink').value  = c.sbp_link || '';
   } catch(e) {}
+  loadPaymentSettings();
 }
 
 async function saveContacts() {
@@ -2516,13 +2547,77 @@ async function saveContacts() {
     telegram: document.getElementById('contactsTelegram').value.trim().replace(/^@/, ''),
     whatsapp: document.getElementById('contactsWhatsapp').value.trim(),
     max:      document.getElementById('contactsMax').value.trim(),
-    sbp_link: document.getElementById('contactsSbpLink').value.trim(),
   };
   try {
     await apiPost('/api/contacts', payload);
     showToast('Контакты сохранены', 'gold');
   } catch(e) {
     showToast('Ошибка сохранения', 'err');
+  }
+}
+
+// PAYMENT SETTINGS (СБП: ссылка, телефон, свой QR-код)
+async function loadPaymentSettings() {
+  try {
+    const p = await apiGet('/api/payment-settings');
+    document.getElementById('paySbpLink').value  = p.sbp_link  || '';
+    document.getElementById('paySbpPhone').value = p.sbp_phone || '';
+    const preview = document.getElementById('paymentQrPreview');
+    const delBtn = document.getElementById('paymentQrDeleteBtn');
+    if (p.qr_uploaded) {
+      preview.src = '/api/payment-qr?t=' + Date.now();
+      preview.style.display = 'block';
+      delBtn.style.display = 'inline-block';
+    } else {
+      preview.style.display = 'none';
+      delBtn.style.display = 'none';
+    }
+  } catch(e) {}
+}
+
+async function savePaymentSettings() {
+  const payload = {
+    sbp_link:  document.getElementById('paySbpLink').value.trim(),
+    sbp_phone: document.getElementById('paySbpPhone').value.trim(),
+  };
+  try {
+    await apiPost('/api/payment-settings', payload);
+    showToast('Настройки оплаты сохранены', 'gold');
+  } catch(e) {
+    showToast('Ошибка сохранения', 'err');
+  }
+}
+
+async function uploadPaymentQr(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const formData = new FormData();
+  formData.append('file', file);
+  try {
+    const res = await fetch(`${API_BASE}/api/payment-qr`, {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + ADMIN_TOKEN },
+      body: formData,
+    });
+    if (!res.ok) throw new Error((await res.json()).detail || 'Ошибка загрузки');
+    showToast('QR-код загружен', 'gold');
+    loadPaymentSettings();
+  } catch(e) {
+    showToast('Ошибка: ' + e.message, 'err');
+  }
+  input.value = '';
+}
+
+async function deletePaymentQr() {
+  try {
+    await fetch(`${API_BASE}/api/payment-qr`, {
+      method: 'DELETE',
+      headers: { 'Authorization': 'Bearer ' + ADMIN_TOKEN },
+    });
+    showToast('QR-код удалён', 'gold');
+    loadPaymentSettings();
+  } catch(e) {
+    showToast('Ошибка удаления', 'err');
   }
 }
 

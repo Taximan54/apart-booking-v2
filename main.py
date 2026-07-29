@@ -112,7 +112,10 @@ class Contacts(BaseModel):
     telegram: str = ""
     whatsapp: str = ""
     max: str = ""
-    sbp_link: str = ""   # ссылка на приём оплаты по СБП (из банковского приложения) — для QR-кода на сайте
+
+class PaymentSettings(BaseModel):
+    sbp_link: str = ""    # ссылка на приём оплаты по СБП (из банковского приложения)
+    sbp_phone: str = ""   # номер телефона для перевода по СБП (может отличаться от контактного)
 
 class SiteSettings(BaseModel):
     hero_photo: str = ""        # имя файла из /data/photos/
@@ -324,6 +327,9 @@ SETTINGS_FILE    = f"{DATA_DIR}/settings.json"
 REVIEW_FILE      = f"{DATA_DIR}/review_template.txt"
 REVIEWS_FILE     = f"{DATA_DIR}/reviews.json"
 CONTACTS_FILE    = f"{DATA_DIR}/contacts.json"
+PAYMENT_FILE     = f"{DATA_DIR}/payment_settings.json"
+PAYMENT_QR_PATH  = f"{DATA_DIR}/payment_qr.jpg"
+DEFAULT_PAYMENT_SETTINGS = {"sbp_link": "", "sbp_phone": ""}
 PLACES_FILE      = f"{DATA_DIR}/places.json"
 PHOTOS_DIR       = f"{DATA_DIR}/photos"
 PHOTOS_ORDER_FILE = f"{DATA_DIR}/photos_order.json"
@@ -1758,7 +1764,7 @@ async def delete_place(place_id: str, _: bool = Depends(require_admin)):
 # API — CONTACTS
 # =====================================================
 
-DEFAULT_CONTACTS = {"phone": "", "email": "", "telegram": "", "whatsapp": "", "max": "", "sbp_link": ""}
+DEFAULT_CONTACTS = {"phone": "", "email": "", "telegram": "", "whatsapp": "", "max": ""}
 
 @app.get("/api/contacts")
 async def get_contacts():
@@ -1774,6 +1780,54 @@ async def set_contacts(c: Contacts, _: bool = Depends(require_admin)):
     with open(CONTACTS_FILE, "w", encoding="utf-8") as f:
         json.dump(c.dict(), f, ensure_ascii=False)
     return {"ok": True}
+
+# =====================================================
+# API — ОПЛАТА (СБП: ссылка, телефон, свой QR-код)
+# =====================================================
+
+@app.get("/api/payment-settings")
+async def get_payment_settings():
+    """Публичный — ссылка/телефон для оплаты по СБП + есть ли загруженный QR-код."""
+    settings = DEFAULT_PAYMENT_SETTINGS
+    if os.path.exists(PAYMENT_FILE):
+        with open(PAYMENT_FILE, "r", encoding="utf-8") as f:
+            settings = {**DEFAULT_PAYMENT_SETTINGS, **json.load(f)}
+    settings = dict(settings)
+    settings["qr_uploaded"] = os.path.exists(PAYMENT_QR_PATH)
+    return settings
+
+@app.post("/api/payment-settings")
+async def set_payment_settings(p: PaymentSettings, _: bool = Depends(require_admin)):
+    with open(PAYMENT_FILE, "w", encoding="utf-8") as f:
+        json.dump(p.dict(), f, ensure_ascii=False)
+    return {"ok": True}
+
+@app.post("/api/payment-qr")
+async def upload_payment_qr(file: UploadFile = File(...), _: bool = Depends(require_admin)):
+    """Загрузка своего QR-кода для оплаты (картинка из банковского приложения)."""
+    content = await file.read()
+    if len(content) > 10 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="Файл слишком большой (макс. 10МБ)")
+    try:
+        img = Image.open(io.BytesIO(content)).convert("RGB")
+        os.makedirs(DATA_DIR, exist_ok=True)
+        img.save(PAYMENT_QR_PATH, format="JPEG", quality=92)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Не удалось обработать изображение")
+    return {"ok": True}
+
+@app.delete("/api/payment-qr")
+async def delete_payment_qr(_: bool = Depends(require_admin)):
+    if os.path.exists(PAYMENT_QR_PATH):
+        os.remove(PAYMENT_QR_PATH)
+    return {"ok": True}
+
+@app.get("/api/payment-qr")
+async def get_payment_qr():
+    """Публичный — отдаёт загруженный QR-код оплаты как изображение."""
+    if not os.path.exists(PAYMENT_QR_PATH):
+        raise HTTPException(status_code=404, detail="QR-код не загружен")
+    return FileResponse(PAYMENT_QR_PATH, media_type="image/jpeg")
 
 # =====================================================
 # API — PHOTOS
