@@ -1878,10 +1878,10 @@ function showPaymentStep(bookingRef, prepay){
   if (qrUploaded || sbpLink) {
     const qrSrc = qrUploaded
       ? `${API.BASE}/api/payment-qr`
-      : 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' + encodeURIComponent(sbpLink);
+      : 'https://api.qrserver.com/v1/create-qr-code/?size=330x330&data=' + encodeURIComponent(sbpLink);
     payHtml += `
       <div style="text-align:center;margin-bottom:16px">
-        <img src="${qrSrc}" alt="QR-код для оплаты" style="width:180px;height:180px;border:1px solid var(--black-border);border-radius:4px;background:#fff;padding:8px">
+        <img src="${qrSrc}" alt="QR-код для оплаты" style="width:270px;height:270px;border:1px solid var(--black-border);border-radius:4px;background:#fff;padding:8px">
         <div style="font-size:11px;color:var(--text-muted);margin-top:8px">Отсканируйте камерой телефона (СБП) — откроется приложение вашего банка</div>
       </div>
     `;
@@ -1896,7 +1896,7 @@ function showPaymentStep(bookingRef, prepay){
   if (sbpPhone) {
     payHtml += `
       <div style="font-size:11px;color:var(--text-muted);text-align:center;margin-top:${(sbpLink || qrUploaded) ? '4px' : '0'}">
-        ${(sbpLink || qrUploaded) ? 'Не получилось? ' : ''}Переведите по СБП на номер телефона (любой банк):<br>
+        ${(sbpLink || qrUploaded) ? 'Не получилось? ' : ''}Переведите по СБП на номер телефона (Т-Банк):<br>
         <span style="color:var(--gold);font-size:15px;letter-spacing:.05em">${sbpPhone}</span>
       </div>
     `;
