@@ -729,7 +729,19 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
           <!-- Итог -->
           <div class="pbd">
             <div class="pbrow"><span class="lbl" id="s3NightsLbl">—</span><span class="val" id="s3NightsCost">—</span></div>
+            <div class="pbrow" id="s3StayDiscountRow" style="display:none">
+              <span class="lbl" id="s3StayDiscountLbl" style="color:var(--text-muted);font-size:11px">—</span>
+              <span class="val" id="s3StayDiscountVal" style="color:var(--gold)">—</span>
+            </div>
+            <div class="pbrow" id="s3PromoRow" style="display:none">
+              <span class="lbl" id="s3PromoLbl" style="color:var(--text-muted);font-size:11px">—</span>
+              <span class="val" id="s3PromoVal" style="color:var(--gold)">—</span>
+            </div>
             <div class="pbrow"><span class="lbl">Доп. уборка + бельё</span><span class="val" id="s3Clean">—</span></div>
+            <div class="pbrow" id="s3ExtraGuestRow" style="display:none">
+              <span class="lbl" id="s3ExtraGuestLbl">—</span>
+              <span class="val" id="s3ExtraGuestVal">—</span>
+            </div>
             <div class="pbrow pbtotal"><span class="lbl">Итого</span><span class="val" id="s3Total">—</span></div>
             <div class="pbrow" style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(201,168,76,.1)">
               <span class="lbl" style="color:var(--gold)">Предоплата 20%</span>
@@ -1782,16 +1794,51 @@ function goS3fromContract(){
   document.getElementById('panelTitle').textContent='Оплата';
   safeDot('sd3','remove','active'); safeDot('sd3','add','done');
   safeDot('sd4','add','active');
-  document.getElementById('s3NightsLbl').textContent=bookingData.nights+' '+bookingData.nw;
-  document.getElementById('s3NightsCost').textContent='₽'+bookingData.cost.toLocaleString('ru');
-  document.getElementById('s3Clean').textContent = bookingData.cleaningSelected ? ('+₽'+bookingData.cleaning.toLocaleString('ru')) : 'не выбрано';
-  document.getElementById('s3Total').textContent='₽'+bookingData.total.toLocaleString('ru');
-  document.getElementById('s3Prepay').textContent='₽'+Math.ceil(bookingData.total*0.2).toLocaleString('ru');
+  fillStep3Breakdown();
   document.getElementById('payStatusBox').style.display='none';
   document.getElementById('payBtns').innerHTML=`
     <button class="btn-outline-s" onclick="goBackToContract()">Назад</button>
     <button class="btn-gold-w" style="flex:2" id="payBtn" onclick="submitBooking()">Забронировать</button>
   `;
+}
+
+function fillStep3Breakdown(){
+  document.getElementById('s3NightsLbl').textContent = bookingData.nights+' '+bookingData.nw;
+  document.getElementById('s3NightsCost').textContent = '₽'+bookingData.cost.toLocaleString('ru');
+
+  const stayRow = document.getElementById('s3StayDiscountRow');
+  if(bookingData.stayDiscount){
+    stayRow.style.display = 'flex';
+    document.getElementById('s3StayDiscountLbl').textContent = `Скидка ${bookingData.stayDiscount.percent}% при проживании от ${bookingData.stayDiscount.min_nights} суток`;
+    document.getElementById('s3StayDiscountVal').textContent = '−₽'+bookingData.stayDiscountAmount.toLocaleString('ru');
+  } else {
+    stayRow.style.display = 'none';
+  }
+
+  const promoRow = document.getElementById('s3PromoRow');
+  if(bookingData.promo){
+    promoRow.style.display = 'flex';
+    document.getElementById('s3PromoLbl').textContent = 'Промокод ' + bookingData.promo.code + ' (−' + bookingData.promo.percent + '%)';
+    document.getElementById('s3PromoVal').textContent = '−₽'+bookingData.promoDiscountAmount.toLocaleString('ru');
+  } else {
+    promoRow.style.display = 'none';
+  }
+
+  document.getElementById('s3Clean').textContent = bookingData.cleaningSelected ? ('+₽'+bookingData.cleaning.toLocaleString('ru')) : 'не выбрано';
+
+  const extraGuests = Math.max(0, parseInt(document.getElementById('gCount')?.value || CONFIG.includedGuests) - CONFIG.includedGuests);
+  const extraGuestRow = document.getElementById('s3ExtraGuestRow');
+  if(extraGuests > 0){
+    const extraGuestCost = extraGuests * CONFIG.extraGuestPrice * bookingData.nights;
+    extraGuestRow.style.display = 'flex';
+    document.getElementById('s3ExtraGuestLbl').textContent = 'Доп. гости (' + extraGuests + ')';
+    document.getElementById('s3ExtraGuestVal').textContent = '+₽'+extraGuestCost.toLocaleString('ru');
+  } else {
+    extraGuestRow.style.display = 'none';
+  }
+
+  document.getElementById('s3Total').textContent = '₽'+bookingData.total.toLocaleString('ru');
+  document.getElementById('s3Prepay').textContent = '₽'+Math.ceil(bookingData.total*0.2).toLocaleString('ru');
 }
 
 function goBackToContract(){
@@ -1816,10 +1863,7 @@ function goS3(){
   setStep(3);
   document.getElementById('panelTitle').textContent='Оплата';
   document.getElementById('s3NightsLbl').textContent=`${bookingData.nights} ${bookingData.nw}`;
-  document.getElementById('s3NightsCost').textContent=`₽${bookingData.cost.toLocaleString('ru')}`;
-  document.getElementById('s3Clean').textContent = bookingData.cleaningSelected ? ('+₽'+bookingData.cleaning.toLocaleString('ru')) : 'не выбрано';
-  document.getElementById('s3Total').textContent=`₽${bookingData.total.toLocaleString('ru')}`;
-  document.getElementById('s3Prepay').textContent=`₽${Math.ceil(bookingData.total*0.2).toLocaleString('ru')}`;
+  fillStep3Breakdown();
   // Сбрасываем статус оплаты при переходе на шаг 3
   document.getElementById('payStatusBox').style.display='none';
   document.getElementById('payBtns').innerHTML=`
