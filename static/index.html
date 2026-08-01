@@ -1473,7 +1473,7 @@ function updatePanel(){
   if(extraGuestRow){
     if(extraGuests > 0){
       extraGuestRow.style.display = 'flex';
-      document.getElementById('pbExtraGuestLbl').textContent = 'Доп. гости (' + extraGuests + ')';
+      document.getElementById('pbExtraGuestLbl').textContent = `Доп. гости (${extraGuests} × ${CONFIG.extraGuestPrice}₽ × ${nights} ${nw(nights)})`;
       document.getElementById('pbExtraGuestVal').textContent = '+₽' + extraGuestCost.toLocaleString('ru');
     } else {
       extraGuestRow.style.display = 'none';
@@ -1725,7 +1725,7 @@ function updateGuestHint(){
   const guests = parseInt(document.getElementById('gCount')?.value || CONFIG.includedGuests);
   const extra = Math.max(0, guests - CONFIG.includedGuests);
   if(CONFIG.extraGuestPrice > 0 && extra > 0){
-    hintEl.textContent = `За ${guests} ${guests===1?'гостя':'гостей'}: доплата ${extra * CONFIG.extraGuestPrice} ₽/сутки (включено ${CONFIG.includedGuests} без доплаты)`;
+    hintEl.textContent = `За ${guests} ${guests===1?'гостя':'гостей'}: доплата ${CONFIG.extraGuestPrice}₽/сутки за каждого доп. гостя (включено ${CONFIG.includedGuests} без доплаты)`;
     hintEl.style.color = 'var(--gold)';
   } else {
     hintEl.textContent = `Базовая цена включает ${CONFIG.includedGuests} ${CONFIG.includedGuests===1?'гостя':'гостей'}. За каждого дополнительного — доплата ${CONFIG.extraGuestPrice} ₽/сутки.`;
@@ -1831,7 +1831,7 @@ function fillStep3Breakdown(){
   if(extraGuests > 0){
     const extraGuestCost = extraGuests * CONFIG.extraGuestPrice * bookingData.nights;
     extraGuestRow.style.display = 'flex';
-    document.getElementById('s3ExtraGuestLbl').textContent = 'Доп. гости (' + extraGuests + ')';
+    document.getElementById('s3ExtraGuestLbl').textContent = `Доп. гости (${extraGuests} × ${CONFIG.extraGuestPrice}₽ × ${bookingData.nights} ${bookingData.nw})`;
     document.getElementById('s3ExtraGuestVal').textContent = '+₽'+extraGuestCost.toLocaleString('ru');
   } else {
     extraGuestRow.style.display = 'none';
