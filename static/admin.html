@@ -274,6 +274,7 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
       <a class="sb-item" onclick="showPanel('sitesettings',this)"><span class="sb-icon">⚙</span>Настройки сайта</a>
       <a class="sb-item" onclick="showPanel('reviews',this)"><span class="sb-icon">★</span>Отзывы</a>
       <a class="sb-item" onclick="showPanel('places',this)"><span class="sb-icon">📍</span>Куда сходить</a>
+      <a class="sb-item" onclick="showPanel('discounts',this)"><span class="sb-icon">🏷️</span>Скидки и акции</a>
       <a class="sb-item" onclick="showPanel('contacts',this)"><span class="sb-icon">☎</span>Контакты</a>
       <a class="sb-item" onclick="showPanel('photos',this)"><span class="sb-icon">🖼</span>Фотографии</a>
       <a class="sb-item" onclick="showPanel('settings',this)"><span class="sb-icon">⊛</span>Настройки</a>
@@ -595,6 +596,46 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
           </div>
         </div>
       </div>
+
+      <div class="card" style="max-width:700px;margin-top:24px">
+        <div class="card-header"><span class="card-title">Скидки за длительность проживания</span></div>
+        <div class="card-body">
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:20px">
+            До 4 порогов — скидка применяется автоматически на сайте при выборе дат, если
+            количество ночей достигает указанного минимума. Оставь «Мин. ночей» = 0, чтобы
+            отключить ячейку.
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px">
+            <div class="price-input-box">
+              <div class="pib-label">Порог 1 — мин. ночей</div>
+              <input type="number" class="pib-input" id="sd0Nights" value="5" min="0">
+              <div class="pib-label" style="margin-top:8px">Скидка, %</div>
+              <input type="number" class="pib-input" id="sd0Percent" value="5" min="0" max="100">
+            </div>
+            <div class="price-input-box">
+              <div class="pib-label">Порог 2 — мин. ночей</div>
+              <input type="number" class="pib-input" id="sd1Nights" value="10" min="0">
+              <div class="pib-label" style="margin-top:8px">Скидка, %</div>
+              <input type="number" class="pib-input" id="sd1Percent" value="10" min="0" max="100">
+            </div>
+            <div class="price-input-box">
+              <div class="pib-label">Порог 3 — мин. ночей</div>
+              <input type="number" class="pib-input" id="sd2Nights" value="14" min="0">
+              <div class="pib-label" style="margin-top:8px">Скидка, %</div>
+              <input type="number" class="pib-input" id="sd2Percent" value="20" min="0" max="100">
+            </div>
+            <div class="price-input-box">
+              <div class="pib-label">Порог 4 — мин. ночей</div>
+              <input type="number" class="pib-input" id="sd3Nights" value="0" min="0">
+              <div class="pib-label" style="margin-top:8px">Скидка, %</div>
+              <input type="number" class="pib-input" id="sd3Percent" value="0" min="0" max="100">
+            </div>
+          </div>
+          <div style="margin-top:20px;display:flex;gap:12px">
+            <button class="btn btn-primary" onclick="savePrices()">Сохранить</button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- PROMO CODES -->
@@ -824,6 +865,51 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
             </div>
           </div>
           <div id="placesList"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" id="panel-discounts">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Скидки и акции</span>
+          <button class="btn btn-ghost btn-sm" onclick="showDiscountForm()">+ Добавить акцию</button>
+        </div>
+        <div class="card-body">
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:20px">
+            Эти карточки отображаются на отдельной публичной странице «Скидки» (ссылка настраивается в разделе «Настройки сайта» → пункты меню).
+          </div>
+          <div id="discountFormWrap" style="display:none;background:var(--black-card);border:1px solid var(--black-border);padding:20px;margin-bottom:24px">
+            <div style="font-size:11px;color:var(--gold);letter-spacing:.2em;text-transform:uppercase;margin-bottom:16px" id="discountFormTitle">Новая акция</div>
+            <input type="hidden" id="discountEditId">
+            <div class="info-field" style="margin-bottom:16px">
+              <div class="info-label">Название</div>
+              <input type="text" class="info-input" id="discountName" placeholder="Скидка 10% при бронировании от 10 суток">
+            </div>
+            <div class="info-field" style="margin-bottom:16px">
+              <div class="info-label">Описание</div>
+              <textarea class="info-input" id="discountDescription" rows="4" style="resize:vertical" placeholder="Условия акции..."></textarea>
+            </div>
+            <div class="info-field" style="margin-bottom:20px">
+              <div class="info-label">Фото</div>
+              <div style="display:flex;gap:12px;align-items:center">
+                <div style="width:100px;height:70px;background:var(--black);border:1px solid var(--black-border);overflow:hidden;flex-shrink:0">
+                  <img id="discountPhotoPreview" src="" style="width:100%;height:100%;object-fit:cover;display:none">
+                </div>
+                <div>
+                  <input type="file" id="discountPhotoFile" accept="image/jpeg,image/png,image/webp" style="display:none" onchange="uploadDiscountPhoto()">
+                  <button class="btn btn-ghost btn-sm" onclick="document.getElementById('discountPhotoFile').click()">Загрузить фото</button>
+                  <div style="font-size:10px;color:var(--text-muted);margin-top:6px"><span id="discountPhotoName">не выбрано</span></div>
+                </div>
+              </div>
+              <input type="hidden" id="discountPhotoValue">
+            </div>
+            <div style="display:flex;gap:12px">
+              <button class="btn btn-primary" onclick="saveDiscount()">Сохранить</button>
+              <button class="btn btn-ghost" onclick="cancelDiscountForm()">Отмена</button>
+            </div>
+          </div>
+          <div id="discountsList"></div>
         </div>
       </div>
     </div>
@@ -1307,7 +1393,7 @@ if (ADMIN_TOKEN) {
 // DATA STATE
 // ============================================================
 let allBookings = [];
-let config = { weekday: 3500, weekend: 4500, cleaning: 1500, included_guests: 1, extra_guest_price: 100, deposit: 6000, door_code: '0000' };
+let config = { weekday: 3500, weekend: 4500, cleaning: 1500, included_guests: 1, extra_guest_price: 100, deposit: 6000, stay_discounts: [{min_nights:5,percent:5},{min_nights:10,percent:10},{min_nights:14,percent:20},{min_nights:0,percent:0}], door_code: '0000' };
 let adminCalYear, adminCalMonth;
 let adminSelStart = null, adminSelEnd = null;
 let selectedBookingId = null;
@@ -1476,6 +1562,7 @@ async function loadPrices() {
     config.included_guests   = data.included_guests   ?? config.included_guests   ?? 1;
     config.extra_guest_price = data.extra_guest_price ?? config.extra_guest_price ?? 100;
     config.deposit = data.deposit ?? config.deposit ?? 6000;
+    config.stay_discounts = Array.isArray(data.stay_discounts) ? data.stay_discounts : config.stay_discounts;
   } catch(e) {}
   document.getElementById('pWeekday').value  = config.weekday;
   document.getElementById('pWeekend').value  = config.weekend;
@@ -1485,9 +1572,22 @@ async function loadPrices() {
   document.getElementById('pDeposit').value = config.deposit;
   const mbDeposit = document.getElementById('mbDeposit');
   if (mbDeposit && !mbDeposit.value) mbDeposit.placeholder = config.deposit;
+
+  const sd = config.stay_discounts || [];
+  for (let i = 0; i < 4; i++) {
+    document.getElementById(`sd${i}Nights`).value  = sd[i]?.min_nights ?? 0;
+    document.getElementById(`sd${i}Percent`).value = sd[i]?.percent ?? 0;
+  }
 }
 
 async function savePrices() {
+  const stay_discounts = [];
+  for (let i = 0; i < 4; i++) {
+    stay_discounts.push({
+      min_nights: parseInt(document.getElementById(`sd${i}Nights`).value) || 0,
+      percent:    parseInt(document.getElementById(`sd${i}Percent`).value) || 0,
+    });
+  }
   const payload = {
     weekday:   parseInt(document.getElementById('pWeekday').value),
     weekend:   parseInt(document.getElementById('pWeekend').value),
@@ -1495,6 +1595,7 @@ async function savePrices() {
     included_guests:   parseInt(document.getElementById('pIncludedGuests').value),
     extra_guest_price: parseInt(document.getElementById('pExtraGuestPrice').value),
     deposit: parseInt(document.getElementById('pDeposit').value),
+    stay_discounts,
   };
   try {
     await apiPost('/api/prices', payload);
@@ -2205,7 +2306,7 @@ function showPanel(id, el) {
   document.querySelectorAll('.sb-item').forEach(i=>i.classList.remove('active'));
   if(el) el.classList.add('active');
   closeAdminSidebar();
-  const titles = {dashboard:'Дашборд',bookings:'Все брони',manualbooking:'Ручная бронь (внешние площадки)',calendar:'Управление календарём',prices:'Цены',promo:'Промокоды',settings:'Настройки',contract:'Договор',contracts:'Архив договоров',checkin:'Памятка гостю',checkout:'Чек-лист выезда',houserules:'Правила проживания',sitesettings:'Настройки сайта',reviews:'Отзывы',places:'Куда сходить',contacts:'Контакты',photos:'Фотографии'};
+  const titles = {dashboard:'Дашборд',bookings:'Все брони',manualbooking:'Ручная бронь (внешние площадки)',calendar:'Управление календарём',prices:'Цены',promo:'Промокоды',settings:'Настройки',contract:'Договор',contracts:'Архив договоров',checkin:'Памятка гостю',checkout:'Чек-лист выезда',houserules:'Правила проживания',sitesettings:'Настройки сайта',reviews:'Отзывы',places:'Куда сходить',discounts:'Скидки и акции',contacts:'Контакты',photos:'Фотографии'};
   document.getElementById('topbarTitle').textContent = titles[id]||id;
   if(id==='settings') { loadTimezone(); loadNotif(); }
   if(id==='contract')   { if(typeof loadContractForEditor==='function') loadContractForEditor(); }
@@ -2216,6 +2317,7 @@ function showPanel(id, el) {
   if(id==='sitesettings'){ if(typeof loadSiteSettings==='function') loadSiteSettings(); loadDesc(); }
   if(id==='reviews')     { if(typeof loadReviewsAdmin==='function') loadReviewsAdmin(); }
   if(id==='places')      { if(typeof loadPlacesAdmin==='function') loadPlacesAdmin(); }
+  if(id==='discounts')   { if(typeof loadDiscountsAdmin==='function') loadDiscountsAdmin(); }
   if(id==='contacts') { if(typeof loadContacts==='function') loadContacts(); }
   if(id==='photos')   { if(typeof loadPhotosAdmin==='function') loadPhotosAdmin(); }
   if(id==='dashboard'){ if(typeof renderDashStrip==='function') renderDashStrip(); if(typeof renderCheckoutSchedule==='function') renderCheckoutSchedule(); }
@@ -2758,6 +2860,139 @@ async function deletePlace(id) {
     });
     showToast('Место удалено', 'err');
     loadPlacesAdmin();
+  } catch(e) { showToast('Ошибка удаления', 'err'); }
+}
+
+// DISCOUNTS ADMIN (Скидки и акции)
+let allDiscountsAdmin = [];
+
+async function loadDiscountsAdmin() {
+  try {
+    allDiscountsAdmin = await apiGet('/api/discounts/all');
+    renderDiscountsAdmin(allDiscountsAdmin);
+  } catch(e) {
+    document.getElementById('discountsList').innerHTML = '<div style="color:var(--text-muted);padding:20px">Ошибка загрузки</div>';
+  }
+}
+
+function renderDiscountsAdmin(discounts) {
+  const list = document.getElementById('discountsList');
+  if(!discounts || discounts.length === 0) {
+    list.innerHTML = '<div style="color:var(--text-muted);padding:20px;text-align:center">Акций пока нет — нажмите «+ Добавить акцию»</div>';
+    return;
+  }
+  list.innerHTML = discounts.map(d => `
+    <div class="place-row" style="display:grid;grid-template-columns:120px 1fr auto;gap:16px;align-items:center;padding:16px;border:1px solid ${d.visible ? 'var(--black-border)' : 'rgba(90,74,48,.3)'};margin-bottom:8px;background:var(--black-card)">
+      <div class="place-row-photo" style="height:80px;overflow:hidden;border:1px solid var(--black-border)">
+        ${d.photo ? `<img src="${API_BASE}/data/photos/${d.photo}" style="width:100%;height:100%;object-fit:cover">` : '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:24px;background:var(--black)">🏷️</div>'}
+      </div>
+      <div style="min-width:0">
+        <div style="font-size:14px;color:var(--text-primary);margin-bottom:4px">${d.name}</div>
+        <div style="font-size:11px;color:var(--text-muted)">${(d.description || '').slice(0, 80)}</div>
+        ${!d.visible ? '<span style="font-size:10px;color:var(--text-muted);background:rgba(90,74,48,.3);padding:2px 8px">скрыто</span>' : ''}
+      </div>
+      <div class="place-row-actions" style="display:flex;flex-direction:column;gap:6px">
+        <button class="btn btn-ghost btn-sm" onclick="editDiscount('${d.id}')">✎</button>
+        <button class="btn btn-ghost btn-sm" onclick="toggleDiscountVisibility('${d.id}', ${!d.visible})">${d.visible ? '👁' : '👁‍🗨'}</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteDiscount('${d.id}')">✕</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function showDiscountForm() {
+  document.getElementById('discountEditId').value = '';
+  document.getElementById('discountName').value = '';
+  document.getElementById('discountDescription').value = '';
+  document.getElementById('discountPhotoValue').value = '';
+  document.getElementById('discountPhotoName').textContent = 'не выбрано';
+  document.getElementById('discountPhotoPreview').style.display = 'none';
+  document.getElementById('discountFormTitle').textContent = 'Новая акция';
+  document.getElementById('discountFormWrap').style.display = 'block';
+}
+
+function editDiscount(id) {
+  const d = allDiscountsAdmin.find(x => x.id === id);
+  if(!d) return;
+  document.getElementById('discountEditId').value = d.id;
+  document.getElementById('discountName').value = d.name || '';
+  document.getElementById('discountDescription').value = d.description || '';
+  document.getElementById('discountPhotoValue').value = d.photo || '';
+  if(d.photo) {
+    const img = document.getElementById('discountPhotoPreview');
+    img.src = `${API_BASE}/data/photos/${d.photo}`;
+    img.style.display = 'block';
+    document.getElementById('discountPhotoName').textContent = d.photo;
+  }
+  document.getElementById('discountFormTitle').textContent = 'Редактировать акцию';
+  document.getElementById('discountFormWrap').style.display = 'block';
+}
+
+function cancelDiscountForm() {
+  document.getElementById('discountFormWrap').style.display = 'none';
+}
+
+async function uploadDiscountPhoto() {
+  const file = document.getElementById('discountPhotoFile').files[0];
+  if(!file) return;
+  if(file.size > 10 * 1024 * 1024) { showToast('Файл слишком большой (макс. 10 МБ)', 'err'); return; }
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('label', document.getElementById('discountName').value || 'Акция');
+  formData.append('purpose', 'discount');
+  try {
+    const resp = await fetch(`${API_BASE}/api/photos/upload`, {
+      method: 'POST',
+      headers: ADMIN_TOKEN ? {'Authorization': 'Bearer ' + ADMIN_TOKEN} : {},
+      body: formData
+    });
+    const data = await resp.json();
+    document.getElementById('discountPhotoValue').value = data.filename;
+    document.getElementById('discountPhotoName').textContent = data.filename;
+    const img = document.getElementById('discountPhotoPreview');
+    img.src = `${API_BASE}/data/photos/${data.filename}`;
+    img.style.display = 'block';
+    showToast('Фото загружено', 'gold');
+  } catch(e) { showToast('Ошибка загрузки фото', 'err'); }
+}
+
+async function saveDiscount() {
+  const id = document.getElementById('discountEditId').value;
+  const payload = {
+    name:        document.getElementById('discountName').value.trim(),
+    description: document.getElementById('discountDescription').value.trim(),
+    photo:       document.getElementById('discountPhotoValue').value.trim(),
+    visible:     true
+  };
+  if(!payload.name) { showToast('Введите название акции', 'err'); return; }
+  try {
+    if(id) await apiPut('/api/discounts/' + id, payload);
+    else   await apiPost('/api/discounts', payload);
+    showToast('Акция сохранена', 'gold');
+    document.getElementById('discountFormWrap').style.display = 'none';
+    loadDiscountsAdmin();
+  } catch(e) { showToast('Ошибка: ' + e.message, 'err'); }
+}
+
+async function toggleDiscountVisibility(id, visible) {
+  const d = allDiscountsAdmin.find(x => x.id === id);
+  if(!d) return;
+  try {
+    await apiPut('/api/discounts/' + id, {...d, visible});
+    showToast(visible ? 'Акция показана' : 'Акция скрыта', 'gold');
+    loadDiscountsAdmin();
+  } catch(e) { showToast('Ошибка', 'err'); }
+}
+
+async function deleteDiscount(id) {
+  if(!confirm('Удалить эту акцию?')) return;
+  try {
+    await fetch(`${API_BASE}/api/discounts/${id}`, {
+      method: 'DELETE',
+      headers: ADMIN_TOKEN ? {'Authorization': 'Bearer ' + ADMIN_TOKEN} : {}
+    });
+    showToast('Акция удалена', 'err');
+    loadDiscountsAdmin();
   } catch(e) { showToast('Ошибка удаления', 'err'); }
 }
 

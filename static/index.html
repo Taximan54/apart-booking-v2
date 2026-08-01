@@ -603,6 +603,10 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
           </div>
           <div class="pbd" id="pbd" style="display:none">
             <div class="pbrow" id="pbNightsRow"><span class="lbl" id="pbNightsLbl">—</span><span class="val" id="pbNightsCost">—</span></div>
+            <div class="pbrow" id="pbStayDiscountRow" style="display:none">
+              <span class="lbl" id="pbStayDiscountLbl" style="color:var(--text-muted);font-size:11px">—</span>
+              <span class="val" id="pbStayDiscountVal" style="color:var(--gold)">—</span>
+            </div>
             <label class="pbrow" id="pbCleanRow" style="cursor:pointer;align-items:center">
               <span class="lbl" style="display:flex;align-items:center;gap:8px">
                 <input type="checkbox" id="pbCleanCheckbox" onchange="updatePanel()" style="width:15px;height:15px;accent-color:var(--gold);cursor:pointer">
@@ -864,7 +868,7 @@ const API = {
 // ============================================================
 // STATE
 // ============================================================
-let CONFIG = { weekday:3500, weekend:4500, cleaning:1500, includedGuests:1, extraGuestPrice:100, doorCode:'0000', sbpLink:'', sbpPhone:'', qrUploaded:false, bookedDates:[], checkoutDates:[] };
+let CONFIG = { weekday:3500, weekend:4500, cleaning:1500, includedGuests:1, extraGuestPrice:100, stayDiscounts:[], doorCode:'0000', sbpLink:'', sbpPhone:'', qrUploaded:false, bookedDates:[], checkoutDates:[] };
 let selStart=null, selEnd=null, hoverDate=null;
 const _now=new Date(); let curYear=_now.getFullYear(), curMonth=_now.getMonth();
 let payMethod='card';
@@ -895,6 +899,7 @@ async function init() {
     CONFIG.cleaning = p.cleaning || p.cleaning_price || 1500;
     CONFIG.includedGuests   = p.included_guests   ?? 1;
     CONFIG.extraGuestPrice  = p.extra_guest_price ?? 0;
+    CONFIG.stayDiscounts    = Array.isArray(p.stay_discounts) ? p.stay_discounts : [];
     document.getElementById('priceWeekday').textContent  = CONFIG.weekday.toLocaleString('ru');
     document.getElementById('priceWeekend').textContent  = CONFIG.weekend.toLocaleString('ru');
     document.getElementById('priceCleaning').textContent = CONFIG.cleaning.toLocaleString('ru');
@@ -1391,6 +1396,18 @@ function onDay(dStr){
   renderCal();
 }
 
+function bestStayDiscount(nights){
+  let best = null;
+  (CONFIG.stayDiscounts || []).forEach(tier => {
+    const minN = tier.min_nights || 0;
+    const pct  = tier.percent || 0;
+    if(minN > 0 && pct > 0 && nights >= minN){
+      if(!best || minN > best.min_nights) best = {min_nights: minN, percent: pct};
+    }
+  });
+  return best;
+}
+
 function updatePanel(){
   if(!selStart || !selEnd) return;
   const s = new Date(selStart + 'T00:00:00');
@@ -1418,15 +1435,27 @@ function updatePanel(){
   const extraGuests = Math.max(0, guestsSelected - CONFIG.includedGuests);
   const extraGuestCost = extraGuests * CONFIG.extraGuestPrice * nights;
   const subtotal = cost + cleaningCost + extraGuestCost;
-  let discount = 0;
-  if(appliedPromo){
-    discount = Math.round(subtotal * appliedPromo.percent / 100);
-  }
+
+  const stayTier = bestStayDiscount(nights);
+  const stayDiscountAmount = stayTier ? Math.round(cost * stayTier.percent / 100) : 0;
+  const promoDiscountAmount = appliedPromo ? Math.round(cost * appliedPromo.percent / 100) : 0;
+  const discount = stayDiscountAmount + promoDiscountAmount;
+
   const total = subtotal - discount;
   const nw = n => n%10===1&&!(n>=11&&n<=19) ? 'ночь'
                 : n%10>=2&&n%10<=4&&!(n>=11&&n<=19) ? 'ночи' : 'ночей';
   document.getElementById('pbNightsLbl').textContent  = nights + ' ' + nw(nights) + ' × тариф';
   document.getElementById('pbNightsCost').textContent = '₽' + cost.toLocaleString('ru');
+
+  const stayRow = document.getElementById('pbStayDiscountRow');
+  if(stayTier){
+    stayRow.style.display = 'flex';
+    document.getElementById('pbStayDiscountLbl').textContent = `Скидка ${stayTier.percent}% при проживании от ${stayTier.min_nights} суток`;
+    document.getElementById('pbStayDiscountVal').textContent = '−₽' + stayDiscountAmount.toLocaleString('ru');
+  } else {
+    stayRow.style.display = 'none';
+  }
+
   document.getElementById('pbClean').textContent      = (cleaningChecked ? '+' : '') + '₽' + CONFIG.cleaning.toLocaleString('ru');
   const extraGuestRow = document.getElementById('pbExtraGuestRow');
   if(extraGuestRow){
@@ -1441,7 +1470,7 @@ function updatePanel(){
   if(appliedPromo){
     document.getElementById('pbPromoRow').style.display = 'flex';
     document.getElementById('pbPromoLbl').textContent = 'Промокод ' + appliedPromo.code + ' (−' + appliedPromo.percent + '%)';
-    document.getElementById('pbPromoVal').textContent = '−₽' + discount.toLocaleString('ru');
+    document.getElementById('pbPromoVal').textContent = '−₽' + promoDiscountAmount.toLocaleString('ru');
   } else {
     document.getElementById('pbPromoRow').style.display = 'none';
   }
@@ -1456,7 +1485,7 @@ function updatePanel(){
   const pc = document.getElementById('privacyCheck');
   if(pc) pc.checked = true;
   const prepay = Math.ceil(total * 0.2);
-  bookingData = {nights, cost, subtotal, discount, total, prepay, start:selStart, end:selEnd, nw:nw(nights), promo: appliedPromo, cleaning: cleaningCost, cleaningSelected: cleaningChecked};
+  bookingData = {nights, cost, subtotal, discount, total, prepay, start:selStart, end:selEnd, nw:nw(nights), promo: appliedPromo, cleaning: cleaningCost, cleaningSelected: cleaningChecked, stayDiscount: stayTier, stayDiscountAmount, promoDiscountAmount};
 }
 
 async function applyPromoCode(){

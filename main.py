@@ -88,6 +88,12 @@ class Prices(BaseModel):
     included_guests: int = 1      # сколько гостей включено в базовую цену без доплаты
     extra_guest_price: int = 100  # доплата за каждого гостя сверх included_guests (₽/сутки)
     deposit: int = 6000           # депозит по умолчанию (₽) — можно переопределить для конкретной ручной брони
+    stay_discounts: List[Dict[str, int]] = Field(default_factory=lambda: [
+        {"min_nights": 5, "percent": 5},
+        {"min_nights": 10, "percent": 10},
+        {"min_nights": 14, "percent": 20},
+        {"min_nights": 0, "percent": 0},
+    ])  # скидка за длительность проживания — 4 настраиваемых порога (min_nights=0 — ячейка не используется)
 
 class PromoCodes(BaseModel):
     codes: Dict[str, int]   # {"SUMMER10": 10} — код -> процент скидки
@@ -179,6 +185,13 @@ class Place(BaseModel):
     photo: str = ""
     description: str = ""
     distance: str = ""
+    visible: bool = True
+
+class Discount(BaseModel):
+    id: Optional[str] = None
+    name: str
+    photo: str = ""
+    description: str = ""
     visible: bool = True
 
 class PhotoOrder(BaseModel):
@@ -331,6 +344,7 @@ PAYMENT_FILE     = f"{DATA_DIR}/payment_settings.json"
 PAYMENT_QR_PATH  = f"{DATA_DIR}/payment_qr.jpg"
 DEFAULT_PAYMENT_SETTINGS = {"sbp_link": "", "sbp_phone": ""}
 PLACES_FILE      = f"{DATA_DIR}/places.json"
+DISCOUNTS_FILE   = f"{DATA_DIR}/discounts.json"
 PHOTOS_DIR       = f"{DATA_DIR}/photos"
 PHOTOS_ORDER_FILE = f"{DATA_DIR}/photos_order.json"
 CONTRACTS_DIR    = f"{DATA_DIR}/contracts"
@@ -338,7 +352,16 @@ AUTH_FILE        = f"{DATA_DIR}/admin_auth.json"
 PASSPORT_DIR         = f"{DATA_DIR}/passports"           # ЗАЩИЩЁННАЯ папка — НЕ должна раздаваться nginx как статика!
 PASSPORT_MAP_FILE    = f"{DATA_DIR}/passport_photos.json"  # {booking_ref: {"main":.., "reg1":..}}
 PROPERTIES_FILE      = f"{DATA_DIR}/properties.json"       # реестр квартир (задел на white-label с несколькими объектами)
-DEFAULT_PRICES   = {"weekday": 3500, "weekend": 4500, "cleaning": 1500, "included_guests": 1, "extra_guest_price": 100, "deposit": 6000}
+DEFAULT_PRICES   = {
+    "weekday": 3500, "weekend": 4500, "cleaning": 1500,
+    "included_guests": 1, "extra_guest_price": 100, "deposit": 6000,
+    "stay_discounts": [
+        {"min_nights": 5, "percent": 5},
+        {"min_nights": 10, "percent": 10},
+        {"min_nights": 14, "percent": 20},
+        {"min_nights": 0, "percent": 0},
+    ],
+}
 
 os.makedirs(CONTRACTS_DIR, exist_ok=True)
 
@@ -1758,6 +1781,58 @@ async def delete_place(place_id: str, _: bool = Depends(require_admin)):
     places = load_places()
     places = [p for p in places if p.get("id") != place_id]
     save_places(places)
+    return {"ok": True}
+
+# =====================================================
+# API — DISCOUNTS (Скидки и акции)
+# =====================================================
+
+def load_discounts():
+    if os.path.exists(DISCOUNTS_FILE):
+        with open(DISCOUNTS_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            return data if isinstance(data, list) else []
+    return []
+
+def save_discounts(discounts):
+    with open(DISCOUNTS_FILE, "w", encoding="utf-8") as f:
+        json.dump(discounts, f, ensure_ascii=False, indent=2)
+
+@app.get("/api/discounts")
+async def get_discounts():
+    """Публичный — только видимые акции/скидки."""
+    return [d for d in load_discounts() if d.get("visible", True)]
+
+@app.get("/api/discounts/all")
+async def get_all_discounts(_: bool = Depends(require_admin)):
+    return load_discounts()
+
+@app.post("/api/discounts")
+async def add_discount(d: Discount, _: bool = Depends(require_admin)):
+    discounts = load_discounts()
+    if len(discounts) >= 10:
+        raise HTTPException(status_code=400, detail="Максимум 10 акций")
+    row = d.dict()
+    row["id"] = secrets.token_hex(6)
+    discounts.append(row)
+    save_discounts(discounts)
+    return {"ok": True, "id": row["id"]}
+
+@app.put("/api/discounts/{discount_id}")
+async def update_discount(discount_id: str, d: Discount, _: bool = Depends(require_admin)):
+    discounts = load_discounts()
+    for i, row in enumerate(discounts):
+        if row.get("id") == discount_id:
+            discounts[i] = {**d.dict(), "id": discount_id}
+            save_discounts(discounts)
+            return {"ok": True}
+    raise HTTPException(status_code=404, detail="Акция не найдена")
+
+@app.delete("/api/discounts/{discount_id}")
+async def delete_discount(discount_id: str, _: bool = Depends(require_admin)):
+    discounts = load_discounts()
+    discounts = [d for d in discounts if d.get("id") != discount_id]
+    save_discounts(discounts)
     return {"ok": True}
 
 # =====================================================
