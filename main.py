@@ -174,6 +174,13 @@ class SiteSettings(BaseModel):
         {"icon": "", "name": ""},
         {"icon": "", "name": ""},
     ])
+    location_points: List[Dict[str, str]] = Field(default_factory=lambda: [
+        {"icon": "🦁", "name": "Новосибирский зоопарк", "distance": "1.2 км · 15 мин пешком", "description": "Один из крупнейших зоопарков России — 770 видов животных"},
+        {"icon": "🚇", "name": "Метро Заельцовская", "distance": "700 м · 8 мин пешком", "description": "Площадь Калинина — прямое сообщение с центром города"},
+        {"icon": "🛍", "name": "ТЦ Роял Парк", "distance": "700 м · 8 мин пешком", "description": "Крупный торгово-развлекательный центр на Красном проспекте"},
+        {"icon": "🍎", "name": "Золотое Яблоко", "distance": "9 мин пешком", "description": "Магазин косметики и парфюмерии премиум-класса"},
+        {"icon": "", "name": "", "distance": "", "description": ""},
+    ])
 
 class HouseRulesText(BaseModel):
     text: str = ""
@@ -1710,6 +1717,13 @@ DEFAULT_SETTINGS = {
         {"icon": "", "name": ""},
         {"icon": "", "name": ""},
         {"icon": "", "name": ""},
+    ],
+    "location_points": [
+        {"icon": "🦁", "name": "Новосибирский зоопарк", "distance": "1.2 км · 15 мин пешком", "description": "Один из крупнейших зоопарков России — 770 видов животных"},
+        {"icon": "🚇", "name": "Метро Заельцовская", "distance": "700 м · 8 мин пешком", "description": "Площадь Калинина — прямое сообщение с центром города"},
+        {"icon": "🛍", "name": "ТЦ Роял Парк", "distance": "700 м · 8 мин пешком", "description": "Крупный торгово-развлекательный центр на Красном проспекте"},
+        {"icon": "🍎", "name": "Золотое Яблоко", "distance": "9 мин пешком", "description": "Магазин косметики и парфюмерии премиум-класса"},
+        {"icon": "", "name": "", "distance": "", "description": ""},
     ],
 }
 

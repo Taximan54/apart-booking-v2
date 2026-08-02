@@ -461,7 +461,7 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
           <a href="https://yandex.ru/maps/?text=Новосибирск%2C+ул.+Дачная+5&z=16" target="_blank" style="font-family:'Cormorant Garamond',serif;font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);text-decoration:none;border:1px solid rgba(212,160,23,.4);padding:10px 20px;white-space:nowrap;transition:all .3s" onmouseover="this.style.borderColor='var(--gold)'" onmouseout="this.style.borderColor='rgba(212,160,23,.4)'">На карте →</a>
         </div>
       </div>
-      <div class="location-points">
+      <div class="location-points" id="locationPointsGrid">
         <div class="loc-point reveal">
           <div class="loc-icon">🦁</div>
           <div class="loc-info">
@@ -490,7 +490,7 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
           <div class="loc-icon">🍎</div>
           <div class="loc-info">
             <div class="loc-name">Золотое Яблоко</div>
-            <div class="loc-dist">5 мин пешком</div>
+            <div class="loc-dist">9 мин пешком</div>
             <div class="loc-desc">Магазин косметики и парфюмерии премиум-класса</div>
           </div>
         </div>
@@ -1065,6 +1065,26 @@ async function init() {
         if(items.length) {
           grid.innerHTML = items.map(a => `
             <div class="amenity-item"><div class="amenity-icon">${a.icon || '•'}</div><div class="amenity-name">${a.name}</div></div>
+          `).join('');
+        }
+      }
+    }
+
+    // Расположение — ближайшие места, рендерим из настроек, пустые (без названия) пропускаем
+    if(Array.isArray(settings.location_points)) {
+      const locGrid = document.getElementById('locationPointsGrid');
+      if(locGrid) {
+        const locItems = settings.location_points.filter(p => p && p.name && p.name.trim());
+        if(locItems.length) {
+          locGrid.innerHTML = locItems.map(p => `
+            <div class="loc-point reveal">
+              <div class="loc-icon">${p.icon || '📍'}</div>
+              <div class="loc-info">
+                <div class="loc-name">${p.name}</div>
+                ${p.distance ? `<div class="loc-dist">${p.distance}</div>` : ''}
+                ${p.description ? `<div class="loc-desc">${p.description}</div>` : ''}
+              </div>
+            </div>
           `).join('');
         }
       }

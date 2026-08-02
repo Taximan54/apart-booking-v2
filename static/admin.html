@@ -1162,6 +1162,19 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
 
       <div class="card" style="max-width:900px">
         <div class="card-header">
+          <span class="card-title">Расположение — ближайшие места</span>
+        </div>
+        <div class="card-body">
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:20px;padding:12px 16px;background:rgba(201,168,76,.04);border:1px solid rgba(201,168,76,.1)">
+            До 5 пунктов. Показываются рядом с картой в разделе «Расположение» на сайте. Пустые (без названия) — не отображаются.
+          </div>
+          <div id="locationPointsEditor" style="display:flex;flex-direction:column;gap:14px;margin-bottom:20px"></div>
+          <button class="btn btn-primary" onclick="saveLocationPoints()">Сохранить расположение</button>
+        </div>
+      </div>
+
+      <div class="card" style="max-width:900px">
+        <div class="card-header">
           <span class="card-title">Удобства</span>
         </div>
         <div class="card-body">
@@ -3239,6 +3252,51 @@ async function saveAmenities() {
   } catch(e) { showToast('Ошибка сохранения', 'err'); }
 }
 
+// РАСПОЛОЖЕНИЕ — ближайшие места (значок, название, расстояние, описание)
+let locationPointsData = [];
+
+function renderLocationPointsEditor() {
+  const el = document.getElementById('locationPointsEditor');
+  if(!el) return;
+  el.innerHTML = locationPointsData.map((p, i) => `
+    <div style="display:flex;gap:10px;align-items:flex-start;padding:12px;background:var(--black-card);border:1px solid var(--black-border)">
+      <input type="text" class="info-input locpoint-icon-input" data-idx="${i}"
+             value="${(p.icon || '').replace(/"/g,'&quot;')}" placeholder="📍"
+             style="width:56px;text-align:center;font-size:18px;flex-shrink:0">
+      <div style="flex:1;display:flex;flex-direction:column;gap:8px">
+        <input type="text" class="info-input locpoint-name-input" data-idx="${i}"
+               value="${(p.name || '').replace(/"/g,'&quot;')}" placeholder="Название места">
+        <input type="text" class="info-input locpoint-dist-input" data-idx="${i}"
+               value="${(p.distance || '').replace(/"/g,'&quot;')}" placeholder="Например: 700 м · 8 мин пешком">
+        <input type="text" class="info-input locpoint-desc-input" data-idx="${i}"
+               value="${(p.description || '').replace(/"/g,'&quot;')}" placeholder="Короткое описание">
+      </div>
+    </div>
+  `).join('');
+}
+
+async function saveLocationPoints() {
+  const icons = document.querySelectorAll('.locpoint-icon-input');
+  const names = document.querySelectorAll('.locpoint-name-input');
+  const dists = document.querySelectorAll('.locpoint-dist-input');
+  const descs = document.querySelectorAll('.locpoint-desc-input');
+  const collected = [];
+  for(let i = 0; i < 5; i++) {
+    collected.push({
+      icon:        icons[i] ? icons[i].value.trim() : '',
+      name:        names[i] ? names[i].value.trim() : '',
+      distance:    dists[i] ? dists[i].value.trim() : '',
+      description: descs[i] ? descs[i].value.trim() : '',
+    });
+  }
+  locationPointsData = collected;
+  try {
+    const current = await apiGet('/api/site-settings');
+    await apiPost('/api/site-settings', {...current, location_points: collected});
+    showToast('Расположение сохранено', 'gold');
+  } catch(e) { showToast('Ошибка сохранения', 'err'); }
+}
+
 function renderFontPicker() {
   const el = document.getElementById('fontPicker');
   el.innerHTML = FONT_OPTIONS.map(f => `
@@ -3445,6 +3503,9 @@ async function loadSiteSettings() {
     amenitiesData = (s.amenities && s.amenities.length ? s.amenities : []).slice(0, 12);
     while(amenitiesData.length < 12) amenitiesData.push({icon:'', name:''});
     renderAmenitiesEditor();
+    locationPointsData = (s.location_points && s.location_points.length ? s.location_points : []).slice(0, 5);
+    while(locationPointsData.length < 5) locationPointsData.push({icon:'', name:'', distance:'', description:''});
+    renderLocationPointsEditor();
     selectedHeroFont = s.hero_font || 'cormorant';
     selectedHeroBold = !!s.hero_bold;
     selectedHeroTitleScale = s.hero_title_scale || 1.0;
