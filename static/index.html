@@ -1077,7 +1077,7 @@ async function init() {
         const locItems = settings.location_points.filter(p => p && p.name && p.name.trim());
         if(locItems.length) {
           locGrid.innerHTML = locItems.map(p => `
-            <div class="loc-point reveal">
+            <div class="loc-point">
               <div class="loc-icon">${p.icon || '📍'}</div>
               <div class="loc-info">
                 <div class="loc-name">${p.name}</div>
