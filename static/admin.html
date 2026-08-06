@@ -1332,10 +1332,13 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
           <div class="card-header"><span class="card-title">Резервное копирование</span></div>
           <div class="card-body">
             <div style="font-size:11px;color:var(--text-muted);line-height:1.7;margin-bottom:16px">
-              База данных броней и ключевые настройки автоматически бэкапятся каждую ночь в 04:00
-              и отправляются файлом в Telegram администраторам и на почту (указанную в Контактах,
-              либо citypause@mail.ru по умолчанию). Последние 14 копий также хранятся
-              на самом сервере.
+              База данных броней, ключевые настройки, подписанные договоры и фото паспортов
+              автоматически бэкапятся каждую ночь в 04:00 и отправляются файлом в Telegram
+              администраторам и на почту (указанную в Контактах, либо citypause@mail.ru по
+              умолчанию). Последние 14 копий также хранятся на самом сервере.<br><br>
+              Если архив вырастет больше 50 МБ — в Telegram не отправится (лимит бота),
+              больше 20 МБ — может не пройти на почту (лимит большинства провайдеров);
+              в обоих случаях копия всё равно останется на сервере.
             </div>
             <button class="btn btn-primary" id="backupNowBtn" onclick="backupNow()">Создать копию сейчас</button>
             <div id="backupStatus" style="font-size:11px;color:var(--text-muted);margin-top:10px"></div>
