@@ -1745,6 +1745,16 @@ async def set_site_settings(s: SiteSettings, _: bool = Depends(require_admin)):
         json.dump(s.dict(), f, ensure_ascii=False)
     return {"ok": True}
 
+@app.post("/api/admin/backup-now")
+async def backup_now(_: bool = Depends(require_admin)):
+    """Ручной запуск резервного копирования — файл отправляется в Telegram и на почту, как и при автоматическом ночном бэкапе."""
+    try:
+        zip_path = create_backup_zip()
+        sent = await send_backup_everywhere(zip_path)
+        return {"ok": True, "sent_to_telegram": sent["telegram"], "sent_to_email": sent["email"], "filename": os.path.basename(zip_path)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Ошибка создания резервной копии: {e}")
+
 # =====================================================
 # API — PLACES (Куда сходить)
 # =====================================================
@@ -2066,6 +2076,9 @@ async def get_properties(_: bool = Depends(require_admin)):
     return load_properties()
 
 OWNER_NOTIFY_FILE = f"{DATA_DIR}/owner_notify_log.json"
+BACKUP_DIR         = f"{DATA_DIR}/backups"
+BACKUP_LOG_FILE     = f"{DATA_DIR}/last_backup.json"
+BACKUP_KEEP_COUNT   = 14   # сколько последних резервных копий хранить локально
 
 def get_last_owner_notify_date():
     """Дата последнего отправленного владельцу уведомления о выездах (чтобы не дублировать в течение дня)."""
@@ -2077,6 +2090,102 @@ def get_last_owner_notify_date():
 def set_last_owner_notify_date(date_str):
     with open(OWNER_NOTIFY_FILE, "w", encoding="utf-8") as f:
         json.dump({"last_date": date_str}, f)
+
+# =====================================================
+# РЕЗЕРВНОЕ КОПИРОВАНИЕ
+# =====================================================
+
+def get_last_backup_date():
+    if os.path.exists(BACKUP_LOG_FILE):
+        with open(BACKUP_LOG_FILE, "r", encoding="utf-8") as f:
+            return json.load(f).get("last_date", "")
+    return ""
+
+def set_last_backup_date(date_str):
+    with open(BACKUP_LOG_FILE, "w", encoding="utf-8") as f:
+        json.dump({"last_date": date_str}, f)
+
+def create_backup_zip():
+    """
+    Собирает бэкап главной базы (bookings.db) и ключевых JSON-настроек
+    в один zip-файл, кладёт в BACKUP_DIR, удаляет старые копии сверх
+    BACKUP_KEEP_COUNT. Возвращает путь к созданному файлу.
+    """
+    import zipfile
+    os.makedirs(BACKUP_DIR, exist_ok=True)
+    timestamp = now_nsk().strftime("%Y-%m-%d_%H-%M")
+    zip_path = os.path.join(BACKUP_DIR, f"backup_{timestamp}.zip")
+
+    files_to_backup = [
+        DB_FILE, PRICE_FILE, CONTACTS_FILE, PAYMENT_FILE,
+        PROMO_FILE, CONTRACT_FILE, PASSPORT_MAP_FILE,
+        SETTINGS_FILE, DISCOUNTS_FILE, PLACES_FILE,
+    ]
+    with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
+        for path in files_to_backup:
+            if path and os.path.exists(path):
+                zf.write(path, arcname=os.path.basename(path))
+
+    # Ротация: оставляем только последние BACKUP_KEEP_COUNT файлов
+    backups = sorted(
+        [f for f in os.listdir(BACKUP_DIR) if f.startswith("backup_") and f.endswith(".zip")]
+    )
+    while len(backups) > BACKUP_KEEP_COUNT:
+        oldest = backups.pop(0)
+        try:
+            os.remove(os.path.join(BACKUP_DIR, oldest))
+        except Exception:
+            pass
+
+    return zip_path
+
+async def send_backup_everywhere(zip_path):
+    """Отправляет файл резервной копии в Telegram админам И на почту арендодателя (best-effort, не роняет процесс при ошибке)."""
+    from aiogram.types import FSInputFile
+    settings = get_site_settings_dict()
+    telegram_targets = set(ADMIN_IDS)
+    configured_chat_id = settings.get("notify_telegram_chat_id", "").strip()
+    if configured_chat_id:
+        try:
+            telegram_targets.add(int(configured_chat_id))
+        except ValueError:
+            pass
+
+    when_str = now_nsk().strftime('%d.%m.%Y %H:%M')
+    caption = f"\U0001f4be \u0420\u0435\u0437\u0435\u0440\u0432\u043d\u0430\u044f \u043a\u043e\u043f\u0438\u044f \u0431\u0430\u0437\u044b \u0434\u0430\u043d\u043d\u044b\u0445 \u2014 {when_str}"
+    sent_telegram = False
+    for admin_id in telegram_targets:
+        try:
+            doc = FSInputFile(zip_path)
+            await asyncio.wait_for(bot.send_document(admin_id, doc, caption=caption), timeout=30.0)
+            sent_telegram = True
+        except Exception as e:
+            print(f"Backup send to {admin_id} failed: {e}")
+
+    sent_email = False
+    contacts = DEFAULT_CONTACTS
+    if os.path.exists(CONTACTS_FILE):
+        try:
+            with open(CONTACTS_FILE, "r", encoding="utf-8") as f:
+                contacts = {**DEFAULT_CONTACTS, **json.load(f)}
+        except Exception:
+            pass
+    backup_email = (contacts.get("email") or "").strip() or LANDLORD_EMAIL
+    if backup_email:
+        try:
+            html = (
+                "<div style='font-family:Arial,sans-serif;padding:20px;color:#333'>"
+                f"<p>Резервная копия базы данных и настроек Городской Паузы — {when_str}.</p>"
+                "<p>Файл во вложении. Хранить в надёжном месте.</p></div>"
+            )
+            send_email(
+                backup_email, f"Резервная копия — {when_str}", html,
+                attachments=[{"filename": os.path.basename(zip_path), "filepath": zip_path}]
+            )
+            sent_email = True
+        except Exception as e:
+            print(f"Backup email failed: {e}")
+    return {"telegram": sent_telegram, "email": sent_email}
 
 # =====================================================
 # API — PASSPORT PHOTO (защищённое хранение)
@@ -3245,6 +3354,17 @@ async def send_notifications():
                             ), timeout=5.0)
                         except Exception:
                             pass
+
+            # Резервное копирование БД + ключевых настроек — раз в сутки, в 04:00
+            # (минимум нагрузки на сайт), отправляется админам в Telegram и
+            # хранится локально (последние BACKUP_KEEP_COUNT копий)
+            if hour == 4 and minute < 30 and get_last_backup_date() != today_str:
+                try:
+                    zip_path = create_backup_zip()
+                    await send_backup_everywhere(zip_path)
+                except Exception as e:
+                    print("Backup error: " + str(e))
+                set_last_backup_date(today_str)
 
         except Exception as e:
             print("Scheduler error: " + str(e))
