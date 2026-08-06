@@ -2306,11 +2306,8 @@ async function backupNow() {
   status.style.color = 'var(--text-muted)';
   try {
     const res = await apiPost('/api/admin/backup-now', {});
-    const parts = [];
-    parts.push(res.sent_to_telegram ? 'в Telegram — отправлено' : 'в Telegram — не удалось');
-    parts.push(res.sent_to_email    ? 'на почту — отправлено'   : 'на почту — не удалось');
-    status.textContent = `${res.filename}: ${parts.join(', ')}`;
-    status.style.color = (res.sent_to_telegram && res.sent_to_email) ? '#4ade80' : 'var(--gold)';
+    status.textContent = `Копия создана (${res.filename}) — отправка в Telegram и на почту запущена, проверьте через минуту`;
+    status.style.color = '#4ade80';
   } catch(e) {
     status.textContent = 'Ошибка: ' + e.message;
     status.style.color = '#f87171';

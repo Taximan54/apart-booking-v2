@@ -1747,13 +1747,18 @@ async def set_site_settings(s: SiteSettings, _: bool = Depends(require_admin)):
 
 @app.post("/api/admin/backup-now")
 async def backup_now(_: bool = Depends(require_admin)):
-    """Ручной запуск резервного копирования — файл отправляется в Telegram и на почту, как и при автоматическом ночном бэкапе."""
+    """
+    Ручной запуск резервного копирования. Сам zip создаётся сразу (быстро,
+    локально), а отправка в Telegram и на почту запускается фоновой задачей —
+    иначе запрос из браузера успевает упасть по таймауту, пока идёт SMTP.
+    """
     try:
         zip_path = create_backup_zip()
-        sent = await send_backup_everywhere(zip_path)
-        return {"ok": True, "sent_to_telegram": sent["telegram"], "sent_to_email": sent["email"], "filename": os.path.basename(zip_path)}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Ошибка создания резервной копии: {e}")
+
+    asyncio.create_task(send_backup_everywhere(zip_path))
+    return {"ok": True, "started": True, "filename": os.path.basename(zip_path)}
 
 # =====================================================
 # API — PLACES (Куда сходить)
