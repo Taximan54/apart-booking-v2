@@ -208,14 +208,6 @@ section{position:relative;z-index:1;scroll-margin-top:100px}
 .finput:focus{border-color:var(--gold)}
 .finput::placeholder{color:var(--text-muted);font-weight:300}
 .frow{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.pay-methods{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:20px}
-.pmeth{padding:12px;background:var(--black-card);border:1px solid var(--black-border);cursor:pointer;text-align:center;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);transition:all .3s}
-.pmeth:hover,.pmeth.active{border-color:var(--gold);color:var(--gold);background:rgba(201,168,76,.05)}
-.pmeth-icon{font-size:20px;display:block;margin-bottom:6px}
-.pay-info-box{padding:16px;background:rgba(201,168,76,.04);border:1px solid rgba(201,168,76,.1);font-size:12px;color:var(--text-secondary);line-height:1.7;display:none}
-.cform{display:none;flex-direction:column;gap:12px}
-.cform.vis{display:flex}
-.pay-title{font-size:10px;letter-spacing:.3em;text-transform:uppercase;color:var(--text-muted);margin-bottom:16px}
 .btn-row{display:flex;gap:12px;margin-top:auto;padding-top:20px}
 .btn-gold-w{padding:16px 0;background:var(--gold);color:var(--black);border:none;font-family:'Montserrat',sans-serif;font-size:11px;letter-spacing:.25em;text-transform:uppercase;font-weight:500;cursor:pointer;transition:all .3s;width:100%}
 .btn-gold-w:hover{background:var(--gold-light);transform:translateY(-1px)}
@@ -897,7 +889,6 @@ const API = {
 let CONFIG = { weekday:3500, weekend:4500, cleaning:1500, includedGuests:1, extraGuestPrice:100, stayDiscounts:[], doorCode:'0000', sbpLink:'', sbpPhone:'', qrUploaded:false, bookedDates:[], checkoutDates:[] };
 let selStart=null, selEnd=null, hoverDate=null;
 const _now=new Date(); let curYear=_now.getFullYear(), curMonth=_now.getMonth();
-let payMethod='card';
 let bookingData={};
 let appliedPromo=null;
 let galleryImages=[];
@@ -1900,38 +1891,6 @@ function goBackToContract(){
   document.getElementById('panelTitle').textContent='Договор аренды';
   safeDot('sd4','remove','active');
   safeDot('sd3','remove','done'); safeDot('sd3','add','active');
-}
-
-function goS2back(){
-  setStep(2);
-  document.getElementById('panelTitle').textContent='Данные гостя';
-}
-
-function goS3(){
-  if(!document.getElementById('gName').value.trim()||!document.getElementById('gSurname').value.trim()||!document.getElementById('gPhone').value.trim()||!document.getElementById('gEmail').value.trim()){showToast('Заполните все обязательные поля','err');return;}
-  if(!isPhoneComplete('gPhone')){showToast('Введите телефон полностью — 10 цифр после +7','err');return;}
-  if(!isPassportComplete('gPassport')){showToast('Введите серию и номер паспорта полностью (4 + 6 цифр)','err');return;}
-  if(!isPatronymicOk()){showToast('Укажите отчество или отметьте, что оно отсутствует','err');return;}
-  if(!document.getElementById('privacyCheck').checked){showToast('Необходимо согласие на обработку персональных данных','err');return;}
-  setStep(3);
-  document.getElementById('panelTitle').textContent='Оплата';
-  document.getElementById('s3NightsLbl').textContent=`${bookingData.nights} ${bookingData.nw}`;
-  fillStep3Breakdown();
-  // Сбрасываем статус оплаты при переходе на шаг 3
-  document.getElementById('payStatusBox').style.display='none';
-  document.getElementById('payBtns').innerHTML=`
-    <button class="btn-outline-s" onclick="goS2back()">Назад</button>
-    <button class="btn-gold-w" style="flex:2" id="payBtn" onclick="submitBooking()">Забронировать</button>
-  `;
-}
-
-function selPay(m,el){
-  payMethod=m;
-  document.querySelectorAll('.pmeth').forEach(e=>e.classList.remove('active'));
-  el.classList.add('active');
-  document.getElementById('cardF').className='cform'+(m==='card'?' vis':'');
-  document.getElementById('sbpBox').style.display=m==='sbp'?'block':'none';
-  document.getElementById('cashBox').style.display=m==='cash'?'block':'none';
 }
 
 // Card formatting removed — no card fields in new payment flow
