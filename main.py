@@ -94,6 +94,11 @@ class Prices(BaseModel):
         {"min_nights": 14, "percent": 20},
         {"min_nights": 0, "percent": 0},
     ])  # скидка за длительность проживания — 4 настраиваемых порога (min_nights=0 — ячейка не используется)
+    holiday_periods: List[Dict[str, str]] = Field(default_factory=lambda: [
+        {"start": "", "end": "", "price": "", "label": ""},
+        {"start": "", "end": "", "price": "", "label": ""},
+    ])  # праздничные периоды с фиксированной ценой за ночь (даты в формате YYYY-MM-DD),
+        # перекрывают обычную цену будни/выходные на эти конкретные даты
 
 class PromoCodes(BaseModel):
     codes: Dict[str, int]   # {"SUMMER10": 10} — код -> процент скидки
@@ -367,6 +372,10 @@ DEFAULT_PRICES   = {
         {"min_nights": 10, "percent": 10},
         {"min_nights": 14, "percent": 20},
         {"min_nights": 0, "percent": 0},
+    ],
+    "holiday_periods": [
+        {"start": "", "end": "", "price": "", "label": ""},
+        {"start": "", "end": "", "price": "", "label": ""},
     ],
 }
 

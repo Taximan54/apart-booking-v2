@@ -50,6 +50,15 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
 
 /* STATS ROW */
 .stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--black-border);margin-bottom:32px}
+.stay-discount-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.holiday-row{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:12px;align-items:end;margin-bottom:14px}
+@media(max-width:900px){
+  .stay-discount-grid{grid-template-columns:repeat(2,1fr)}
+  .holiday-row{grid-template-columns:1fr 1fr;row-gap:8px}
+}
+@media(max-width:520px){
+  .stay-discount-grid{grid-template-columns:1fr}
+}
 .stat-card{background:var(--black-card);padding:28px 24px;display:flex;flex-direction:column;gap:8px;position:relative;overflow:hidden}
 .stat-card::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--gold);transform:scaleX(0);transition:transform .3s;transform-origin:left}
 .stat-card:hover::after{transform:scaleX(1)}
@@ -605,7 +614,7 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
             количество ночей достигает указанного минимума. Оставь «Мин. ночей» = 0, чтобы
             отключить ячейку.
           </div>
-          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px">
+          <div class="stay-discount-grid">
             <div class="price-input-box">
               <div class="pib-label">Порог 1 — мин. ночей</div>
               <input type="number" class="pib-input" id="sd0Nights" value="5" min="0">
@@ -633,6 +642,22 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
           </div>
           <div style="margin-top:20px;display:flex;gap:12px">
             <button class="btn btn-primary" onclick="savePrices()">Сохранить</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="max-width:900px;margin-top:24px">
+        <div class="card-header"><span class="card-title">Праздничные дни</span></div>
+        <div class="card-body">
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:20px">
+            Периоды с фиксированной ценой за ночь — перекрывают обычную цену будни/выходные
+            на эти конкретные даты (например, новогодние или майские праздники). Можно добавить
+            сколько угодно периодов на любой месяц.
+          </div>
+          <div id="holidayPeriodsEditor"></div>
+          <div style="margin-top:12px;display:flex;gap:12px">
+            <button class="btn btn-ghost" onclick="addHolidayPeriod()">+ Добавить период</button>
+            <button class="btn btn-primary" onclick="saveHolidayPeriods()">Сохранить праздничные дни</button>
           </div>
         </div>
       </div>
@@ -1422,7 +1447,7 @@ if (ADMIN_TOKEN) {
 // DATA STATE
 // ============================================================
 let allBookings = [];
-let config = { weekday: 3500, weekend: 4500, cleaning: 1500, included_guests: 1, extra_guest_price: 100, deposit: 6000, stay_discounts: [{min_nights:5,percent:5},{min_nights:10,percent:10},{min_nights:14,percent:20},{min_nights:0,percent:0}], door_code: '0000' };
+let config = { weekday: 3500, weekend: 4500, cleaning: 1500, included_guests: 1, extra_guest_price: 100, deposit: 6000, stay_discounts: [{min_nights:5,percent:5},{min_nights:10,percent:10},{min_nights:14,percent:20},{min_nights:0,percent:0}], holiday_periods: [{start:'',end:'',price:'',label:''},{start:'',end:'',price:'',label:''}], door_code: '0000' };
 let adminCalYear, adminCalMonth;
 let adminSelStart = null, adminSelEnd = null;
 let selectedBookingId = null;
@@ -1592,6 +1617,9 @@ async function loadPrices() {
     config.extra_guest_price = data.extra_guest_price ?? config.extra_guest_price ?? 100;
     config.deposit = data.deposit ?? config.deposit ?? 6000;
     config.stay_discounts = Array.isArray(data.stay_discounts) ? data.stay_discounts : config.stay_discounts;
+    config.holiday_periods = Array.isArray(data.holiday_periods) && data.holiday_periods.length
+      ? data.holiday_periods
+      : [{start:'',end:'',price:'',label:''},{start:'',end:'',price:'',label:''}];
   } catch(e) {}
   document.getElementById('pWeekday').value  = config.weekday;
   document.getElementById('pWeekend').value  = config.weekend;
@@ -1607,9 +1635,70 @@ async function loadPrices() {
     document.getElementById(`sd${i}Nights`).value  = sd[i]?.min_nights ?? 0;
     document.getElementById(`sd${i}Percent`).value = sd[i]?.percent ?? 0;
   }
+
+  renderHolidayPeriodsEditor();
 }
 
-async function savePrices() {
+// ПРАЗДНИЧНЫЕ ДНИ — динамический список периодов с фиксированной ценой
+function renderHolidayPeriodsEditor() {
+  const el = document.getElementById('holidayPeriodsEditor');
+  if (!el) return;
+  el.innerHTML = config.holiday_periods.map((h, i) => `
+    <div class="holiday-row">
+      <div class="price-input-box">
+        <div class="pib-label">Начало</div>
+        <input type="date" class="pib-input holiday-start" data-idx="${i}" value="${h.start || ''}">
+      </div>
+      <div class="price-input-box">
+        <div class="pib-label">Конец</div>
+        <input type="date" class="pib-input holiday-end" data-idx="${i}" value="${h.end || ''}">
+      </div>
+      <div class="price-input-box">
+        <div class="pib-label">Цена за ночь, ₽</div>
+        <input type="number" class="pib-input holiday-price" data-idx="${i}" value="${h.price || ''}" placeholder="7600" min="0">
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="removeHolidayPeriod(${i})" title="Удалить период" style="margin-bottom:2px">✕</button>
+    </div>
+    <input type="text" class="info-input holiday-label" data-idx="${i}" value="${h.label || ''}"
+           placeholder="Название периода (например: Новогодние каникулы) — необязательно"
+           style="margin-bottom:14px">
+  `).join('');
+}
+
+function addHolidayPeriod() {
+  config.holiday_periods.push({start:'',end:'',price:'',label:''});
+  renderHolidayPeriodsEditor();
+}
+
+function removeHolidayPeriod(idx) {
+  collectHolidayPeriodsFromForm();
+  config.holiday_periods.splice(idx, 1);
+  if (config.holiday_periods.length === 0) config.holiday_periods.push({start:'',end:'',price:'',label:''});
+  renderHolidayPeriodsEditor();
+}
+
+function collectHolidayPeriodsFromForm() {
+  const starts = document.querySelectorAll('.holiday-start');
+  const ends   = document.querySelectorAll('.holiday-end');
+  const prices = document.querySelectorAll('.holiday-price');
+  const labels = document.querySelectorAll('.holiday-label');
+  const collected = [];
+  starts.forEach((s, i) => {
+    collected.push({
+      start: s.value || '',
+      end:   ends[i]?.value || '',
+      price: prices[i]?.value || '',
+      label: labels[i]?.value.trim() || '',
+    });
+  });
+  config.holiday_periods = collected;
+  return collected;
+}
+
+// Собирает ПОЛНЫЙ набор цен (включая пороги скидок и праздничные периоды) —
+// нужно отправлять целиком при любом сохранении, т.к. /api/prices каждый раз
+// перезаписывает файл целиком, а не сливает частично
+function buildFullPricesPayload() {
   const stay_discounts = [];
   for (let i = 0; i < 4; i++) {
     stay_discounts.push({
@@ -1617,7 +1706,7 @@ async function savePrices() {
       percent:    parseInt(document.getElementById(`sd${i}Percent`).value) || 0,
     });
   }
-  const payload = {
+  return {
     weekday:   parseInt(document.getElementById('pWeekday').value),
     weekend:   parseInt(document.getElementById('pWeekend').value),
     cleaning:  parseInt(document.getElementById('pCleaning').value),
@@ -1625,7 +1714,23 @@ async function savePrices() {
     extra_guest_price: parseInt(document.getElementById('pExtraGuestPrice').value),
     deposit: parseInt(document.getElementById('pDeposit').value),
     stay_discounts,
+    holiday_periods: collectHolidayPeriodsFromForm(),
   };
+}
+
+async function saveHolidayPeriods() {
+  const payload = buildFullPricesPayload();
+  try {
+    await apiPost('/api/prices', payload);
+    Object.assign(config, payload);
+    showToast('Праздничные дни сохранены', 'gold');
+  } catch(e) {
+    showToast('Ошибка сохранения', 'err');
+  }
+}
+
+async function savePrices() {
+  const payload = buildFullPricesPayload();
   try {
     await apiPost('/api/prices', payload);
     Object.assign(config, payload);

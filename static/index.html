@@ -172,8 +172,8 @@ section{position:relative;z-index:1;scroll-margin-top:100px}
 .cal-dow{display:grid;grid-template-columns:repeat(7,1fr);margin-bottom:12px}
 .cal-dow span{text-align:center;font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--text-muted);padding:8px 0}
 .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
-.cday{aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;font-size:13px;color:var(--text-secondary);cursor:pointer;position:relative;transition:all .2s;border:1px solid transparent;font-weight:400}
-.cday-price{font-size:8px;letter-spacing:.02em;color:var(--text-muted);line-height:1}
+.cday{aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:16px;color:var(--text-secondary);cursor:pointer;position:relative;transition:all .2s;border:1px solid transparent;font-weight:400}
+.cday-price{font-size:11px;letter-spacing:.02em;color:var(--text-muted);line-height:1}
 .cday:hover:not(.disabled):not(.booked){background:rgba(201,168,76,.1);border-color:rgba(201,168,76,.3);color:var(--gold)}
 .cday:hover:not(.disabled):not(.booked) .cday-price{color:var(--gold)}
 .cday.today{color:var(--gold);font-weight:500}
@@ -301,6 +301,8 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
   .price-cards{grid-template-columns:1fr}
   .booking-wrap{grid-template-columns:1fr}
   .sec-inner,.cal-panel,.form-panel{padding:32px 24px}
+  .cday{font-size:19px}
+  .cday-price{font-size:13px}
   footer{grid-template-columns:1fr;text-align:center}
   .footer-r{text-align:center}
 }
@@ -890,7 +892,7 @@ const API = {
 // ============================================================
 // STATE
 // ============================================================
-let CONFIG = { weekday:3500, weekend:4500, cleaning:1500, includedGuests:1, extraGuestPrice:100, stayDiscounts:[], doorCode:'0000', sbpLink:'', sbpPhone:'', qrUploaded:false, bookedDates:[], checkoutDates:[] };
+let CONFIG = { weekday:3500, weekend:4500, cleaning:1500, includedGuests:1, extraGuestPrice:100, stayDiscounts:[], holidayPeriods:[], doorCode:'0000', sbpLink:'', sbpPhone:'', qrUploaded:false, bookedDates:[], checkoutDates:[] };
 let selStart=null, selEnd=null, hoverDate=null;
 const _now=new Date(); let curYear=_now.getFullYear(), curMonth=_now.getMonth();
 let bookingData={};
@@ -921,6 +923,7 @@ async function init() {
     CONFIG.includedGuests   = p.included_guests   ?? 1;
     CONFIG.extraGuestPrice  = p.extra_guest_price ?? 0;
     CONFIG.stayDiscounts    = Array.isArray(p.stay_discounts) ? p.stay_discounts : [];
+    CONFIG.holidayPeriods   = Array.isArray(p.holiday_periods) ? p.holiday_periods.filter(h => h.start && h.end && h.price) : [];
     document.getElementById('priceWeekday').textContent  = CONFIG.weekday.toLocaleString('ru');
     document.getElementById('priceWeekend').textContent  = CONFIG.weekend.toLocaleString('ru');
     document.getElementById('priceCleaning').textContent = CONFIG.cleaning.toLocaleString('ru');
@@ -1331,8 +1334,22 @@ function ds(y,m,d){return`${y}-${String(m+1).padStart(2,'0')}-${String(d).padSta
 function isBooked(s){return CONFIG.bookedDates.includes(s)}
 // ── CALENDAR HELPERS ──────────────────────────────
 function isWE(y,m,d){
+  // Выходная цена — только для ночей "пятница→суббота" и "суббота→воскресенье".
+  // Ночь "воскресенье→понедельник" считается уже буднями.
   const dow = new Date(y,m,d).getDay();
-  return dow===0||dow===5||dow===6;
+  return dow===5||dow===6;
+}
+// Праздничный период (если задан) перекрывает обычную цену будни/выходные
+function holidayPriceFor(dateStr){
+  for(const h of (CONFIG.holidayPeriods || [])){
+    if(dateStr >= h.start && dateStr <= h.end) return parseInt(h.price) || null;
+  }
+  return null;
+}
+function priceForDate(y,m,d){
+  const holiday = holidayPriceFor(ds(y,m,d));
+  if(holiday) return holiday;
+  return isWE(y,m,d) ? CONFIG.weekend : CONFIG.weekday;
 }
 
 function isPast(dateStr){
@@ -1382,7 +1399,7 @@ function renderCal(){
     if(past || booked){
       el.textContent = d;
     } else {
-      const price = isWE(curYear, curMonth, d) ? CONFIG.weekend : CONFIG.weekday;
+      const price = priceForDate(curYear, curMonth, d);
       el.innerHTML = `<span class="cday-num">${d}</span><span class="cday-price">${price.toLocaleString('ru')}</span>`;
     }
 
@@ -1509,8 +1526,7 @@ function updatePanel(){
   for(let i = 0; i < nights; i++){
     const d = new Date(s);
     d.setDate(d.getDate() + i);
-    cost += isWE(d.getFullYear(), d.getMonth(), d.getDate())
-      ? CONFIG.weekend : CONFIG.weekday;
+    cost += priceForDate(d.getFullYear(), d.getMonth(), d.getDate());
   }
   const cleaningChecked = document.getElementById('pbCleanCheckbox')?.checked || false;
   const cleaningCost = cleaningChecked ? CONFIG.cleaning : 0;
