@@ -51,7 +51,7 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
 /* STATS ROW */
 .stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--black-border);margin-bottom:32px}
 .stay-discount-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
-.holiday-row{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:12px;align-items:end;margin-bottom:14px}
+.holiday-row{display:grid;grid-template-columns:1.1fr 1.1fr .8fr auto;gap:10px;align-items:end;margin-bottom:14px}
 @media(max-width:900px){
   .stay-discount-grid{grid-template-columns:repeat(2,1fr)}
   .holiday-row{grid-template-columns:1fr 1fr;row-gap:8px}
@@ -1655,10 +1655,10 @@ function renderHolidayPeriodsEditor() {
         <input type="date" class="pib-input holiday-end" data-idx="${i}" value="${h.end || ''}">
       </div>
       <div class="price-input-box">
-        <div class="pib-label">Цена за ночь, ₽</div>
+        <div class="pib-label" style="white-space:nowrap">Цена, ₽</div>
         <input type="number" class="pib-input holiday-price" data-idx="${i}" value="${h.price || ''}" placeholder="7600" min="0">
       </div>
-      <button class="btn btn-ghost btn-sm" onclick="removeHolidayPeriod(${i})" title="Удалить период" style="margin-bottom:2px">✕</button>
+      <button class="btn btn-ghost btn-sm" onclick="removeHolidayPeriod(${i})" title="Удалить период" style="margin-bottom:2px;padding:6px 12px">✕</button>
     </div>
     <input type="text" class="info-input holiday-label" data-idx="${i}" value="${h.label || ''}"
            placeholder="Название периода (например: Новогодние каникулы) — необязательно"
