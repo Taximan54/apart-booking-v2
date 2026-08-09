@@ -1670,11 +1670,22 @@ function addHolidayPeriod() {
   renderHolidayPeriodsEditor();
 }
 
-function removeHolidayPeriod(idx) {
+async function removeHolidayPeriod(idx) {
   collectHolidayPeriodsFromForm();
   config.holiday_periods.splice(idx, 1);
   if (config.holiday_periods.length === 0) config.holiday_periods.push({start:'',end:'',price:'',label:''});
   renderHolidayPeriodsEditor();
+
+  // Сразу сохраняем на сервере — иначе визуально период исчез, а цены
+  // на сайте остаются старыми, пока не нажать "Сохранить" вручную
+  const payload = buildFullPricesPayload();
+  try {
+    await apiPost('/api/prices', payload);
+    Object.assign(config, payload);
+    showToast('Период удалён и сохранён', 'gold');
+  } catch(e) {
+    showToast('Период удалён локально, но не сохранился на сервере: ' + e.message, 'err');
+  }
 }
 
 function collectHolidayPeriodsFromForm() {
