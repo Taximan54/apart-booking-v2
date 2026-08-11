@@ -1481,6 +1481,8 @@ def get_db():
         "signed_at":  "TEXT DEFAULT ''",
         "sign_ip":    "TEXT DEFAULT ''",
         "deposit":    "INTEGER DEFAULT 0",
+        "deposit_returned":    "INTEGER DEFAULT 0",
+        "deposit_returned_at": "TEXT DEFAULT ''",
     }.items():
         try:
             conn.execute("ALTER TABLE bookings ADD COLUMN " + col + " " + col_type)
@@ -1752,6 +1754,22 @@ async def get_site_settings():
 async def set_site_settings(s: SiteSettings, _: bool = Depends(require_admin)):
     with open(SETTINGS_FILE, "w", encoding="utf-8") as f:
         json.dump(s.dict(), f, ensure_ascii=False)
+    return {"ok": True}
+
+@app.post("/api/admin/bookings/{ref}/deposit-returned")
+async def mark_deposit_returned(ref: str, _: bool = Depends(require_admin)):
+    """Отмечает депозит по брони как возвращённый гостю (используется для дашборд-алертов)."""
+    conn = get_db()
+    row = conn.execute("SELECT id FROM bookings WHERE username = ?", (ref,)).fetchone()
+    if not row:
+        conn.close()
+        raise HTTPException(status_code=404, detail="Бронь не найдена")
+    conn.execute(
+        "UPDATE bookings SET deposit_returned=1, deposit_returned_at=? WHERE username=?",
+        (now_nsk().strftime("%Y-%m-%d %H:%M:%S"), ref)
+    )
+    conn.commit()
+    conn.close()
     return {"ok": True}
 
 @app.post("/api/admin/backup-now")

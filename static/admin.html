@@ -325,6 +325,16 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
         <div class="stat-card"><div class="stat-card-icon">⊛</div><div class="stat-card-label">Занятость</div><div class="stat-card-val" id="sOccupancy">—</div><div class="stat-card-sub">этот месяц</div></div>
       </div>
 
+      <div class="card" id="alertsCard" style="margin-bottom:24px;display:none">
+        <div class="card-header">
+          <span class="card-title">⚠️ Требует внимания</span>
+          <span id="alertsCount" style="font-size:11px;color:var(--text-muted)"></span>
+        </div>
+        <div class="card-body">
+          <div id="alertsList" style="display:flex;flex-direction:column;gap:8px"></div>
+        </div>
+      </div>
+
       <div class="card" style="margin-bottom:24px">
         <div class="card-header">
           <span class="card-title">Занятость по датам</span>
@@ -1504,6 +1514,24 @@ async function initAdmin() {
   // Calendar nav
   document.getElementById('adminPrevM').onclick = () => { adminCalMonth--; if(adminCalMonth<0){adminCalMonth=11;adminCalYear--;} renderAdminCal(); };
   document.getElementById('adminNextM').onclick = () => { adminCalMonth++; if(adminCalMonth>11){adminCalMonth=0;adminCalYear++;} renderAdminCal(); };
+
+  startAutoRefresh();
+}
+
+// Автообновление броней/дашборда в фоне — чтобы новые брони с сайта появлялись
+// без ручного обновления страницы. Не трогает открытые модалки/формы, просто
+// обновляет список и статистику. Пропускает тик, если вкладка неактивна.
+let _autoRefreshTimer = null;
+function startAutoRefresh() {
+  if (_autoRefreshTimer) return;
+  _autoRefreshTimer = setInterval(async () => {
+    if (document.hidden) return;
+    try {
+      await loadBookings();
+      updateDashboard();
+      if (typeof renderAdminCal === 'function') renderAdminCal();
+    } catch(e) { /* тихо игнорируем, не мешаем работе админа */ }
+  }, 25000);
 }
 
 async function checkApi() {
@@ -1606,6 +1634,89 @@ async function loadBookings() {
     allBookings = [...DEMO_BOOKINGS];
   }
   renderBookingsTable(allBookings);
+  renderAlerts();
+}
+
+// АЛЕРТЫ ДАШБОРДА — то, что требует ручного внимания
+function renderAlerts() {
+  const card = document.getElementById('alertsCard');
+  const list = document.getElementById('alertsList');
+  const countEl = document.getElementById('alertsCount');
+  if (!card || !list) return;
+
+  const now = new Date();
+  const todayStr = now.toISOString().slice(0, 10);
+  const tomorrow = new Date(now); tomorrow.setDate(tomorrow.getDate() + 1);
+  const tomorrowStr = tomorrow.toISOString().slice(0, 10);
+  const msDay = 24 * 60 * 60 * 1000;
+
+  const alerts = [];
+
+  (allBookings || []).forEach(b => {
+    if (b.status === 'cancelled') return;
+
+    // 1. Оплата не подтверждена больше 2 суток
+    if (['waiting_payment', 'payment_pending'].includes(b.status) && b.created_at) {
+      const created = new Date(b.created_at);
+      if (!isNaN(created) && (now - created) > 2 * msDay) {
+        const daysAgo = Math.floor((now - created) / msDay);
+        alerts.push({
+          type: 'payment', booking: b, severity: 'high',
+          text: `Оплата не подтверждена уже ${daysAgo} ${daysAgo === 1 ? 'день' : 'дня'} — бронь ${b.username || b.id}`,
+        });
+      }
+    }
+
+    // 2. Заезд завтра, а фото паспорта нет
+    if (b.check_in === tomorrowStr && !b.has_passport_photo && b.status !== 'waiting_payment') {
+      alerts.push({
+        type: 'passport', booking: b, severity: 'high',
+        text: `Заезд завтра, но нет фото паспорта — бронь ${b.username || b.id} (${b.guest_name || 'без имени'})`,
+      });
+    }
+
+    // 3. Депозит не возвращён спустя неделю после выезда
+    if (['confirmed', 'fully_paid'].includes(b.status) && b.check_out && !b.deposit_returned && (b.deposit || 0) > 0) {
+      const checkout = new Date(b.check_out);
+      if (!isNaN(checkout) && (now - checkout) > 7 * msDay) {
+        const daysAgo = Math.floor((now - checkout) / msDay);
+        alerts.push({
+          type: 'deposit', booking: b, severity: 'medium',
+          text: `Депозит не возвращён спустя ${daysAgo} дн. после выезда — бронь ${b.username || b.id}`,
+        });
+      }
+    }
+  });
+
+  if (alerts.length === 0) {
+    card.style.display = 'none';
+    return;
+  }
+  card.style.display = 'block';
+  countEl.textContent = `${alerts.length}`;
+  alerts.sort((a, b) => (a.severity === 'high' ? 0 : 1) - (b.severity === 'high' ? 0 : 1));
+
+  list.innerHTML = alerts.map(a => `
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 14px;
+                background:${a.severity === 'high' ? 'rgba(192,57,43,.08)' : 'rgba(201,168,76,.06)'};
+                border-left:2px solid ${a.severity === 'high' ? '#c0392b' : 'var(--gold)'};cursor:pointer"
+         onclick="openBookingModal(${encodeBooking(a.booking)})">
+      <span style="font-size:12px;color:var(--text-secondary)">${a.text}</span>
+      ${a.type === 'deposit'
+        ? `<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();markDepositReturned('${a.booking.username || a.booking.id}')">Депозит возвращён</button>`
+        : `<span style="font-size:11px;color:var(--text-muted);white-space:nowrap">›</span>`}
+    </div>
+  `).join('');
+}
+
+async function markDepositReturned(ref) {
+  try {
+    await apiPost(`/api/admin/bookings/${ref}/deposit-returned`, {});
+    showToast('Депозит отмечен как возвращённый', 'gold');
+    await loadBookings();
+  } catch(e) {
+    showToast('Ошибка: ' + e.message, 'err');
+  }
 }
 
 // PRICES
