@@ -1646,43 +1646,46 @@ function renderAlerts() {
 
   const now = new Date();
   const todayStr = now.toISOString().slice(0, 10);
-  const tomorrow = new Date(now); tomorrow.setDate(tomorrow.getDate() + 1);
-  const tomorrowStr = tomorrow.toISOString().slice(0, 10);
-  const msDay = 24 * 60 * 60 * 1000;
+  const msHour = 60 * 60 * 1000;
+  const msDay = 24 * msHour;
 
   const alerts = [];
 
   (allBookings || []).forEach(b => {
     if (b.status === 'cancelled') return;
 
-    // 1. Оплата не подтверждена больше 2 суток
+    // 1. Оплата не подтверждена больше 2 часов
     if (['waiting_payment', 'payment_pending'].includes(b.status) && b.created_at) {
       const created = new Date(b.created_at);
-      if (!isNaN(created) && (now - created) > 2 * msDay) {
-        const daysAgo = Math.floor((now - created) / msDay);
+      if (!isNaN(created) && (now - created) > 2 * msHour) {
+        const hoursAgo = Math.floor((now - created) / msHour);
         alerts.push({
           type: 'payment', booking: b, severity: 'high',
-          text: `Оплата не подтверждена уже ${daysAgo} ${daysAgo === 1 ? 'день' : 'дня'} — бронь ${b.username || b.id}`,
+          text: `Оплата не подтверждена уже ${hoursAgo} ч — бронь ${b.username || b.id}`,
         });
       }
     }
 
-    // 2. Заезд завтра, а фото паспорта нет
-    if (b.check_in === tomorrowStr && !b.has_passport_photo && b.status !== 'waiting_payment') {
+    // 2. Нет фото паспорта — по любой предстоящей/идущей брони (не только заезд завтра).
+    // Защита от ложных срабатываний: не показываем, пока оплата ещё не подтверждена
+    // (b.status waiting_payment/payment_pending), и не показываем для уже завершившихся
+    // (check_out в прошлом) или отменённых/заблокированных дат.
+    const isBlockedEntry = b.source === 'admin_block' || b.status === 'blocked';
+    if (!isBlockedEntry && !['waiting_payment', 'payment_pending'].includes(b.status)
+        && !b.has_passport_photo && b.check_out && b.check_out >= todayStr) {
       alerts.push({
         type: 'passport', booking: b, severity: 'high',
-        text: `Заезд завтра, но нет фото паспорта — бронь ${b.username || b.id} (${b.guest_name || 'без имени'})`,
+        text: `Нет фото паспорта — бронь ${b.username || b.id} (${b.guest_name || 'без имени'}), заезд ${fmtDateRu(b.check_in)}`,
       });
     }
 
-    // 3. Депозит не возвращён спустя неделю после выезда
+    // 3. Депозит не возвращён — подсвечиваем сразу после выезда
     if (['confirmed', 'fully_paid'].includes(b.status) && b.check_out && !b.deposit_returned && (b.deposit || 0) > 0) {
-      const checkout = new Date(b.check_out);
-      if (!isNaN(checkout) && (now - checkout) > 7 * msDay) {
-        const daysAgo = Math.floor((now - checkout) / msDay);
+      if (b.check_out < todayStr) {
+        const daysAgo = Math.floor((now - new Date(b.check_out)) / msDay);
         alerts.push({
           type: 'deposit', booking: b, severity: 'medium',
-          text: `Депозит не возвращён спустя ${daysAgo} дн. после выезда — бронь ${b.username || b.id}`,
+          text: `Депозит не возвращён — выезд был ${daysAgo === 0 ? 'сегодня' : daysAgo + ' дн. назад'} — бронь ${b.username || b.id}`,
         });
       }
     }
