@@ -1016,6 +1016,27 @@ def email_contract_signed(booking):
         ]
     )
 
+    # Дублируем это же письмо на почту Городской Паузы (из Контактов) — для архива
+    landlord_email = LANDLORD_EMAIL
+    if os.path.exists(CONTACTS_FILE):
+        try:
+            with open(CONTACTS_FILE, "r", encoding="utf-8") as f:
+                saved_contacts = json.load(f)
+            landlord_email = (saved_contacts.get("email") or "").strip() or LANDLORD_EMAIL
+        except Exception:
+            pass
+    if landlord_email and landlord_email != guest_email:
+        try:
+            send_email(
+                landlord_email, f"[Копия] Договор подписан — {booking_ref}", html,
+                attachments=[
+                    {"filename": f"dogovor_{booking_ref}_podpisan.pdf", "filepath": contract_pdf},
+                    {"filename": f"soglasie_pd_{booking_ref}.pdf", "filepath": consent_pdf},
+                ]
+            )
+        except Exception as e:
+            print(f"Copy to landlord email failed: {e}")
+
 def email_manual_contract(booking, target_email):
     """
     Письмо с договором для броней с внешних площадок (Авито и т.п.) или
