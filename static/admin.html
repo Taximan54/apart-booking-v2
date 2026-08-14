@@ -1397,8 +1397,11 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
       <button class="btn btn-primary" id="btnConfirm" onclick="confirmBooking()">✓ Подтвердить</button>
       <button class="btn btn-primary" id="btnFullPay" onclick="fullPaymentBooking()" style="background:#2D6A4F;display:none">✓ Полная оплата получена</button>
       <button class="btn btn-outline" id="btnCopySignLink" onclick="copySignLinkForSelected()">🔗 Скопировать ссылку на подписание</button>
+      <button class="btn btn-outline" id="btnContractPdf" onclick="downloadSignedPdf('contract')" style="display:none">📄 Договор (PDF)</button>
+      <button class="btn btn-outline" id="btnConsentPdf" onclick="downloadSignedPdf('consent')" style="display:none">📄 Согласие на ПД (PDF)</button>
       <button class="btn btn-ghost" onclick="closeModal()">Закрыть</button>
       <button class="btn btn-danger" onclick="cancelBooking()">✕ Отменить</button>
+      <button class="btn btn-danger" onclick="deleteBookingConfirm()">🗑 Удалить</button>
     </div>
   </div>
 </div>
@@ -1596,6 +1599,24 @@ async function apiPost(path, data) {
       ...(ADMIN_TOKEN ? {'Authorization': 'Bearer ' + ADMIN_TOKEN} : {})
     },
     body:JSON.stringify(data),
+    signal: AbortSignal.timeout(4000)
+  });
+  if (r.status === 401) { forceRelogin(); throw new Error('401'); }
+  if (!r.ok) {
+    let message = String(r.status);
+    try {
+      const errBody = await r.json();
+      if (errBody && errBody.detail) message = errBody.detail;
+    } catch(e) {}
+    throw new Error(message);
+  }
+  return r.json();
+}
+
+async function apiDelete(path) {
+  const r = await fetch(`${API_BASE}${path}`, {
+    method:'DELETE',
+    headers: ADMIN_TOKEN ? {'Authorization': 'Bearer ' + ADMIN_TOKEN} : {},
     signal: AbortSignal.timeout(4000)
   });
   if (r.status === 401) { forceRelogin(); throw new Error('401'); }
@@ -2142,9 +2163,25 @@ function renderBookingsTable(list) {
       <td data-label="Сумма" style="color:var(--gold)">₽${(b.total_price||0).toLocaleString('ru')}</td>
       <td data-label="Оплата">${payBadge(b.payment_method)}</td>
       <td data-label="Статус">${statusBadge(b.status)}</td>
-      <td data-label=""><button class="btn btn-ghost btn-icon" onclick="event.stopPropagation();openBookingModal(${encodeBooking(b)})">›</button></td>
+      <td data-label="" style="white-space:nowrap">
+        <button class="btn btn-ghost btn-icon" onclick="event.stopPropagation();openBookingModal(${encodeBooking(b)})">›</button>
+        <button class="btn btn-ghost btn-icon" title="Удалить" onclick="event.stopPropagation();deleteBookingRow('${b.username || b.id}','${(b.guest_name||'').replace(/'/g,"\\'")}')">🗑</button>
+      </td>
     </tr>
   `).join('');
+}
+
+async function deleteBookingRow(ref, guestName) {
+  if (!confirm(`Удалить бронь «${guestName}» (${ref}) безвозвратно?\n\nБудут удалены сама бронь, договор, фото паспорта — восстановить будет нельзя.`)) return;
+  try {
+    await apiDelete(`/api/bookings/${ref}`);
+    allBookings = allBookings.filter(x => (x.username || x.id) != ref);
+    filterBookings(currentFilter);
+    updateDashboard();
+    showToast('Бронь удалена', 'gold');
+  } catch(e) {
+    showToast('Ошибка удаления: ' + e.message, 'err');
+  }
 }
 
 function encodeBooking(b) {
@@ -2190,7 +2227,47 @@ function openBookingModal(encoded) {
   btnConfirm.style.display = (s === 'waiting_payment' || s === 'payment_pending') ? '' : 'none';
   btnFullPay.style.display = (s === 'confirmed') ? '' : 'none';
 
+  // Кнопки подписанных документов — только если договор реально подписан
+  const signed = !!b.signed_at;
+  document.getElementById('btnContractPdf').style.display = signed ? '' : 'none';
+  document.getElementById('btnConsentPdf').style.display = signed ? '' : 'none';
+
   document.getElementById('bookingModal').classList.add('open');
+}
+
+async function downloadSignedPdf(docType) {
+  if (!selectedBookingId) return;
+  const b = allBookings.find(x => x.id == selectedBookingId || x.username == selectedBookingId);
+  const ref = b ? (b.username || b.id) : selectedBookingId;
+  try {
+    const resp = await fetch(`${API_BASE}/api/admin/contract-pdf/${ref}/${docType}`, {
+      headers: ADMIN_TOKEN ? {'Authorization': 'Bearer ' + ADMIN_TOKEN} : {}
+    });
+    if (!resp.ok) throw new Error('Документ не найден');
+    const blob = await resp.blob();
+    const url = URL.createObjectURL(blob);
+    window.open(url, '_blank');
+  } catch(e) {
+    showToast('Не удалось открыть документ: ' + e.message, 'err');
+  }
+}
+
+async function deleteBookingConfirm() {
+  if (!selectedBookingId) return;
+  const b = allBookings.find(x => x.id == selectedBookingId || x.username == selectedBookingId);
+  const ref = b ? (b.username || b.id) : selectedBookingId;
+  const name = b ? b.guest_name : ref;
+  if (!confirm(`Удалить бронь «${name}» (${ref}) безвозвратно?\n\nБудут удалены сама бронь, договор, фото паспорта — восстановить будет нельзя.`)) return;
+  try {
+    await apiDelete(`/api/bookings/${ref}`);
+    allBookings = allBookings.filter(x => x !== b);
+    closeModal();
+    filterBookings(currentFilter);
+    updateDashboard();
+    showToast('Бронь удалена', 'gold');
+  } catch(e) {
+    showToast('Ошибка удаления: ' + e.message, 'err');
+  }
 }
 
 async function viewPassportPhoto(ref, slot) {
@@ -2689,6 +2766,8 @@ async function downloadContract(ref, guestName) {
 }
 
 // CONTRACTS ARCHIVE
+const PASSPORT_SLOT_LABELS = {main: '📄 Паспорт (главная)', reg1: '🏠 Паспорт (прописка)'};
+
 async function loadContractsArchive() {
   const container = document.getElementById('contractsArchiveContent');
   container.innerHTML = '<div style="color:var(--text-muted);padding:20px;text-align:center">Загрузка...</div>';
@@ -2701,7 +2780,7 @@ async function loadContractsArchive() {
     container.innerHTML = `
       <table class="tbl">
         <thead><tr>
-          <th>Бронь</th><th>Гость</th><th>Даты</th><th>Сумма</th><th>Создан</th><th></th>
+          <th>Бронь</th><th>Гость</th><th>Даты</th><th>Сумма</th><th>Создан</th><th>Документы</th>
         </tr></thead>
         <tbody>
           ${contracts.map(c => `
@@ -2714,8 +2793,12 @@ async function loadContractsArchive() {
               <td data-label="Даты" style="font-size:12px">${c.check_in || '—'} → ${c.check_out || '—'}</td>
               <td data-label="Сумма" style="font-size:12px">${c.total_price ? '₽' + Number(c.total_price).toLocaleString('ru') : '—'}</td>
               <td data-label="Создан" style="font-size:11px;color:var(--text-muted)">${c.created}</td>
-              <td data-label="">
-                <button class="btn btn-ghost btn-sm" onclick="downloadContract('${c.ref}', '${c.guest_name || c.ref}')">Скачать</button>
+              <td data-label="Документы" style="display:flex;flex-wrap:wrap;gap:6px">
+                ${c.has_contract_pdf ? `<button class="btn btn-outline btn-sm" onclick="downloadArchivePdf('${c.ref}','contract')">📄 Договор (PDF)</button>` : ''}
+                ${c.has_consent_pdf ? `<button class="btn btn-outline btn-sm" onclick="downloadArchivePdf('${c.ref}','consent')">📄 Согласие (PDF)</button>` : ''}
+                ${!c.has_contract_pdf && c.has_draft ? `<button class="btn btn-ghost btn-sm" onclick="downloadContract('${c.ref}', '${(c.guest_name || c.ref).replace(/'/g,"\\'")}')">Черновик (.txt)</button>` : ''}
+                ${(c.passport_photo_slots||[]).map(slot => `<button class="btn btn-ghost btn-sm" onclick="viewArchivePassportPhoto('${c.passport_ref}','${slot}')">${PASSPORT_SLOT_LABELS[slot]}</button>`).join('')}
+                ${!c.has_contract_pdf && !c.has_draft && !c.has_passport_photo ? '—' : ''}
               </td>
             </tr>
           `).join('')}
@@ -2724,6 +2807,34 @@ async function loadContractsArchive() {
     `;
   } catch(e) {
     container.innerHTML = '<div style="color:var(--text-muted);padding:20px">Ошибка загрузки: ' + e.message + '</div>';
+  }
+}
+
+async function downloadArchivePdf(ref, docType) {
+  try {
+    const resp = await fetch(`${API_BASE}/api/admin/contract-pdf/${ref}/${docType}`, {
+      headers: ADMIN_TOKEN ? {'Authorization': 'Bearer ' + ADMIN_TOKEN} : {}
+    });
+    if (!resp.ok) throw new Error('Документ не найден');
+    const blob = await resp.blob();
+    const url = URL.createObjectURL(blob);
+    window.open(url, '_blank');
+  } catch(e) {
+    showToast('Не удалось открыть документ: ' + e.message, 'err');
+  }
+}
+
+async function viewArchivePassportPhoto(ref, slot) {
+  try {
+    const resp = await fetch(`${API_BASE}/api/admin/passport-photo/${ref}/${slot}`, {
+      headers: ADMIN_TOKEN ? {'Authorization': 'Bearer ' + ADMIN_TOKEN} : {}
+    });
+    if(!resp.ok) throw new Error('not found');
+    const blob = await resp.blob();
+    const url = URL.createObjectURL(blob);
+    window.open(url, '_blank');
+  } catch(e) {
+    showToast('Фото не найдено', 'err');
   }
 }
 

@@ -2913,6 +2913,59 @@ async def cancel_booking_api(booking_ref: str, _: bool = Depends(require_admin))
     conn.close()
     return {"ok": True}
 
+@app.delete("/api/bookings/{booking_ref}")
+async def delete_booking_api(booking_ref: str, _: bool = Depends(require_admin)):
+    """
+    Полностью и безвозвратно удаляет бронь: саму запись в БД, черновик
+    договора (.txt), подписанные PDF (договор + согласие на ПД), фото
+    паспорта и запись о них в PASSPORT_MAP_FILE. Используется в основном
+    для очистки тестовых броней. Подтверждение запрашивается на клиенте
+    перед вызовом — это необратимое действие.
+    """
+    ref_alt = booking_ref.replace("GP-", "\u0413\u041f-")
+    conn = get_db()
+    row = conn.execute(
+        "SELECT * FROM bookings WHERE username=? OR username=? OR CAST(id AS TEXT)=? LIMIT 1",
+        (booking_ref, ref_alt, booking_ref)
+    ).fetchone()
+    if not row:
+        conn.close()
+        raise HTTPException(status_code=404, detail="Booking not found")
+    ref = row["username"] or str(row["id"])
+    conn.execute("DELETE FROM bookings WHERE id=?", (row["id"],))
+    conn.commit()
+    conn.close()
+
+    # Удаляем файлы договора (черновик + подписанные PDF), для обоих
+    # вариантов префикса (GP- / ГП- — старые брони)
+    for candidate in {ref, ref.replace("GP-", "\u0413\u041f-")}:
+        for suffix in (".txt", "_podpisan.pdf", "_soglasie_pd.pdf"):
+            path = os.path.join(CONTRACTS_DIR, candidate + suffix)
+            if os.path.exists(path):
+                try:
+                    os.remove(path)
+                except Exception as e:
+                    print(f"Не удалось удалить файл договора {path}: {e}")
+
+    # Удаляем фото паспорта и запись из карты
+    pm = load_passport_map()
+    for candidate in {ref, ref.replace("GP-", "\u0413\u041f-")}:
+        entry = pm.get(candidate)
+        if isinstance(entry, dict):
+            for slot_file in entry.values():
+                if not slot_file:
+                    continue
+                fpath = os.path.join(PASSPORT_DIR, slot_file)
+                if os.path.exists(fpath):
+                    try:
+                        os.remove(fpath)
+                    except Exception as e:
+                        print(f"Не удалось удалить фото паспорта {fpath}: {e}")
+            pm.pop(candidate, None)
+    save_passport_map(pm)
+
+    return {"ok": True}
+
 # =====================================================
 # API — PAYMENT NOTIFY (гость нажал "Я оплатил")
 # =====================================================
@@ -2970,29 +3023,61 @@ async def payment_notify(p: PaymentNotify):
 
 @app.get("/api/contracts")
 async def list_contracts(_: bool = Depends(require_admin)):
-    """Список всех сохранённых договоров."""
+    """
+    Список всех броней с сохранёнными документами. Собирается по всем
+    типам файлов в CONTRACTS_DIR (черновик .txt, подписанный договор
+    _podpisan.pdf, согласие на ПД _soglasie_pd.pdf), а не только по .txt —
+    иначе подписанные документы для броней без .txt-черновика (например,
+    старых) не попадали бы в архив. Также отмечает наличие фото паспорта.
+    """
     os.makedirs(CONTRACTS_DIR, exist_ok=True)
-    files = sorted(
-        [f for f in os.listdir(CONTRACTS_DIR) if f.endswith(".txt")],
-        reverse=True
-    )
-    # Дополняем информацией из БД
+    all_files = os.listdir(CONTRACTS_DIR)
+
+    def base_ref(fname):
+        for suffix in ("_podpisan.pdf", "_soglasie_pd.pdf", ".txt"):
+            if fname.endswith(suffix):
+                return fname[: -len(suffix)]
+        return None
+
+    refs_seen = {}
+    for f in all_files:
+        ref = base_ref(f)
+        if ref is None:
+            continue
+        # нормализуем ГП- к GP- как основному ключу
+        norm_ref = ref.replace("\u0413\u041f-", "GP-")
+        refs_seen.setdefault(norm_ref, {"txt": False, "contract_pdf": False, "consent_pdf": False, "mtime": 0})
+        if f.endswith(".txt"):
+            refs_seen[norm_ref]["txt"] = True
+        elif f.endswith("_podpisan.pdf"):
+            refs_seen[norm_ref]["contract_pdf"] = True
+        elif f.endswith("_soglasie_pd.pdf"):
+            refs_seen[norm_ref]["consent_pdf"] = True
+        stat = os.stat(os.path.join(CONTRACTS_DIR, f))
+        refs_seen[norm_ref]["mtime"] = max(refs_seen[norm_ref]["mtime"], stat.st_mtime)
+
+    pm = load_passport_map()
     conn = get_db()
     result = []
-    for f in files:
-        ref = f.replace(".txt", "")
-        ref_alt = ref.replace("GP-", "\u0413\u041f-")  # GP- → ГП- для старых броней
+    for ref, flags in refs_seen.items():
+        ref_alt = ref.replace("GP-", "\u0413\u041f-")
         row = conn.execute(
             "SELECT guest_name, guest_email, check_in, check_out, total_price, status "
             "FROM bookings WHERE username=? OR username=? OR CAST(id AS TEXT)=? LIMIT 1",
             (ref, ref_alt, ref)
         ).fetchone()
-        stat = os.stat(os.path.join(CONTRACTS_DIR, f))
+        pm_key = ref if ref in pm else (ref_alt if ref_alt in pm else ref)
+        pm_entry = pm.get(pm_key)
+        passport_slots = [s for s in ("main", "reg1") if isinstance(pm_entry, dict) and pm_entry.get(s)]
         entry = {
             "ref": ref,
-            "filename": f,
-            "size": stat.st_size,
-            "created": datetime.fromtimestamp(stat.st_mtime, tz=now_nsk().tzinfo).strftime("%d.%m.%Y %H:%M"),
+            "passport_ref": pm_key,
+            "has_draft": flags["txt"],
+            "has_contract_pdf": flags["contract_pdf"],
+            "has_consent_pdf": flags["consent_pdf"],
+            "has_passport_photo": bool(passport_slots),
+            "passport_photo_slots": passport_slots,
+            "created": datetime.fromtimestamp(flags["mtime"], tz=now_nsk().tzinfo).strftime("%d.%m.%Y %H:%M"),
         }
         if row:
             entry.update({
@@ -3005,6 +3090,7 @@ async def list_contracts(_: bool = Depends(require_admin)):
             })
         result.append(entry)
     conn.close()
+    result.sort(key=lambda e: e["created"], reverse=True)
     return result
 
 @app.get("/api/contracts/{booking_ref}")
@@ -3025,6 +3111,25 @@ async def get_contract(booking_ref: str, _: bool = Depends(require_admin)):
     if not row:
         raise HTTPException(status_code=404, detail="Booking not found")
     return PlainTextResponse(generate_contract(dict(row)))
+
+@app.get("/api/admin/contract-pdf/{booking_ref}/{doc_type}")
+async def get_signed_contract_pdf(booking_ref: str, doc_type: str, _: bool = Depends(require_admin)):
+    """
+    Отдаёт подписанный PDF из архива: doc_type = 'contract' (договор +
+    приложения + фото паспорта с водяным знаком) или 'consent' (согласие
+    на обработку ПД). Файлы создаются в момент подписания гостем —
+    до этого момента отдаёт 404.
+    """
+    suffix = {"contract": "_podpisan.pdf", "consent": "_soglasie_pd.pdf"}.get(doc_type)
+    if not suffix:
+        raise HTTPException(status_code=400, detail="Неверный doc_type — ожидается 'contract' или 'consent'")
+    ref_alt = booking_ref.replace("GP-", "\u0413\u041f-")
+    for candidate in (booking_ref, ref_alt):
+        path = os.path.join(CONTRACTS_DIR, candidate + suffix)
+        if os.path.exists(path):
+            filename = ("dogovor_podpisan_" if doc_type == "contract" else "soglasie_pd_") + booking_ref + ".pdf"
+            return FileResponse(path, media_type="application/pdf", filename=filename)
+    raise HTTPException(status_code=404, detail="Подписанный документ не найден — договор ещё не подписан")
 
 # =====================================================
 # API — ПОДПИСАНИЕ ДОГОВОРА (ПЭП, публичные эндпоинты по токену)
