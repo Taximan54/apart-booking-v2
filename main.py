@@ -360,6 +360,7 @@ DISCOUNTS_FILE   = f"{DATA_DIR}/discounts.json"
 PHOTOS_DIR       = f"{DATA_DIR}/photos"
 PHOTOS_ORDER_FILE = f"{DATA_DIR}/photos_order.json"
 CONTRACTS_DIR    = f"{DATA_DIR}/contracts"
+CONTRACT_PREVIEW_DIR = f"{DATA_DIR}/contract_preview"  # временный PDF-предпросмотр шаблона, в архив не попадает
 AUTH_FILE        = f"{DATA_DIR}/admin_auth.json"
 PASSPORT_DIR         = f"{DATA_DIR}/passports"           # ЗАЩИЩЁННАЯ папка — НЕ должна раздаваться nginx как статика!
 PASSPORT_MAP_FILE    = f"{DATA_DIR}/passport_photos.json"  # {booking_ref: {"main":.., "reg1":..}}
@@ -508,11 +509,19 @@ def load_contract_template():
 
 def fill_contract(template, data):
     for key, value in data.items():
-        template = template.replace("{{" + key + "}}", str(value))
+        placeholder = "{{" + key + "}}"
+        if placeholder in template:
+            # Подставленное значение оборачиваем спец-маркерами (не **, а
+            # непечатаемые символы) — при рендере в PDF это автоматически
+            # станет жирным текстом. Отдельные от ** маркеры нужны, чтобы не
+            # ломаться, когда пользователь вручную выделяет жирным целую
+            # строку, ВНУТРИ которой уже есть подставленный плейсхолдер —
+            # см. _render_inline_bold().
+            template = template.replace(placeholder, f"{_AUTO_BOLD_OPEN}{value}{_AUTO_BOLD_CLOSE}")
     return template
 
-def generate_contract(booking):
-    """Генерирует текст договора из шаблона и данных брони."""
+def _contract_placeholders(booking):
+    """Собирает словарь плейсхолдеров для подстановки в шаблон договора/согласия по данным брони."""
     today        = now_nsk().strftime("%d.%m.%Y")
     checkin_fmt  = datetime.strptime(booking["check_in"],  "%Y-%m-%d").strftime("%d.%m.%Y")
     checkout_fmt = datetime.strptime(booking["check_out"], "%Y-%m-%d").strftime("%d.%m.%Y")
@@ -524,11 +533,7 @@ def generate_contract(booking):
     pre_discount_total = round(total / (1 - discount_pct / 100)) if discount_pct else total
     per_night    = round(pre_discount_total / nights) if nights else pre_discount_total
 
-    template = load_contract_template()
-    if not template:
-        return "Shablon dogovora ne nayden."
-
-    return fill_contract(template, {
+    return {
         "ДАТА_ДОГОВОРА":  today,
         "АРЕНДОДАТЕЛЬ":   "Городская Пауза",
         "ФИО":            booking.get("guest_name", ""),
@@ -557,7 +562,14 @@ def generate_contract(booking):
         "SUMMA":          str(total),
         "DEPOZIT":        "6000",
         "NOMER_BRONI":    str(booking.get("username") or booking.get("id", "")),
-    })
+    }
+
+def generate_contract(booking):
+    """Генерирует текст договора из шаблона и данных брони."""
+    template = load_contract_template()
+    if not template:
+        return "Shablon dogovora ne nayden."
+    return fill_contract(template, _contract_placeholders(booking))
 
 def save_contract(booking_ref, contract_text):
     """Сохраняет договор в файл (.txt — для архива в админке)."""
@@ -570,22 +582,38 @@ _CYRILLIC_FONT_NAME = None
 
 def _register_cyrillic_font():
     """
-    Регистрирует шрифт с поддержкой кириллицы для reportlab.
-    Стандартные встроенные шрифты reportlab (Helvetica и т.п.) кириллицу не поддерживают.
+    Регистрирует шрифт с поддержкой кириллицы для reportlab — обычное И
+    жирное начертание, и связывает их в одно "семейство" через
+    registerFontFamily(). Это отдельный обязательный шаг: без него тег
+    <b>...</b> внутри Paragraph молча игнорируется и жирный текст в PDF
+    не появляется, даже если сам обычный шрифт зарегистрирован нормально.
     """
     global _CYRILLIC_FONT_NAME
     if _CYRILLIC_FONT_NAME:
         return _CYRILLIC_FONT_NAME
     candidates = [
-        ("DejaVuSans", "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"),
-        ("Liberation", "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf"),
-        ("Noto", "/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf"),
-        ("Arial", "/usr/share/fonts/truetype/msttcorefonts/Arial.ttf"),
+        ("DejaVuSans", "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+                        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"),
+        ("Liberation", "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+                        "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf"),
+        ("Noto", "/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf",
+                 "/usr/share/fonts/truetype/noto/NotoSans-Bold.ttf"),
+        ("Arial", "/usr/share/fonts/truetype/msttcorefonts/Arial.ttf",
+                  "/usr/share/fonts/truetype/msttcorefonts/Arial_Bold.ttf"),
     ]
-    for name, path in candidates:
+    for name, path, bold_path in candidates:
         if os.path.exists(path):
             try:
                 pdfmetrics.registerFont(TTFont(name, path))
+                bold_name = name + "-Bold"
+                if os.path.exists(bold_path):
+                    pdfmetrics.registerFont(TTFont(bold_name, bold_path))
+                else:
+                    # Жирного файла нет — регистрируем обычный повторно под
+                    # именем "-Bold", чтобы <b> хотя бы не ломал рендер
+                    # (сам текст не потеряется, просто не будет визуально жирным)
+                    pdfmetrics.registerFont(TTFont(bold_name, path))
+                pdfmetrics.registerFontFamily(name, normal=name, bold=bold_name, italic=name, boldItalic=bold_name)
                 _CYRILLIC_FONT_NAME = name
                 return name
             except Exception:
@@ -608,6 +636,79 @@ def _get_cyrillic_ttf_path():
         if os.path.exists(path):
             return path
     return None
+
+# =====================================================
+# РАЗМЕТКА ТЕКСТА ДОГОВОРА: жирные плейсхолдеры и заголовки разделов
+# =====================================================
+# В тексте шаблона поддерживается инлайн-разметка **жирный текст** (как в
+# Markdown) — её вставляет кнопка "Жирный" в редакторе админки, а также
+# fill_contract() автоматически оборачивает ею подставленные значения
+# плейсхолдеров. Заголовки разделов ("1. Предмет Договора", "3.1. Права и
+# обязанности Арендодателя:", "Приложение N 1") определяются автоматически
+# по структуре строки — их не нужно размечать вручную.
+
+_HEADING_MAIN_RE     = re.compile(r"^\d+\.\s+\S")            # "1. Предмет Договора"
+_HEADING_APPENDIX_RE = re.compile(r"^Приложение\b", re.IGNORECASE)
+_HEADING_SUB_RE       = re.compile(r"^\d+\.\d+\.\s+.*:\s*$")  # "3.1. Права и обязанности Арендодателя:"
+
+# Маркеры автоматического жирного текста для подставленных плейсхолдеров
+# (см. fill_contract). Символы из приватной юникод-зоны — гарантированно не
+# встретятся в обычном тексте договора и не конфликтуют с ручной разметкой **.
+_AUTO_BOLD_OPEN  = "\ue000"
+_AUTO_BOLD_CLOSE = "\ue001"
+_AUTO_BOLD_RE = re.compile(_AUTO_BOLD_OPEN + r"(.*?)" + _AUTO_BOLD_CLOSE)
+
+def _is_heading_line(line, in_appendix=False):
+    """
+    Заголовок раздела — если это "Приложение N ...", подзаголовок вида
+    "3.1. ...:", или (только ВНЕ приложений) "N. Текст". Внутри приложений
+    single-level нумерация используется для обычных списков (перечень
+    имущества и т.п.), поэтому там она заголовком не считается — иначе
+    каждый пункт списка ("1. Кухонный гарнитур", "2. Телевизор"...)
+    ошибочно стал бы крупным жирным заголовком.
+    """
+    if _HEADING_APPENDIX_RE.match(line):
+        return True
+    if _HEADING_SUB_RE.match(line):
+        return True
+    if not in_appendix and _HEADING_MAIN_RE.match(line):
+        return True
+    return False
+
+def _render_inline_bold(line):
+    """
+    Экранирует текст строки для reportlab и раскрывает жирную разметку:
+    - автоматическую (маркеры _AUTO_BOLD_OPEN/CLOSE вокруг значений
+      плейсхолдеров, вставленные fill_contract) — обрабатывается ПЕРВЫМ
+      проходом как самодостаточные, всегда корректно закрытые фрагменты;
+    - ручную (маркеры **текст**, вставленные кнопкой "Жирный" в админке) —
+      обрабатывается ВТОРЫМ проходом как переключатель (открыл/закрыл).
+    Два прохода с разными маркерами нужны, чтобы не ломаться, когда
+    пользователь вручную выделяет жирным целую строку, внутри которой уже
+    есть подставленный плейсхолдер (иначе два вида разметки со ОДНИМ и тем
+    же маркером ** налагались бы друг на друга и текст переставал быть
+    жирным именно там, где выделен плейсхолдер).
+    """
+    # Проход 1: вырезаем авто-жирные фрагменты, экранируем их содержимое и
+    # заменяем на короткие служебные токены, чтобы они не мешали разбору **
+    auto_spans = []
+    def _stash_auto(m):
+        auto_spans.append(f"<b>{xml_escape(m.group(1))}</b>")
+        return f"\ue002{len(auto_spans) - 1}\ue003"
+    line = _AUTO_BOLD_RE.sub(_stash_auto, line)
+
+    # Проход 2: ручные маркеры ** — простое переключение жирности
+    parts = line.split("**")
+    out = []
+    for i, part in enumerate(parts):
+        escaped = xml_escape(part)
+        out.append(f"<b>{escaped}</b>" if i % 2 == 1 else escaped)
+    result = "".join(out)
+
+    # Возвращаем на место авто-жирные фрагменты (уже готовый <b>...</b>)
+    for i, span in enumerate(auto_spans):
+        result = result.replace(f"\ue002{i}\ue003", span)
+    return result
 
 def _make_numbered_canvas(header_text, font_name):
     """
@@ -646,7 +747,7 @@ def _make_numbered_canvas(header_text, font_name):
 
     return NumberedCanvas
 
-def generate_contract_pdf(contract_text, booking_ref, extra_blocks=None, header_text=None):
+def generate_contract_pdf(contract_text, booking_ref, extra_blocks=None, header_text=None, output_dir=None):
     """
     Рендерит текст в PDF и сохраняет в архив.
     extra_blocks — необязательный список элементов, которые добавляются
@@ -658,9 +759,16 @@ def generate_contract_pdf(contract_text, booking_ref, extra_blocks=None, header_
     документов, где header_text это "Городская Пауза · <идентификатор>".
     Строки между маркерами [[SIGNATURE_BOX_START]]/[[SIGNATURE_BOX_END]]
     оформляются отдельной рамкой с золотой обводкой и логотипом сверху.
+    Внутри обычного текста маркеры **текст** дают жирное начертание, а
+    заголовки разделов ("1. ...", "3.1. ...:", "Приложение N 1") автоматически
+    выводятся крупным жирным шрифтом.
+    output_dir — если задан, PDF сохраняется туда вместо CONTRACTS_DIR
+    (используется для предпросмотра, чтобы не засорять архив договоров).
     """
     font_name = _register_cyrillic_font()
-    path = os.path.join(CONTRACTS_DIR, booking_ref + ".pdf")
+    target_dir = output_dir or CONTRACTS_DIR
+    os.makedirs(target_dir, exist_ok=True)
+    path = os.path.join(target_dir, booking_ref + ".pdf")
     doc = SimpleDocTemplate(
         path, pagesize=A4,
         leftMargin=20 * mm, rightMargin=20 * mm,
@@ -669,6 +777,10 @@ def generate_contract_pdf(contract_text, booking_ref, extra_blocks=None, header_
     )
     style = ParagraphStyle(
         "contract", fontName=font_name, fontSize=10.5, leading=15, spaceAfter=4,
+    )
+    heading_style = ParagraphStyle(
+        "contract_heading", fontName=font_name, fontSize=13, leading=17,
+        spaceBefore=10, spaceAfter=6,
     )
     box_style = ParagraphStyle(
         "sigbox", fontName=font_name, fontSize=9.5, leading=14, spaceAfter=3,
@@ -684,6 +796,7 @@ def generate_contract_pdf(contract_text, booking_ref, extra_blocks=None, header_
     def _add_text_block(text, story, break_before_appendix=False):
         in_box = False
         box_lines = []
+        in_appendix = False
         for raw_line in text.split("\n"):
             line = raw_line.strip()
             if line == "[[SIGNATURE_BOX_START]]":
@@ -697,7 +810,7 @@ def generate_contract_pdf(contract_text, booking_ref, extra_blocks=None, header_
                     if not bl:
                         box_flow.append(Spacer(1, 6))
                     else:
-                        box_flow.append(Paragraph(xml_escape(bl), box_style))
+                        box_flow.append(Paragraph(_render_inline_bold(bl), box_style))
                 tbl = Table([[box_flow]], colWidths=[max_box_width])
                 tbl.setStyle(TableStyle([
                     ("BOX", (0, 0), (-1, -1), 1.1, colors.HexColor("#C9A84C")),
@@ -717,7 +830,12 @@ def generate_contract_pdf(contract_text, booking_ref, extra_blocks=None, header_
                 continue
             if break_before_appendix and line.startswith("Приложение N 1"):
                 story.append(PageBreak())
-            story.append(Paragraph(xml_escape(line), style))
+            if _HEADING_APPENDIX_RE.match(line):
+                in_appendix = True
+            if _is_heading_line(line, in_appendix):
+                story.append(Paragraph(_render_inline_bold(line), heading_style))
+            else:
+                story.append(Paragraph(_render_inline_bold(line), style))
 
     story = []
     _add_text_block(contract_text, story, break_before_appendix=True)
@@ -3130,6 +3248,34 @@ async def get_signed_contract_pdf(booking_ref: str, doc_type: str, _: bool = Dep
             filename = ("dogovor_podpisan_" if doc_type == "contract" else "soglasie_pd_") + booking_ref + ".pdf"
             return FileResponse(path, media_type="application/pdf", filename=filename)
     raise HTTPException(status_code=404, detail="Подписанный документ не найден — договор ещё не подписан")
+
+class ContractPreviewRequest(BaseModel):
+    text: str
+
+@app.post("/api/admin/contract-preview")
+async def contract_preview(body: ContractPreviewRequest, _: bool = Depends(require_admin)):
+    """
+    Генерирует PDF-предпросмотр ТЕКУЩЕГО текста в редакторе шаблона (даже
+    ещё не сохранённого) с фиктивными тестовыми данными вместо реальной
+    брони — чтобы сразу видеть, как договор будет выглядеть у гостя.
+    Сохраняется во временную папку (не в архив договоров), перезаписывается
+    при каждом вызове.
+    """
+    dummy_booking = {
+        "check_in":       (now_nsk() + timedelta(days=2)).strftime("%Y-%m-%d"),
+        "check_out":      (now_nsk() + timedelta(days=7)).strftime("%Y-%m-%d"),
+        "nights":         5,
+        "guest_name":     "Иванов Иван Иванович",
+        "passport":       "0000 000000",
+        "guests_count":   2,
+        "total_price":    33725,
+        "discount_percent": 0,
+        "deposit":        get_default_deposit(),
+        "username":       "PREVIEW",
+    }
+    filled_text = fill_contract(body.text, _contract_placeholders(dummy_booking))
+    path = generate_contract_pdf(filled_text, "preview", output_dir=CONTRACT_PREVIEW_DIR)
+    return FileResponse(path, media_type="application/pdf", filename="dogovor_predprosmotr.pdf")
 
 # =====================================================
 # API — ПОДПИСАНИЕ ДОГОВОРА (ПЭП, публичные эндпоинты по токену)

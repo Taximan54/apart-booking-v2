@@ -740,11 +740,15 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
           </div>
           <div class="info-field">
             <div class="info-label">Текст договора</div>
+            <div style="margin-bottom:8px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+              <button type="button" class="btn btn-ghost btn-sm" onclick="wrapSelectionBold()" style="font-weight:700">Ж Жирный</button>
+              <span style="font-size:10px;color:var(--text-muted)">Выделите текст ниже и нажмите — жирным станет в предпросмотре и итоговом договоре (не в самом поле). Заголовки разделов (1., 2., 3.1. и т.п.) и данные гостя из плейсхолдеров становятся жирными автоматически, без разметки.</span>
+            </div>
             <textarea class="info-input" id="contractEditor" rows="30" style="resize:vertical;line-height:1.7;font-size:12px;font-family:monospace" placeholder="Загрузка..."></textarea>
           </div>
           <div style="display:flex;gap:12px;margin-top:16px">
             <button class="btn btn-primary" onclick="saveContract()">Сохранить договор</button>
-            <button class="btn btn-ghost" onclick="previewContract()">Предпросмотр</button>
+            <button class="btn btn-ghost" id="btnPreviewContract" onclick="previewContract()">Предпросмотр (PDF)</button>
           </div>
         </div>
       </div>
@@ -2738,10 +2742,51 @@ async function resetContract() {
   }
 }
 
-function previewContract() {
+function wrapSelectionBold() {
+  const ta = document.getElementById('contractEditor');
+  const start = ta.selectionStart, end = ta.selectionEnd;
+  if (start === end) {
+    showToast('Сначала выделите текст в поле договора', 'err');
+    return;
+  }
+  const text = ta.value;
+  const selected = text.slice(start, end);
+  let replacement, newStart, newEnd;
+  if (selected.startsWith('**') && selected.endsWith('**') && selected.length >= 4) {
+    // Уже жирный — снимаем разметку (повторное нажатие работает как переключатель)
+    replacement = selected.slice(2, -2);
+  } else {
+    replacement = '**' + selected + '**';
+  }
+  newStart = start;
+  newEnd = start + replacement.length;
+  ta.value = text.slice(0, start) + replacement + text.slice(end);
+  ta.focus();
+  ta.setSelectionRange(newStart, newEnd);
+}
+
+async function previewContract() {
   const text = document.getElementById('contractEditor').value;
-  const w = window.open('', '_blank');
-  w.document.write('<pre style="font-family:Arial;padding:40px;max-width:800px;margin:0 auto;line-height:1.8">' + text + '</pre>');
+  const btn = document.getElementById('btnPreviewContract');
+  if (btn) { btn.textContent = 'Генерируем...'; btn.disabled = true; }
+  try {
+    const resp = await fetch(`${API_BASE}/api/admin/contract-preview`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(ADMIN_TOKEN ? {'Authorization': 'Bearer ' + ADMIN_TOKEN} : {})
+      },
+      body: JSON.stringify({text})
+    });
+    if (!resp.ok) throw new Error('Не удалось сгенерировать предпросмотр');
+    const blob = await resp.blob();
+    const url = URL.createObjectURL(blob);
+    window.open(url, '_blank');
+  } catch(e) {
+    showToast('Ошибка предпросмотра: ' + e.message, 'err');
+  } finally {
+    if (btn) { btn.textContent = 'Предпросмотр (PDF)'; btn.disabled = false; }
+  }
 }
 
 // Загрузка договора встроена в основной showPanel
