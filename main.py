@@ -25,6 +25,7 @@ from reportlab.lib.units import mm
 from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image as RLImage, PageBreak, KeepTogether, Table, TableStyle
 from reportlab.lib.styles import ParagraphStyle
+from reportlab.lib.enums import TA_CENTER, TA_RIGHT
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen.canvas import Canvas as _PDFCanvas
@@ -507,6 +508,80 @@ def load_contract_template():
             return f.read()
     return ""
 
+# =====================================================
+# СУММА ПРОПИСЬЮ И ДАТА СЛОВАМИ (для договора)
+# =====================================================
+
+_NUM_ONES_M = ["", "один", "два", "три", "четыре", "пять", "шесть", "семь", "восемь", "девять"]
+_NUM_ONES_F = ["", "одна", "две", "три", "четыре", "пять", "шесть", "семь", "восемь", "девять"]
+_NUM_TEENS  = ["десять", "одиннадцать", "двенадцать", "тринадцать", "четырнадцать",
+               "пятнадцать", "шестнадцать", "семнадцать", "восемнадцать", "девятнадцать"]
+_NUM_TENS   = ["", "", "двадцать", "тридцать", "сорок", "пятьдесят",
+               "шестьдесят", "семьдесят", "восемьдесят", "девяносто"]
+_NUM_HUNDREDS = ["", "сто", "двести", "триста", "четыреста", "пятьсот",
+                 "шестьсот", "семьсот", "восемьсот", "девятьсот"]
+
+def _three_digit_words(n, feminine=False):
+    """Прописывает число от 0 до 999 (для составления тысяч/рублей)."""
+    words = []
+    h, rest = divmod(n, 100)
+    if h:
+        words.append(_NUM_HUNDREDS[h])
+    if 10 <= rest < 20:
+        words.append(_NUM_TEENS[rest - 10])
+    else:
+        t, o = divmod(rest, 10)
+        if t:
+            words.append(_NUM_TENS[t])
+        if o:
+            words.append((_NUM_ONES_F if feminine else _NUM_ONES_M)[o])
+    return words
+
+def _plural_ru(n, forms):
+    """forms = (для 1, для 2-4, для 5-20/0) — стандартное русское склонение по числительному."""
+    n = abs(int(n)) % 100
+    if 11 <= n <= 14:
+        return forms[2]
+    n10 = n % 10
+    if n10 == 1:
+        return forms[0]
+    if 2 <= n10 <= 4:
+        return forms[1]
+    return forms[2]
+
+def _rub_in_words(amount):
+    """
+    Переводит целую сумму в рублях в пропись с заглавной буквы:
+    6745 → "Шесть тысяч семьсот сорок пять рублей". Копейки не
+    поддерживаются — в проекте суммы аренды всегда целые.
+    """
+    n = int(round(amount))
+    parts = []
+    thousands, rub = divmod(n, 1000)
+    if thousands:
+        parts.extend(_three_digit_words(thousands, feminine=True))
+        parts.append(_plural_ru(thousands, ("тысяча", "тысячи", "тысяч")))
+    if rub or not thousands:
+        rw = _three_digit_words(rub, feminine=False)
+        if rw:
+            parts.extend(rw)
+        elif not thousands:
+            parts.append("ноль")
+    parts.append(_plural_ru(n, ("рубль", "рубля", "рублей")))
+    text = " ".join(parts)
+    return text[0].upper() + text[1:] if text else "Ноль рублей"
+
+def _sum_with_words(amount):
+    """"6745" → "6745 (Шесть тысяч семьсот сорок пять рублей)" — для подстановки в договор."""
+    return f"{int(round(amount))} ({_rub_in_words(amount)})"
+
+_MONTHS_RU_GENITIVE = ["января", "февраля", "марта", "апреля", "мая", "июня",
+                       "июля", "августа", "сентября", "октября", "ноября", "декабря"]
+
+def _date_ru_words(dt):
+    """datetime(2026,7,22) → "22 июля 2026" (без "г." — суффикс уже есть в тексте шаблона)."""
+    return f"{dt.day} {_MONTHS_RU_GENITIVE[dt.month - 1]} {dt.year}"
+
 def fill_contract(template, data):
     for key, value in data.items():
         placeholder = "{{" + key + "}}"
@@ -522,7 +597,7 @@ def fill_contract(template, data):
 
 def _contract_placeholders(booking):
     """Собирает словарь плейсхолдеров для подстановки в шаблон договора/согласия по данным брони."""
-    today        = now_nsk().strftime("%d.%m.%Y")
+    today        = _date_ru_words(now_nsk())
     checkin_fmt  = datetime.strptime(booking["check_in"],  "%Y-%m-%d").strftime("%d.%m.%Y")
     checkout_fmt = datetime.strptime(booking["check_out"], "%Y-%m-%d").strftime("%d.%m.%Y")
     nights       = booking.get("nights") or booking.get("guests", 1)
@@ -532,6 +607,7 @@ def _contract_placeholders(booking):
     # восстанавливаем исходную (до скидки) сумму, чтобы тариф совпадал с тем, что гость видел при выборе дат
     pre_discount_total = round(total / (1 - discount_pct / 100)) if discount_pct else total
     per_night    = round(pre_discount_total / nights) if nights else pre_discount_total
+    deposit      = booking.get("deposit") or get_default_deposit()
 
     return {
         "ДАТА_ДОГОВОРА":  today,
@@ -543,9 +619,9 @@ def _contract_placeholders(booking):
         "ДАТА_ЗАЕЗДА":    checkin_fmt,
         "ДАТА_ВЫЕЗДА":    checkout_fmt,
         "ГОСТЕЙ":         str(booking.get("guests_count", booking.get("guests", 2))),
-        "ЦЕНА_В_СУТКИ":   str(per_night),
-        "ИТОГО":          str(total),
-        "ДЕПОЗИТ":        str(booking.get("deposit") or get_default_deposit()),
+        "ЦЕНА_В_СУТКИ":   _sum_with_words(per_night),
+        "ИТОГО":          _sum_with_words(total),
+        "ДЕПОЗИТ":        _sum_with_words(deposit),
         "EMAIL":          "citypause@mail.ru",
         "САЙТ":           "citypause.ru",
         "НОМЕР_БРОНИ":    str(booking.get("username") or booking.get("id", "")),
@@ -558,9 +634,9 @@ def _contract_placeholders(booking):
         "DATA_ZAEZDA":    checkin_fmt,
         "DATA_VYEZDA":    checkout_fmt,
         "GOSTEY":         str(booking.get("guests_count", 2)),
-        "CENA_SUTKI":     str(per_night),
-        "SUMMA":          str(total),
-        "DEPOZIT":        "6000",
+        "CENA_SUTKI":     _sum_with_words(per_night),
+        "SUMMA":          _sum_with_words(total),
+        "DEPOZIT":        _sum_with_words(deposit),
         "NOMER_BRONI":    str(booking.get("username") or booking.get("id", "")),
     }
 
@@ -657,6 +733,22 @@ _HEADING_SUB_RE       = re.compile(r"^\d+\.\d+\.\s+.*:\s*$")  # "3.1. Права
 _AUTO_BOLD_OPEN  = "\ue000"
 _AUTO_BOLD_CLOSE = "\ue001"
 _AUTO_BOLD_RE = re.compile(_AUTO_BOLD_OPEN + r"(.*?)" + _AUTO_BOLD_CLOSE)
+
+# Маркеры выравнивания строки целиком — вставляются кнопками "По центру" /
+# "Вправо" в редакторе админки. В отличие от **жирного**, это выравнивание
+# ВСЕЙ строки (абзаца), а не части текста внутри неё.
+_ALIGN_CENTER_RE = re.compile(r"^\[\[CENTER\]\](.*)\[\[/CENTER\]\]$")
+_ALIGN_RIGHT_RE  = re.compile(r"^\[\[RIGHT\]\](.*)\[\[/RIGHT\]\]$")
+
+def _strip_alignment_marker(line):
+    """Возвращает (текст_без_маркера, 'center'|'right'|None)."""
+    m = _ALIGN_CENTER_RE.match(line)
+    if m:
+        return m.group(1), "center"
+    m = _ALIGN_RIGHT_RE.match(line)
+    if m:
+        return m.group(1), "right"
+    return line, None
 
 def _is_heading_line(line, in_appendix=False):
     """
@@ -778,10 +870,14 @@ def generate_contract_pdf(contract_text, booking_ref, extra_blocks=None, header_
     style = ParagraphStyle(
         "contract", fontName=font_name, fontSize=10.5, leading=15, spaceAfter=4,
     )
+    style_center = ParagraphStyle("contract_center", parent=style, alignment=TA_CENTER)
+    style_right  = ParagraphStyle("contract_right",  parent=style, alignment=TA_RIGHT)
     heading_style = ParagraphStyle(
         "contract_heading", fontName=font_name, fontSize=13, leading=17,
         spaceBefore=10, spaceAfter=6,
     )
+    heading_style_center = ParagraphStyle("contract_heading_center", parent=heading_style, alignment=TA_CENTER)
+    heading_style_right  = ParagraphStyle("contract_heading_right",  parent=heading_style, alignment=TA_RIGHT)
     box_style = ParagraphStyle(
         "sigbox", fontName=font_name, fontSize=9.5, leading=14, spaceAfter=3,
         textColor=colors.HexColor("#3a3226"),
@@ -828,14 +924,17 @@ def generate_contract_pdf(contract_text, booking_ref, extra_blocks=None, header_
             if not line:
                 story.append(Spacer(1, 8))
                 continue
+            line, align = _strip_alignment_marker(line)
             if break_before_appendix and line.startswith("Приложение N 1"):
                 story.append(PageBreak())
             if _HEADING_APPENDIX_RE.match(line):
                 in_appendix = True
-            if _is_heading_line(line, in_appendix):
-                story.append(Paragraph(_render_inline_bold(line), heading_style))
+            is_heading = _is_heading_line(line, in_appendix)
+            if is_heading:
+                chosen_style = {"center": heading_style_center, "right": heading_style_right}.get(align, heading_style)
             else:
-                story.append(Paragraph(_render_inline_bold(line), style))
+                chosen_style = {"center": style_center, "right": style_right}.get(align, style)
+            story.append(Paragraph(_render_inline_bold(line), chosen_style))
 
     story = []
     _add_text_block(contract_text, story, break_before_appendix=True)
@@ -889,7 +988,7 @@ def load_consent_template():
 
 def generate_consent(booking):
     """Генерирует текст согласия на обработку ПД по тому же принципу, что и generate_contract()."""
-    today = now_nsk().strftime("%d.%m.%Y")
+    today = _date_ru_words(now_nsk())
     template = load_consent_template()
     if not template:
         return "Shablon soglasiya ne nayden."

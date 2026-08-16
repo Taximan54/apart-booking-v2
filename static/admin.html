@@ -742,7 +742,9 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
             <div class="info-label">Текст договора</div>
             <div style="margin-bottom:8px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
               <button type="button" class="btn btn-ghost btn-sm" onclick="wrapSelectionBold()" style="font-weight:700">Ж Жирный</button>
-              <span style="font-size:10px;color:var(--text-muted)">Выделите текст ниже и нажмите — жирным станет в предпросмотре и итоговом договоре (не в самом поле). Заголовки разделов (1., 2., 3.1. и т.п.) и данные гостя из плейсхолдеров становятся жирными автоматически, без разметки.</span>
+              <button type="button" class="btn btn-ghost btn-sm" onclick="alignSelectionCenter()">↔ По центру</button>
+              <button type="button" class="btn btn-ghost btn-sm" onclick="alignSelectionRight()">→ Вправо</button>
+              <span style="font-size:10px;color:var(--text-muted)">Выделите строку(и) ниже и нажмите — эффект появится в предпросмотре и итоговом договоре (не в самом поле). Заголовки разделов (1., 2., 3.1. и т.п.) и данные гостя из плейсхолдеров становятся жирными автоматически, без разметки.</span>
             </div>
             <textarea class="info-input" id="contractEditor" rows="30" style="resize:vertical;line-height:1.7;font-size:12px;font-family:monospace" placeholder="Загрузка..."></textarea>
           </div>
@@ -2764,6 +2766,35 @@ function wrapSelectionBold() {
   ta.focus();
   ta.setSelectionRange(newStart, newEnd);
 }
+
+function _wrapLinesWithTag(openTag, closeTag) {
+  const ta = document.getElementById('contractEditor');
+  let start = ta.selectionStart, end = ta.selectionEnd;
+  if (start === end) {
+    showToast('Сначала выделите строку (или несколько строк) в поле договора', 'err');
+    return;
+  }
+  const text = ta.value;
+  // Расширяем выделение до границ строк — выравнивание применяется к строке целиком
+  while (start > 0 && text[start - 1] !== '\n') start--;
+  while (end < text.length && text[end] !== '\n') end++;
+  const block = text.slice(start, end);
+  const lines = block.split('\n').map(line => {
+    if (line.startsWith(openTag) && line.endsWith(closeTag)) {
+      // Уже обёрнуто этим тегом — снимаем (повторное нажатие работает как переключатель)
+      return line.slice(openTag.length, line.length - closeTag.length);
+    }
+    if (line.trim() === '') return line;
+    return openTag + line + closeTag;
+  });
+  const replacement = lines.join('\n');
+  ta.value = text.slice(0, start) + replacement + text.slice(end);
+  ta.focus();
+  ta.setSelectionRange(start, start + replacement.length);
+}
+
+function alignSelectionCenter() { _wrapLinesWithTag('[[CENTER]]', '[[/CENTER]]'); }
+function alignSelectionRight()  { _wrapLinesWithTag('[[RIGHT]]', '[[/RIGHT]]'); }
 
 async function previewContract() {
   const text = document.getElementById('contractEditor').value;
