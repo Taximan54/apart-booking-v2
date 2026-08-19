@@ -3130,31 +3130,14 @@ async def cancel_booking_api(booking_ref: str, _: bool = Depends(require_admin))
     conn.close()
     return {"ok": True}
 
-@app.delete("/api/bookings/{booking_ref}")
-async def delete_booking_api(booking_ref: str, _: bool = Depends(require_admin)):
+def _delete_contract_files_and_photos(ref):
     """
-    Полностью и безвозвратно удаляет бронь: саму запись в БД, черновик
-    договора (.txt), подписанные PDF (договор + согласие на ПД), фото
-    паспорта и запись о них в PASSPORT_MAP_FILE. Используется в основном
-    для очистки тестовых броней. Подтверждение запрашивается на клиенте
-    перед вызовом — это необратимое действие.
+    Удаляет с диска всё, что относится к договору брони ref: черновик
+    (.txt), подписанные PDF (договор + согласие на ПД), фото паспорта и
+    запись о них в PASSPORT_MAP_FILE. НЕ трогает саму запись брони в БД —
+    это отдельная операция (см. delete_booking_api). Работает и для
+    "осиротевших" файлов, у которых брони в БД уже нет.
     """
-    ref_alt = booking_ref.replace("GP-", "\u0413\u041f-")
-    conn = get_db()
-    row = conn.execute(
-        "SELECT * FROM bookings WHERE username=? OR username=? OR CAST(id AS TEXT)=? LIMIT 1",
-        (booking_ref, ref_alt, booking_ref)
-    ).fetchone()
-    if not row:
-        conn.close()
-        raise HTTPException(status_code=404, detail="Booking not found")
-    ref = row["username"] or str(row["id"])
-    conn.execute("DELETE FROM bookings WHERE id=?", (row["id"],))
-    conn.commit()
-    conn.close()
-
-    # Удаляем файлы договора (черновик + подписанные PDF), для обоих
-    # вариантов префикса (GP- / ГП- — старые брони)
     for candidate in {ref, ref.replace("GP-", "\u0413\u041f-")}:
         for suffix in (".txt", "_podpisan.pdf", "_soglasie_pd.pdf"):
             path = os.path.join(CONTRACTS_DIR, candidate + suffix)
@@ -3164,7 +3147,6 @@ async def delete_booking_api(booking_ref: str, _: bool = Depends(require_admin))
                 except Exception as e:
                     print(f"Не удалось удалить файл договора {path}: {e}")
 
-    # Удаляем фото паспорта и запись из карты
     pm = load_passport_map()
     for candidate in {ref, ref.replace("GP-", "\u0413\u041f-")}:
         entry = pm.get(candidate)
@@ -3181,6 +3163,53 @@ async def delete_booking_api(booking_ref: str, _: bool = Depends(require_admin))
             pm.pop(candidate, None)
     save_passport_map(pm)
 
+@app.delete("/api/bookings/{booking_ref}")
+async def delete_booking_api(booking_ref: str, _: bool = Depends(require_admin)):
+    """
+    Полностью и безвозвратно удаляет бронь: саму запись в БД и все файлы
+    договора (см. _delete_contract_files_and_photos). Используется в
+    основном для очистки тестовых броней. Подтверждение запрашивается на
+    клиенте перед вызовом — это необратимое действие.
+    """
+    ref_alt = booking_ref.replace("GP-", "\u0413\u041f-")
+    conn = get_db()
+    row = conn.execute(
+        "SELECT * FROM bookings WHERE username=? OR username=? OR CAST(id AS TEXT)=? LIMIT 1",
+        (booking_ref, ref_alt, booking_ref)
+    ).fetchone()
+    if not row:
+        conn.close()
+        raise HTTPException(status_code=404, detail="Booking not found")
+    ref = row["username"] or str(row["id"])
+    conn.execute("DELETE FROM bookings WHERE id=?", (row["id"],))
+    conn.commit()
+    conn.close()
+
+    _delete_contract_files_and_photos(ref)
+    return {"ok": True}
+
+@app.delete("/api/contracts/{ref}")
+async def delete_contract_archive_entry(ref: str, _: bool = Depends(require_admin)):
+    """
+    Удаляет договор из архива вручную: черновик, подписанные PDF и фото
+    паспорта — независимо от того, существует ли ещё сама бронь в БД
+    (например, если бронь уже была удалена раньше, а файлы остались, или
+    наоборот — нужно почистить только документы тестовой брони). Если
+    подходящая бронь в БД найдена — удаляется и она тоже, для полной
+    очистки. Подтверждение запрашивается на клиенте — действие необратимо.
+    """
+    _delete_contract_files_and_photos(ref)
+
+    ref_alt = ref.replace("GP-", "\u0413\u041f-")
+    conn = get_db()
+    row = conn.execute(
+        "SELECT id FROM bookings WHERE username=? OR username=? OR CAST(id AS TEXT)=? LIMIT 1",
+        (ref, ref_alt, ref)
+    ).fetchone()
+    if row:
+        conn.execute("DELETE FROM bookings WHERE id=?", (row["id"],))
+        conn.commit()
+    conn.close()
     return {"ok": True}
 
 # =====================================================

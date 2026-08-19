@@ -2856,7 +2856,7 @@ async function loadContractsArchive() {
     container.innerHTML = `
       <table class="tbl">
         <thead><tr>
-          <th>Бронь</th><th>Гость</th><th>Даты</th><th>Сумма</th><th>Создан</th><th>Документы</th>
+          <th>Бронь</th><th>Гость</th><th>Даты</th><th>Сумма</th><th>Создан</th><th>Документы</th><th></th>
         </tr></thead>
         <tbody>
           ${contracts.map(c => `
@@ -2876,6 +2876,7 @@ async function loadContractsArchive() {
                 ${(c.passport_photo_slots||[]).map(slot => `<button class="btn btn-ghost btn-sm" onclick="viewArchivePassportPhoto('${c.passport_ref}','${slot}')">${PASSPORT_SLOT_LABELS[slot]}</button>`).join('')}
                 ${!c.has_contract_pdf && !c.has_draft && !c.has_passport_photo ? '—' : ''}
               </td>
+              <td data-label=""><button class="btn btn-ghost btn-icon" title="Удалить из архива" onclick="deleteArchiveContract('${c.ref}','${(c.guest_name || c.ref).replace(/'/g,"\\'")}')">🗑</button></td>
             </tr>
           `).join('')}
         </tbody>
@@ -2911,6 +2912,17 @@ async function viewArchivePassportPhoto(ref, slot) {
     window.open(url, '_blank');
   } catch(e) {
     showToast('Фото не найдено', 'err');
+  }
+}
+
+async function deleteArchiveContract(ref, guestName) {
+  if (!confirm(`Удалить договор «${guestName}» (${ref}) из архива безвозвратно?\n\nБудут удалены черновик, подписанный PDF, согласие на ПД и фото паспорта. Если по этой брони есть запись в списке броней — она тоже будет удалена.`)) return;
+  try {
+    await apiDelete(`/api/contracts/${ref}`);
+    showToast('Договор удалён из архива', 'gold');
+    loadContractsArchive();
+  } catch(e) {
+    showToast('Ошибка удаления: ' + e.message, 'err');
   }
 }
 
