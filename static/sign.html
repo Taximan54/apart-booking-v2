@@ -15,8 +15,19 @@
   .logo{text-align:center;font-size:24px;letter-spacing:4px;color:var(--gold);margin-bottom:28px}
   .card{background:var(--panel);border:1px solid var(--border);padding:24px;margin-bottom:20px;border-radius:2px}
   .label{font-size:11px;color:var(--gold);letter-spacing:.08em;text-transform:uppercase;margin-bottom:12px}
-  .doc{white-space:pre-wrap;font-family:'Courier New',monospace;font-size:12px;line-height:1.6;color:var(--muted);
-    max-height:320px;overflow-y:auto;padding-right:6px;border-top:1px solid var(--border);margin-top:12px;padding-top:12px}
+  .fill-btn{display:block;width:100%;background:var(--gold);color:var(--black);border:none;
+    padding:14px;font-size:13px;font-weight:bold;letter-spacing:.04em;cursor:pointer;border-radius:2px;margin-bottom:16px}
+  .fill-btn:active{opacity:.85}
+  .doc{font-family:Arial,sans-serif;font-size:13px;line-height:1.65;color:var(--muted);
+    max-height:420px;overflow-y:auto;padding-right:10px;border-top:1px solid var(--border);margin-top:4px;padding-top:14px}
+  .doc p{margin:0 0 10px}
+  .doc .doc-heading{font-weight:bold;font-size:14px;color:var(--text);margin-top:16px}
+  .doc .doc-center{text-align:center}
+  .doc .doc-right{text-align:right}
+  .doc .doc-gap{height:8px}
+  .doc b{color:var(--text)}
+  .doc-section-title{font-size:11px;color:var(--gold);letter-spacing:.08em;text-transform:uppercase;
+    margin:20px 0 4px;padding-top:16px;border-top:1px solid var(--border)}
   .btn{display:block;width:100%;background:var(--gold);color:var(--black);border:none;padding:14px;
     font-size:13px;font-weight:bold;letter-spacing:.04em;cursor:pointer;border-radius:2px;margin-top:14px}
   .btn:disabled{opacity:.5;cursor:default}
@@ -25,6 +36,29 @@
   .ok{color:var(--gold)}
   .hidden{display:none}
   .center{text-align:center}
+
+  /* Поля формы "Ваши данные" — стили как в complete.html */
+  input[type=text],input[type=tel],input[type=email]{width:100%;background:var(--black);border:1px solid var(--border);color:var(--text);
+    padding:12px;font-size:14px;border-radius:2px;margin-top:6px}
+  .field-label{font-size:12px;color:var(--muted);margin-top:16px}
+  .photo-row{display:flex;flex-direction:column;gap:8px;margin-top:14px}
+  .photo-status{font-size:12px}
+  .photo-status.done{color:var(--gold)}
+  .photo-status.pending{color:var(--muted)}
+  .photo-status.err{color:var(--red)}
+  input[type=file]{display:none}
+  .file-btn{display:inline-block;border:1px solid var(--border);color:var(--text);padding:10px 16px;
+    font-size:12px;border-radius:2px;cursor:pointer;margin-top:6px}
+  .checkline{display:flex;align-items:flex-start;gap:10px;margin-top:14px;font-size:12px;color:var(--muted);line-height:1.5}
+  .checkline input{margin-top:3px;accent-color:var(--gold);width:16px;height:16px;flex-shrink:0}
+
+  /* Модальное окно "Ваши данные" */
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);display:flex;align-items:flex-end;
+    justify-content:center;z-index:100;padding:0}
+  .modal-box{background:var(--panel);border:1px solid var(--border);border-bottom:none;padding:24px;
+    width:100%;max-width:600px;max-height:88vh;overflow-y:auto;border-radius:8px 8px 0 0}
+  .modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+  .modal-close{background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:4px 8px;line-height:1}
 </style>
 </head>
 <body>
@@ -36,21 +70,12 @@
   <div id="content" class="hidden">
     <div class="card">
       <div class="label">Договор аренды — <span id="bookingRef"></span></div>
-      <div id="contractText" class="doc"></div>
-    </div>
-
-    <div class="card">
-      <div class="label">Согласие на обработку персональных данных</div>
-      <div id="consentText" class="doc"></div>
-    </div>
-
-    <div id="signBlock" class="card">
-      <div class="label">Подписание</div>
-      <div class="msg">Нажимая «Подписать», вы подтверждаете, что ознакомились с текстом
-        договора и согласия выше и принимаете их условия. Это является простой электронной
-        подписью (ПЭП) в соответствии с 63-ФЗ «Об электронной подписи».</div>
-      <button class="btn" id="signBtn" onclick="signNow()">Подписать договор</button>
-      <div id="signMsg" class="msg"></div>
+      <button type="button" class="fill-btn" id="fillBtn" onclick="openFillModal()">✎ Заполнить и подписать</button>
+      <div id="docScroll" class="doc">
+        <div id="contractHtml"></div>
+        <div class="doc-section-title">Согласие на обработку персональных данных</div>
+        <div id="consentHtml"></div>
+      </div>
     </div>
   </div>
 
@@ -64,8 +89,130 @@
   </div>
 </div>
 
+<!-- Модалка "Ваши данные" — сюда полностью перенесён блок подписания:
+     поля данных гостя (показываются только недостающие), обязательные фото
+     паспорта, чекбоксы согласия и сама кнопка "Подписать договор" —
+     один в один как раньше было на странице /complete, без изменений -->
+<div id="fillModalOverlay" class="modal-overlay hidden" onclick="if(event.target===this) closeFillModal()">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="label" style="margin-bottom:0">Ваши данные</div>
+      <button type="button" class="modal-close" onclick="closeFillModal()">✕</button>
+    </div>
+
+    <div id="formInner">
+      <div id="nameField" class="hidden">
+        <div class="field-label">Фамилия и имя</div>
+        <input type="text" id="surnameInput" placeholder="Фамилия">
+        <input type="text" id="firstNameInput" placeholder="Имя" style="margin-top:8px">
+        <div style="display:flex;gap:10px;align-items:center;margin-top:8px">
+          <input type="text" id="patronymicInput" placeholder="Отчество" style="flex:1">
+          <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);white-space:nowrap;cursor:pointer;flex-shrink:0">
+            <input type="checkbox" id="noPatronymicCheck" style="accent-color:var(--gold);width:15px;height:15px">
+            отсутствует
+          </label>
+        </div>
+      </div>
+
+      <div id="phoneField" class="hidden">
+        <div class="field-label">Телефон</div>
+        <input type="tel" id="phoneInput" value="+7" oninput="formatPhoneInput(this)" placeholder="+7 (___) ___-__-__">
+      </div>
+
+      <div id="emailField" class="hidden">
+        <div class="field-label">Email (на него придёт подписанный договор)</div>
+        <input type="email" id="emailInput" placeholder="your@email.com">
+      </div>
+
+      <div id="passportField" class="hidden">
+        <div class="field-label">Паспортные данные (серия, номер)</div>
+        <input type="text" id="passportInput" placeholder="0000 000000" maxlength="11" oninput="formatPassportInput(this)">
+      </div>
+
+      <div class="photo-row">
+        <div>
+          <div class="field-label">Фото разворота паспорта</div>
+          <label class="file-btn" for="fileMain">Выбрать файл</label>
+          <input type="file" id="fileMain" accept="image/*" onchange="uploadPhoto('main', this)">
+          <div class="photo-status pending" id="statusMain">Не загружено</div>
+        </div>
+        <div>
+          <div class="field-label">Фото страницы с пропиской</div>
+          <label class="file-btn" for="fileReg1">Выбрать файл</label>
+          <input type="file" id="fileReg1" accept="image/*" onchange="uploadPhoto('reg1', this)">
+          <div class="photo-status pending" id="statusReg1">Не загружено</div>
+        </div>
+      </div>
+
+      <label class="checkline">
+        <input type="checkbox" id="privacyCheck">
+        Даю согласие на обработку персональных данных в соответствии с условиями выше
+      </label>
+      <label class="checkline">
+        <input type="checkbox" id="contractCheck">
+        Ознакомлен(а) и согласен(на) с условиями договора аренды выше
+      </label>
+
+      <button class="btn" id="signBtn" onclick="signNow()" disabled>Подписать договор</button>
+      <div id="signMsg" class="msg"></div>
+    </div>
+  </div>
+</div>
+
 <script>
 const token = window.location.pathname.split('/').filter(Boolean).pop();
+let photosState = { main: false, reg1: false };
+let passportNeeded = false, nameNeeded = false, phoneNeeded = false, emailNeeded = false;
+
+function formatPassportInput(el){
+  let digits = el.value.replace(/\D/g, '').slice(0, 10);
+  let out = digits.slice(0,4);
+  if(digits.length > 4) out += ' ' + digits.slice(4,10);
+  el.value = out;
+}
+function isPassportComplete(el){
+  const digits = el.value.replace(/\D/g, '');
+  return digits.length === 10;
+}
+
+function formatPhoneInput(el){
+  let digits = el.value.replace(/\D/g, '');
+  if(digits.startsWith('7')) digits = digits.slice(1);
+  else if(digits.startsWith('8')) digits = digits.slice(1);
+  digits = digits.slice(0, 10);
+  let out = '+7';
+  if(digits.length) out += ' (' + digits.slice(0,3);
+  if(digits.length >= 3) out += ')';
+  if(digits.length > 3) out += ' ' + digits.slice(3,6);
+  if(digits.length > 6) out += '-' + digits.slice(6,8);
+  if(digits.length > 8) out += '-' + digits.slice(8,10);
+  el.value = out;
+}
+function isPhoneComplete(el){
+  let digits = el.value.replace(/\D/g, '');
+  if(digits.startsWith('7')) digits = digits.slice(1);
+  return digits.length === 10;
+}
+
+function isPatronymicOk(){
+  if(document.getElementById('noPatronymicCheck').checked) return true;
+  return document.getElementById('patronymicInput').value.trim().length > 0;
+}
+
+function updateSignButton() {
+  const btn = document.getElementById('signBtn');
+  const nameOk = !nameNeeded || (
+    document.getElementById('surnameInput').value.trim().length > 0 &&
+    document.getElementById('firstNameInput').value.trim().length > 0 &&
+    isPatronymicOk()
+  );
+  const phoneOk = !phoneNeeded || isPhoneComplete(document.getElementById('phoneInput'));
+  const emailOk = !emailNeeded || document.getElementById('emailInput').value.includes('@');
+  const passportOk = !passportNeeded || isPassportComplete(document.getElementById('passportInput'));
+  const photosOk = photosState.main && photosState.reg1;
+  const checksOk = document.getElementById('privacyCheck').checked && document.getElementById('contractCheck').checked;
+  btn.disabled = !(nameOk && phoneOk && emailOk && passportOk && photosOk && checksOk);
+}
 
 async function init() {
   try {
@@ -82,11 +229,75 @@ async function init() {
 
     document.getElementById('content').classList.remove('hidden');
     document.getElementById('bookingRef').textContent = data.booking_ref || '';
-    document.getElementById('contractText').textContent = data.contract_text || '';
-    document.getElementById('consentText').textContent = data.consent_text || '';
+    // contract_html / consent_html — уже готовый безопасный HTML с сервера
+    // (заголовки, выравнивание и жирный текст договора отрендерены заранее)
+    document.getElementById('contractHtml').innerHTML = data.contract_html || '';
+    document.getElementById('consentHtml').innerHTML = data.consent_html || '';
+
+    nameNeeded = !(data.guest_name || '').trim();
+    phoneNeeded = !(data.guest_phone || '').trim();
+    emailNeeded = !(data.guest_email || '').trim();
+    passportNeeded = !(data.passport || '').trim();
+    if (phoneNeeded && data.guest_phone) document.getElementById('phoneInput').value = data.guest_phone;
+    if (emailNeeded && data.guest_email) document.getElementById('emailInput').value = data.guest_email;
+    if (passportNeeded && data.passport) document.getElementById('passportInput').value = data.passport;
+
+    if (nameNeeded) document.getElementById('nameField').classList.remove('hidden');
+    if (phoneNeeded) document.getElementById('phoneField').classList.remove('hidden');
+    if (emailNeeded) document.getElementById('emailField').classList.remove('hidden');
+    if (passportNeeded) document.getElementById('passportField').classList.remove('hidden');
+
+    photosState.main = !!(data.photos_uploaded && data.photos_uploaded.main);
+    photosState.reg1 = !!(data.photos_uploaded && data.photos_uploaded.reg1);
+    if (photosState.main) { document.getElementById('statusMain').textContent = 'Загружено ✓'; document.getElementById('statusMain').className = 'photo-status done'; }
+    if (photosState.reg1) { document.getElementById('statusReg1').textContent = 'Загружено ✓'; document.getElementById('statusReg1').className = 'photo-status done'; }
+
+    ['surnameInput','firstNameInput','patronymicInput','phoneInput','emailInput','passportInput'].forEach(id => {
+      document.getElementById(id).addEventListener('input', updateSignButton);
+    });
+    document.getElementById('noPatronymicCheck').addEventListener('change', () => {
+      document.getElementById('patronymicInput').disabled = document.getElementById('noPatronymicCheck').checked;
+      if (document.getElementById('noPatronymicCheck').checked) document.getElementById('patronymicInput').value = '';
+      updateSignButton();
+    });
+    document.getElementById('privacyCheck').addEventListener('change', updateSignButton);
+    document.getElementById('contractCheck').addEventListener('change', updateSignButton);
+    updateSignButton();
   } catch (e) {
     document.getElementById('loading').classList.add('hidden');
     document.getElementById('notFound').classList.remove('hidden');
+  }
+}
+
+function openFillModal() {
+  document.getElementById('fillModalOverlay').classList.remove('hidden');
+}
+function closeFillModal() {
+  document.getElementById('fillModalOverlay').classList.add('hidden');
+}
+
+async function uploadPhoto(slot, input) {
+  const file = input.files[0];
+  if (!file) return;
+  const statusEl = document.getElementById(slot === 'main' ? 'statusMain' : 'statusReg1');
+  statusEl.textContent = 'Загрузка…';
+  statusEl.className = 'photo-status pending';
+
+  const formData = new FormData();
+  formData.append('slot', slot);
+  formData.append('file', file);
+
+  try {
+    const r = await fetch(`/api/complete/${token}/upload-photo`, { method: 'POST', body: formData });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.detail || 'Ошибка загрузки');
+    photosState[slot] = true;
+    statusEl.textContent = 'Загружено ✓';
+    statusEl.className = 'photo-status done';
+    updateSignButton();
+  } catch (e) {
+    statusEl.textContent = e.message;
+    statusEl.className = 'photo-status err';
   }
 }
 
@@ -96,19 +307,34 @@ async function signNow() {
   btn.disabled = true;
   msg.textContent = ''; msg.className = 'msg';
 
+  const guestName = nameNeeded
+    ? [document.getElementById('surnameInput').value.trim(), document.getElementById('firstNameInput').value.trim(), document.getElementById('patronymicInput').value.trim()].filter(Boolean).join(' ')
+    : '';
+
   try {
-    const r = await fetch(`/api/sign/${token}/confirm`, { method: 'POST' });
+    const r = await fetch(`/api/complete/${token}/submit`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        passport: document.getElementById('passportInput').value.trim(),
+        guest_name: guestName,
+        guest_phone: document.getElementById('phoneInput').value.trim(),
+        guest_email: document.getElementById('emailInput').value.trim(),
+      })
+    });
     const data = await r.json();
     if (!r.ok) throw new Error(data.detail || 'Не удалось подписать договор');
 
-    document.getElementById('signBlock').innerHTML =
-      `<div class="label">✅ Договор подписан</div>
-       <div class="msg ok">Дата подписания: ${data.signed_at}. Подписанный договор и
-       согласие на обработку персональных данных отправлены вам на email.</div>`;
+    closeFillModal();
+    document.getElementById('content').classList.add('hidden');
+    document.getElementById('alreadySigned').classList.remove('hidden');
+    document.getElementById('alreadySigned').querySelector('.label').textContent = '✅ Договор подписан';
+    document.getElementById('signedAtText').textContent =
+      `Дата подписания: ${data.signed_at}. Подписанный договор и согласие на обработку персональных данных отправлены вам на email.`;
   } catch (e) {
     msg.textContent = e.message;
     msg.className = 'msg err';
-    btn.disabled = false;
+    updateSignButton();
   }
 }
 

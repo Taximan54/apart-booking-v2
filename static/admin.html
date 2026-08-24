@@ -245,7 +245,10 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
     <div class="login-sub">Панель управления</div>
     <div class="info-field">
       <div class="info-label">Пароль</div>
-      <input type="password" class="info-input" id="loginPwd" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+      <div style="position:relative">
+        <input type="password" class="info-input" id="loginPwd" placeholder="••••••••" style="padding-right:40px" onkeydown="if(event.key==='Enter')doLogin()">
+        <button type="button" onclick="togglePasswordVisibility('loginPwd', this)" title="Показать пароль" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:16px;color:var(--text-muted);padding:4px;line-height:1">👁</button>
+      </div>
     </div>
     <button class="btn btn-primary" style="width:100%;margin-top:8px;justify-content:center" onclick="doLogin()">Войти</button>
     <div class="login-error" id="loginErr">Неверный пароль</div>
@@ -1365,8 +1368,14 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
             </div>
             <div style="margin-top:20px;border-top:1px solid var(--black-border);padding-top:16px">
               <div class="info-label" style="margin-bottom:8px">Сменить пароль панели</div>
-              <input type="password" class="info-input" id="oldPwd" placeholder="Текущий пароль" style="margin-bottom:8px">
-              <input type="password" class="info-input" id="newPwd" placeholder="Новый пароль" style="margin-bottom:8px">
+              <div style="position:relative;margin-bottom:8px">
+                <input type="password" class="info-input" id="oldPwd" placeholder="Текущий пароль" style="padding-right:40px;margin-bottom:0">
+                <button type="button" onclick="togglePasswordVisibility('oldPwd', this)" title="Показать пароль" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:16px;color:var(--text-muted);padding:4px;line-height:1">👁</button>
+              </div>
+              <div style="position:relative;margin-bottom:8px">
+                <input type="password" class="info-input" id="newPwd" placeholder="Новый пароль" style="padding-right:40px;margin-bottom:0">
+                <button type="button" onclick="togglePasswordVisibility('newPwd', this)" title="Показать пароль" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:16px;color:var(--text-muted);padding:4px;line-height:1">👁</button>
+              </div>
               <button class="btn btn-ghost btn-sm" onclick="changePwd()">Изменить пароль</button>
             </div>
           </div>
@@ -1425,6 +1434,19 @@ let ADMIN_TOKEN = localStorage.getItem('gorodskaya-pauza_token') || null;
 // ============================================================
 // AUTH
 // ============================================================
+function togglePasswordVisibility(inputId, btn) {
+  const input = document.getElementById(inputId);
+  if (input.type === 'password') {
+    input.type = 'text';
+    btn.textContent = '🙈';
+    btn.title = 'Скрыть пароль';
+  } else {
+    input.type = 'password';
+    btn.textContent = '👁';
+    btn.title = 'Показать пароль';
+  }
+}
+
 async function doLogin() {
   const pwd = document.getElementById('loginPwd').value;
   const btn = document.querySelector('#loginScreen button');

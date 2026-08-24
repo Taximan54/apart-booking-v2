@@ -802,6 +802,48 @@ def _render_inline_bold(line):
         result = result.replace(f"\ue002{i}\ue003", span)
     return result
 
+def contract_text_to_html(text):
+    """
+    Конвертирует размеченный текст договора/согласия (маркеры [[CENTER]],
+    [[RIGHT]], **жирный**, авто-жирные плейсхолдеры) в готовый HTML для
+    показа гостю на странице подписания. Использует те же _is_heading_line
+    / _strip_alignment_marker / _render_inline_bold, что и PDF-рендер —
+    один источник правды для разметки, чтобы гостю на сайте и в PDF
+    договор выглядел одинаково. Блок электронной подписи
+    ([[SIGNATURE_BOX_START/END]]) не показывается — он появляется только
+    в уже подписанном документе.
+    """
+    in_appendix = False
+    in_box = False
+    parts = []
+    for raw_line in text.split("\n"):
+        line = raw_line.strip()
+        if line == "[[SIGNATURE_BOX_START]]":
+            in_box = True
+            continue
+        if line == "[[SIGNATURE_BOX_END]]":
+            in_box = False
+            continue
+        if in_box:
+            continue
+        if not line:
+            parts.append('<div class="doc-gap"></div>')
+            continue
+        line, align = _strip_alignment_marker(line)
+        if _HEADING_APPENDIX_RE.match(line):
+            in_appendix = True
+        is_heading = _is_heading_line(line, in_appendix)
+        classes = []
+        if is_heading:
+            classes.append("doc-heading")
+        if align == "center":
+            classes.append("doc-center")
+        elif align == "right":
+            classes.append("doc-right")
+        cls = f' class="{" ".join(classes)}"' if classes else ""
+        parts.append(f"<p{cls}>{_render_inline_bold(line)}</p>")
+    return "\n".join(parts)
+
 def _make_numbered_canvas(header_text, font_name):
     """
     Canvas с шапкой на каждой странице: "header_text · N / M" (как у ОкиДоки).
@@ -3432,12 +3474,20 @@ async def get_sign_info(token: str):
     booking = dict(row)
     if booking.get("signed_at"):
         return {"already_signed": True, "signed_at": booking["signed_at"]}
+
+    booking_ref = str(booking.get("username") or booking.get("id", ""))
+    pm = load_passport_map()
+    entry = pm.get(booking_ref, {}) if isinstance(pm.get(booking_ref), dict) else {}
     return {
         "already_signed": False,
-        "booking_ref": booking.get("username"),
+        "booking_ref": booking_ref,
         "guest_name": booking.get("guest_name"),
-        "contract_text": generate_contract(booking),
-        "consent_text": generate_consent(booking),
+        "guest_phone": booking.get("guest_phone"),
+        "guest_email": booking.get("guest_email"),
+        "passport": booking.get("passport"),
+        "photos_uploaded": {"main": bool(entry.get("main")), "reg1": bool(entry.get("reg1"))},
+        "contract_html": contract_text_to_html(generate_contract(booking)),
+        "consent_html":  contract_text_to_html(generate_consent(booking)),
     }
 
 @app.post("/api/sign/{token}/confirm")
@@ -3464,6 +3514,8 @@ async def confirm_sign(token: str, request: Request):
     threading.Thread(target=email_contract_signed, args=(booking,)).start()
 
     return {"ok": True, "signed_at": signed_at}
+
+
 
 # =====================================================
 # API — ДОЗАПОЛНЕНИЕ ДАННЫХ И ПОДПИСАНИЕ РУЧНОЙ БРОНИ
