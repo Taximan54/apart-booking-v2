@@ -15,8 +15,14 @@
   .logo{text-align:center;font-size:24px;letter-spacing:4px;color:var(--gold);margin-bottom:28px}
   .card{background:var(--panel);border:1px solid var(--border);padding:24px;margin-bottom:20px;border-radius:2px}
   .label{font-size:11px;color:var(--gold);letter-spacing:.08em;text-transform:uppercase;margin-bottom:12px}
-  .doc{white-space:pre-wrap;font-family:'Courier New',monospace;font-size:12px;line-height:1.6;color:var(--muted);
-    max-height:280px;overflow-y:auto;padding-right:6px;border-top:1px solid var(--border);margin-top:12px;padding-top:12px}
+  .doc{font-family:Arial,sans-serif;font-size:13px;line-height:1.65;color:var(--muted);
+    max-height:280px;overflow-y:auto;padding-right:10px;border-top:1px solid var(--border);margin-top:12px;padding-top:12px}
+  .doc p{margin:0 0 10px}
+  .doc .doc-heading{font-weight:bold;font-size:14px;color:var(--text);margin-top:16px}
+  .doc .doc-center{text-align:center}
+  .doc .doc-right{text-align:right}
+  .doc .doc-gap{height:8px}
+  .doc b{color:var(--text)}
   .btn{display:block;width:100%;background:var(--gold);color:var(--black);border:none;padding:14px;
     font-size:13px;font-weight:bold;letter-spacing:.04em;cursor:pointer;border-radius:2px;margin-top:14px}
   .btn:disabled{opacity:.5;cursor:default}
@@ -197,8 +203,10 @@ async function init() {
 
     document.getElementById('content').classList.remove('hidden');
     document.getElementById('bookingRef').textContent = data.booking_ref || '';
-    document.getElementById('contractText').textContent = data.contract_text || '';
-    document.getElementById('consentText').textContent = data.consent_text || '';
+    // contract_html / consent_html — уже готовый безопасный HTML с сервера
+    // (заголовки, выравнивание и жирный текст договора отрендерены заранее)
+    document.getElementById('contractText').innerHTML = data.contract_html || '';
+    document.getElementById('consentText').innerHTML = data.consent_html || '';
 
     nameNeeded = !!data.name_needed;
     phoneNeeded = !!data.phone_needed;

@@ -3562,8 +3562,8 @@ async def get_complete_info(token: str):
         "email_needed": not bool((booking.get("guest_email") or "").strip()),
         "passport_needed": not bool((booking.get("passport") or "").strip()),
         "photos_uploaded": {"main": bool(entry.get("main")), "reg1": bool(entry.get("reg1"))},
-        "contract_text": generate_contract(booking),
-        "consent_text": generate_consent(booking),
+        "contract_html": contract_text_to_html(generate_contract(booking)),
+        "consent_html":  contract_text_to_html(generate_consent(booking)),
     }
 
 @app.post("/api/complete/{token}/upload-photo")
