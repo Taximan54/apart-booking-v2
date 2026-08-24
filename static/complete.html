@@ -15,35 +15,49 @@
   .logo{text-align:center;font-size:24px;letter-spacing:4px;color:var(--gold);margin-bottom:28px}
   .card{background:var(--panel);border:1px solid var(--border);padding:24px;margin-bottom:20px;border-radius:2px}
   .label{font-size:11px;color:var(--gold);letter-spacing:.08em;text-transform:uppercase;margin-bottom:12px}
+  .fill-btn{display:block;width:100%;background:var(--gold);color:var(--black);border:none;
+    padding:14px;font-size:13px;font-weight:bold;letter-spacing:.04em;cursor:pointer;border-radius:2px;margin-bottom:16px}
+  .fill-btn:active{opacity:.85}
   .doc{font-family:Arial,sans-serif;font-size:13px;line-height:1.65;color:var(--muted);
-    max-height:280px;overflow-y:auto;padding-right:10px;border-top:1px solid var(--border);margin-top:12px;padding-top:12px}
+    max-height:420px;overflow-y:auto;padding-right:10px;border-top:1px solid var(--border);margin-top:4px;padding-top:14px}
   .doc p{margin:0 0 10px}
   .doc .doc-heading{font-weight:bold;font-size:14px;color:var(--text);margin-top:16px}
   .doc .doc-center{text-align:center}
   .doc .doc-right{text-align:right}
   .doc .doc-gap{height:8px}
-  .doc b{color:var(--text)}
+  .doc b{font-weight:bold}
+  .doc-section-title{font-size:11px;color:var(--gold);letter-spacing:.08em;text-transform:uppercase;
+    margin:20px 0 4px;padding-top:16px;border-top:1px solid var(--border)}
   .btn{display:block;width:100%;background:var(--gold);color:var(--black);border:none;padding:14px;
     font-size:13px;font-weight:bold;letter-spacing:.04em;cursor:pointer;border-radius:2px;margin-top:14px}
   .btn:disabled{opacity:.5;cursor:default}
-  .btn-outline{background:transparent;border:1px solid var(--gold);color:var(--gold)}
   .msg{font-size:12px;line-height:1.6;color:var(--muted);margin-top:10px}
   .err{color:var(--red)}
   .ok{color:var(--gold)}
   .hidden{display:none}
   .center{text-align:center}
-  input[type=text]{width:100%;background:var(--black);border:1px solid var(--border);color:var(--text);
+
+  input[type=text],input[type=tel],input[type=email]{width:100%;background:var(--black);border:1px solid var(--border);color:var(--text);
     padding:12px;font-size:14px;border-radius:2px;margin-top:6px}
   .field-label{font-size:12px;color:var(--muted);margin-top:16px}
   .photo-row{display:flex;flex-direction:column;gap:8px;margin-top:14px}
   .photo-status{font-size:12px}
   .photo-status.done{color:var(--gold)}
   .photo-status.pending{color:var(--muted)}
+  .photo-status.err{color:var(--red)}
   input[type=file]{display:none}
   .file-btn{display:inline-block;border:1px solid var(--border);color:var(--text);padding:10px 16px;
     font-size:12px;border-radius:2px;cursor:pointer;margin-top:6px}
   .checkline{display:flex;align-items:flex-start;gap:10px;margin-top:14px;font-size:12px;color:var(--muted);line-height:1.5}
   .checkline input{margin-top:3px;accent-color:var(--gold);width:16px;height:16px;flex-shrink:0}
+
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);display:flex;align-items:flex-end;
+    justify-content:center;z-index:100;padding:0}
+  .modal-box{background:var(--panel);border:1px solid var(--border);border-bottom:none;padding:24px;
+    width:100%;max-width:600px;max-height:88vh;overflow-y:auto;border-radius:8px 8px 0 0}
+  .modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+  .modal-close{background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:4px 8px;line-height:1}
+  .modal-overlay.hidden{display:none}
 </style>
 </head>
 <body>
@@ -55,17 +69,34 @@
   <div id="content" class="hidden">
     <div class="card">
       <div class="label">Договор аренды — <span id="bookingRef"></span></div>
-      <div id="contractText" class="doc"></div>
+      <button type="button" class="fill-btn" id="fillBtn" onclick="openFillModal()">✎ Заполнить и подписать</button>
+      <div id="docScroll" class="doc">
+        <div id="contractText"></div>
+        <div class="doc-section-title">Согласие на обработку персональных данных</div>
+        <div id="consentText"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="alreadySigned" class="card center hidden">
+    <div class="label">✅ Договор уже подписан</div>
+    <div class="msg" id="signedAtText"></div>
+  </div>
+
+  <div id="notFound" class="card center hidden">
+    <div class="msg err">Ссылка недействительна или устарела. Свяжитесь с администратором.</div>
+  </div>
+</div>
+
+<!-- Модалка "Ваши данные" — поля, фото и подписание, всплывает по кнопке "Заполнить" -->
+<div id="fillModalOverlay" class="modal-overlay hidden" onclick="if(event.target===this) closeFillModal()">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="label" style="margin-bottom:0">Ваши данные</div>
+      <button type="button" class="modal-close" onclick="closeFillModal()">✕</button>
     </div>
 
-    <div class="card">
-      <div class="label">Согласие на обработку персональных данных</div>
-      <div id="consentText" class="doc"></div>
-    </div>
-
-    <div id="formCard" class="card">
-      <div class="label">Ваши данные</div>
-
+    <div id="formInner">
       <div id="nameField" class="hidden">
         <div class="field-label">Фамилия и имя</div>
         <input type="text" id="surnameInput" placeholder="Фамилия">
@@ -121,15 +152,6 @@
       <button class="btn" id="signBtn" onclick="signNow()" disabled>Подписать договор</button>
       <div id="signMsg" class="msg"></div>
     </div>
-  </div>
-
-  <div id="alreadySigned" class="card center hidden">
-    <div class="label">✅ Договор уже подписан</div>
-    <div class="msg" id="signedAtText"></div>
-  </div>
-
-  <div id="notFound" class="card center hidden">
-    <div class="msg err">Ссылка недействительна или устарела. Свяжитесь с администратором.</div>
   </div>
 </div>
 
@@ -204,7 +226,6 @@ async function init() {
     document.getElementById('content').classList.remove('hidden');
     document.getElementById('bookingRef').textContent = data.booking_ref || '';
     // contract_html / consent_html — уже готовый безопасный HTML с сервера
-    // (заголовки, выравнивание и жирный текст договора отрендерены заранее)
     document.getElementById('contractText').innerHTML = data.contract_html || '';
     document.getElementById('consentText').innerHTML = data.consent_html || '';
 
@@ -237,6 +258,13 @@ async function init() {
     document.getElementById('loading').classList.add('hidden');
     document.getElementById('notFound').classList.remove('hidden');
   }
+}
+
+function openFillModal() {
+  document.getElementById('fillModalOverlay').classList.remove('hidden');
+}
+function closeFillModal() {
+  document.getElementById('fillModalOverlay').classList.add('hidden');
 }
 
 async function uploadPhoto(slot, input) {
@@ -288,10 +316,12 @@ async function signNow() {
     const data = await r.json();
     if (!r.ok) throw new Error(data.detail || 'Не удалось подписать договор');
 
-    document.getElementById('formCard').innerHTML =
-      `<div class="label">✅ Договор подписан</div>
-       <div class="msg ok">Дата подписания: ${data.signed_at}. Подписанный договор и
-       согласие на обработку персональных данных отправлены вам на email.</div>`;
+    closeFillModal();
+    document.getElementById('content').classList.add('hidden');
+    document.getElementById('alreadySigned').classList.remove('hidden');
+    document.getElementById('alreadySigned').querySelector('.label').textContent = '✅ Договор подписан';
+    document.getElementById('signedAtText').textContent =
+      `Дата подписания: ${data.signed_at}. Подписанный договор и согласие на обработку персональных данных отправлены вам на email.`;
   } catch (e) {
     msg.textContent = e.message;
     msg.className = 'msg err';
