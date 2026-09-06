@@ -18,7 +18,7 @@
 <style>
 :root {
   --gold:#D4A017;--gold-light:#F0C040;--gold-dark:#8B6914;--gold-muted:#6B5420;
-  --black:#0A0A0A;--black-card:#141414;--black-border:#1E1E1E;
+  --black:#0A0A0A;--black-card:#141414;--black-border:#1E1E1E;--black-rgb:10,10,10;
   --text-primary:#F0E6C8;--text-secondary:#A89060;--text-muted:#5A4A30;--white:#FAF6EE;
   --logo-font:'IM Fell English',serif;--logo-weight:400;--logo-scale:1;--nav-scale:1;
   --accent-gradient:linear-gradient(180deg,#FFD060 0%,#D4920A 28%,#8B5E00 50%,#D4920A 72%,#FFD060 100%);
@@ -31,7 +31,7 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
 body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");pointer-events:none;z-index:0;opacity:.4}
 
 /* HEADER */
-header{position:fixed;top:0;left:0;right:0;z-index:1000;display:flex;align-items:center;justify-content:space-between;gap:24px;padding:16px 40px;background:linear-gradient(to bottom,rgba(10,10,10,.98),rgba(10,10,10,.85));backdrop-filter:blur(20px);border-bottom:1px solid rgba(201,168,76,.15);transition:padding .4s}
+header{position:fixed;top:0;left:0;right:0;z-index:1000;display:flex;align-items:center;justify-content:space-between;gap:24px;padding:16px 40px;background:linear-gradient(to bottom,rgba(var(--black-rgb),.98),rgba(var(--black-rgb),.85));backdrop-filter:blur(20px);border-bottom:1px solid rgba(201,168,76,.15);transition:padding .4s}
 .logo{flex-shrink:0;font-family:var(--logo-font);font-size:calc(32px * var(--logo-scale));font-weight:var(--logo-weight);letter-spacing:.08em;text-decoration:none;background:var(--accent-gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;filter:drop-shadow(0 2px 8px rgba(80,40,0,.8))}
 .logo span{font-weight:inherit}
 nav{flex:1;display:flex;flex-direction:column;align-items:center;row-gap:10px;min-width:0}
@@ -103,8 +103,8 @@ section{position:relative;z-index:1;scroll-margin-top:100px}
 .gitem-placeholder{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px}
 .gitem-placeholder svg{width:28px;height:28px;color:var(--gold-muted);opacity:.4}
 .gitem-placeholder span{font-size:10px;letter-spacing:.2em;color:var(--text-muted);text-transform:uppercase}
-.goverlay{position:absolute;inset:0;background:rgba(10,10,10,0);transition:background .4s;display:flex;align-items:center;justify-content:center}
-.gitem:hover .goverlay{background:rgba(10,10,10,.35)}
+.goverlay{position:absolute;inset:0;background:rgba(var(--black-rgb),0);transition:background .4s;display:flex;align-items:center;justify-content:center}
+.gitem:hover .goverlay{background:rgba(var(--black-rgb),.35)}
 .goverlay-plus{width:44px;height:44px;border:1px solid var(--gold);display:flex;align-items:center;justify-content:center;color:var(--gold);font-size:20px;opacity:0;transform:scale(.8);transition:all .3s}
 .gitem:hover .goverlay-plus{opacity:1;transform:scale(1)}
 .gallery-counter{text-align:right;margin-top:16px;font-size:10px;letter-spacing:.2em;color:var(--text-muted);text-transform:uppercase}
@@ -313,7 +313,7 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
 .hamburger.open span:nth-child(1){transform:translateY(11px) rotate(45deg)}
 .hamburger.open span:nth-child(2){opacity:0}
 .hamburger.open span:nth-child(3){transform:translateY(-11px) rotate(-45deg)}
-.mobile-nav{position:fixed;top:0;left:0;right:0;bottom:0;z-index:999;background:rgba(10,10,10,.98);backdrop-filter:blur(10px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px;opacity:0;pointer-events:none;transition:opacity .3s}
+.mobile-nav{position:fixed;top:0;left:0;right:0;bottom:0;z-index:999;background:rgba(var(--black-rgb),.98);backdrop-filter:blur(10px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px;opacity:0;pointer-events:none;transition:opacity .3s}
 .mobile-nav.open{opacity:1;pointer-events:auto}
 .mobile-nav a{font-family:var(--logo-font);font-size:22px;letter-spacing:.04em;text-decoration:none;color:var(--text-primary)}
 .mobile-nav a:active{opacity:.6}
@@ -1005,6 +1005,24 @@ async function init() {
       el.classList.remove('pos-left', 'pos-right');
       if(heroPos !== 'center') el.classList.add(`pos-${heroPos}`);
     });
+
+    const BACKGROUND_THEMES = {
+      black:     {bg:'#0A0A0A', card:'#141414', border:'#1E1E1E', text_primary:'#F0E6C8', text_secondary:'#A89060', text_muted:'#5A4A30', white:'#FAF6EE', rgb:'10,10,10'},
+      white:     {bg:'#FFFFFF', card:'#F7F7F5', border:'#E5E3DD', text_primary:'#1A1A1A', text_secondary:'#6B6B63', text_muted:'#A8A69C', white:'#0A0A0A', rgb:'255,255,255'},
+      pistachio: {bg:'#E8EDDC', card:'#DEE6CE', border:'#C9D4B4', text_primary:'#2B3620', text_secondary:'#5C6B47', text_muted:'#8A9678', white:'#1A2214', rgb:'232,237,220'},
+      cream:     {bg:'#FAF6EE', card:'#F0EADB', border:'#E0D6C0', text_primary:'#2A2318', text_secondary:'#6B5D45', text_muted:'#A6957A', white:'#1C1710', rgb:'250,246,238'},
+      midnight:  {bg:'#0B1220', card:'#131C2E', border:'#1E2A40', text_primary:'#E8EDF5', text_secondary:'#93A3BD', text_muted:'#4C5A73', white:'#F5F8FC', rgb:'11,18,32'},
+      sand:      {bg:'#EDE3D0', card:'#E3D7BE', border:'#D0C09E', text_primary:'#2E2416', text_secondary:'#6B5738', text_muted:'#9C8968', white:'#1C160D', rgb:'237,227,208'},
+    };
+    const bgTheme = BACKGROUND_THEMES[settings.background_theme] || BACKGROUND_THEMES.black;
+    document.documentElement.style.setProperty('--black', bgTheme.bg);
+    document.documentElement.style.setProperty('--black-card', bgTheme.card);
+    document.documentElement.style.setProperty('--black-border', bgTheme.border);
+    document.documentElement.style.setProperty('--black-rgb', bgTheme.rgb);
+    document.documentElement.style.setProperty('--text-primary', bgTheme.text_primary);
+    document.documentElement.style.setProperty('--text-secondary', bgTheme.text_secondary);
+    document.documentElement.style.setProperty('--text-muted', bgTheme.text_muted);
+    document.documentElement.style.setProperty('--white', bgTheme.white);
 
     const COLOR_THEMES = {
       gold:       {gold:'#D4A017', light:'#F0C040', dark:'#8B6914', muted:'#6B5420', gradient:'linear-gradient(180deg,#FFD060 0%,#D4920A 28%,#8B5E00 50%,#D4920A 72%,#FFD060 100%)'},

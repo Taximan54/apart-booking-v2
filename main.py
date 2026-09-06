@@ -35,6 +35,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, PlainTextResponse, FileResponse
 from PIL import Image, ImageDraw, ImageFont
+try:
+    import pillow_heif
+    pillow_heif.register_heif_opener()  # чтобы Image.open() понимал .heic/.heif с iPhone
+except ImportError:
+    print("WARNING: pillow-heif не установлен — фото паспорта в формате HEIC (iPhone) "
+          "не будут прикрепляться. Установите: pip install pillow-heif --break-system-packages")
 from pydantic import BaseModel, Field
 from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
@@ -142,6 +148,7 @@ class SiteSettings(BaseModel):
     logo_scale: float = 1.0     # 0.5 / 0.7 / 1.0 / 1.5 / 2.0 / 2.5 — размер логотипа и кнопки "Забронировать"
     nav_scale: float = 1.0      # 1.0–1.8 — размер пунктов меню (навигации)
     color_theme: str = "gold"   # gold / emerald / sapphire / burgundy / amethyst / dusty_rose / teal / copper / graphite
+    background_theme: str = "black"  # black / white / pistachio / cream / midnight / charcoal — фон сайта
     nav_labels: Dict[str, str] = Field(default_factory=lambda: {
         "gallery": "Галерея",
         "amenities": "Удобства",
@@ -802,7 +809,7 @@ def _render_inline_bold(line):
         result = result.replace(f"\ue002{i}\ue003", span)
     return result
 
-def contract_text_to_html(text):
+def contract_text_to_html(text, flat_numbering=False):
     """
     Конвертирует размеченный текст договора/согласия (маркеры [[CENTER]],
     [[RIGHT]], **жирный**, авто-жирные плейсхолдеры) в готовый HTML для
@@ -812,8 +819,12 @@ def contract_text_to_html(text):
     договор выглядел одинаково. Блок электронной подписи
     ([[SIGNATURE_BOX_START/END]]) не показывается — он появляется только
     в уже подписанном документе.
+    flat_numbering=True — для документов без настоящих разделов (согласие
+    на ПД и т.п.), где "1.", "2.", "3." это просто обычные пронумерованные
+    пункты, а не заголовки — иначе они ошибочно стали бы жирными крупными
+    заголовками (как список имущества в приложении к договору).
     """
-    in_appendix = False
+    in_appendix = flat_numbering
     in_box = False
     parts = []
     for raw_line in text.split("\n"):
@@ -881,7 +892,7 @@ def _make_numbered_canvas(header_text, font_name):
 
     return NumberedCanvas
 
-def generate_contract_pdf(contract_text, booking_ref, extra_blocks=None, header_text=None, output_dir=None):
+def generate_contract_pdf(contract_text, booking_ref, extra_blocks=None, header_text=None, output_dir=None, flat_numbering=False):
     """
     Рендерит текст в PDF и сохраняет в архив.
     extra_blocks — необязательный список элементов, которые добавляются
@@ -896,6 +907,10 @@ def generate_contract_pdf(contract_text, booking_ref, extra_blocks=None, header_
     Внутри обычного текста маркеры **текст** дают жирное начертание, а
     заголовки разделов ("1. ...", "3.1. ...:", "Приложение N 1") автоматически
     выводятся крупным жирным шрифтом.
+    flat_numbering=True — для документов без настоящих разделов (согласие
+    на ПД и т.п.), где "1.", "2.", "3." — обычные пронумерованные пункты,
+    а не заголовки; отключает автоопределение заголовков по номеру с самого
+    начала документа (как для списков внутри приложений к договору).
     output_dir — если задан, PDF сохраняется туда вместо CONTRACTS_DIR
     (используется для предпросмотра, чтобы не засорять архив договоров).
     """
@@ -934,7 +949,7 @@ def generate_contract_pdf(contract_text, booking_ref, extra_blocks=None, header_
     def _add_text_block(text, story, break_before_appendix=False):
         in_box = False
         box_lines = []
-        in_appendix = False
+        in_appendix = flat_numbering
         for raw_line in text.split("\n"):
             line = raw_line.strip()
             if line == "[[SIGNATURE_BOX_START]]":
@@ -1240,6 +1255,7 @@ def generate_signed_consent_pdf(booking):
     return generate_contract_pdf(
         text, booking_ref + "_soglasie_pd",
         header_text=f"Городская Пауза {doc_id}",
+        flat_numbering=True,
     )
 
 def email_contract_signed(booking):
@@ -1971,6 +1987,7 @@ DEFAULT_SETTINGS = {
     "logo_scale": 1.0,
     "nav_scale": 1.0,
     "color_theme": "gold",
+    "background_theme": "black",
     "nav_labels": {
         "gallery": "Галерея",
         "amenities": "Удобства",
@@ -2560,8 +2577,9 @@ async def upload_passport_photo(file: UploadFile = File(...)):
         raise HTTPException(status_code=400, detail="Файл слишком большой (макс. 20МБ)")
     try:
         compressed = compress_passport_image(content)
-    except Exception:
-        raise HTTPException(status_code=400, detail="Не удалось обработать изображение — попробуйте другое фото")
+    except Exception as e:
+        print(f"Ошибка обработки фото паспорта (файл '{file.filename}', {len(content)} байт): {e}")
+        raise HTTPException(status_code=400, detail="Не удалось обработать изображение — попробуйте другое фото (или переснимите не в формате HEIC)")
 
     os.makedirs(PASSPORT_DIR, exist_ok=True)
     filename = f"passport_{secrets.token_hex(12)}.jpg"
@@ -3487,7 +3505,7 @@ async def get_sign_info(token: str):
         "passport": booking.get("passport"),
         "photos_uploaded": {"main": bool(entry.get("main")), "reg1": bool(entry.get("reg1"))},
         "contract_html": contract_text_to_html(generate_contract(booking)),
-        "consent_html":  contract_text_to_html(generate_consent(booking)),
+        "consent_html":  contract_text_to_html(generate_consent(booking), flat_numbering=True),
     }
 
 @app.post("/api/sign/{token}/confirm")
@@ -3563,7 +3581,7 @@ async def get_complete_info(token: str):
         "passport_needed": not bool((booking.get("passport") or "").strip()),
         "photos_uploaded": {"main": bool(entry.get("main")), "reg1": bool(entry.get("reg1"))},
         "contract_html": contract_text_to_html(generate_contract(booking)),
-        "consent_html":  contract_text_to_html(generate_consent(booking)),
+        "consent_html":  contract_text_to_html(generate_consent(booking), flat_numbering=True),
     }
 
 @app.post("/api/complete/{token}/upload-photo")
@@ -3584,8 +3602,9 @@ async def upload_complete_photo(token: str, slot: str = Form(...), file: UploadF
         raise HTTPException(status_code=400, detail="Файл слишком большой (макс. 20МБ)")
     try:
         compressed = compress_passport_image(content)
-    except Exception:
-        raise HTTPException(status_code=400, detail="Не удалось обработать изображение — попробуйте другое фото")
+    except Exception as e:
+        print(f"Ошибка обработки фото паспорта (файл '{file.filename}', {len(content)} байт): {e}")
+        raise HTTPException(status_code=400, detail="Не удалось обработать изображение — попробуйте другое фото (или переснимите не в формате HEIC)")
 
     booking_ref = str(booking.get("username") or booking.get("id", ""))
     os.makedirs(PASSPORT_DIR, exist_ok=True)

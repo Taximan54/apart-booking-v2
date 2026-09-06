@@ -1097,6 +1097,11 @@ input[type=date]::-webkit-calendar-picker-indicator:active{
           </div>
           <div id="colorPicker" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-bottom:24px"></div>
 
+          <div class="info-field" style="margin-bottom:8px">
+            <div class="info-label">Фон сайта</div>
+          </div>
+          <div id="backgroundPicker" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-bottom:24px"></div>
+
           <div style="display:flex;gap:24px;flex-wrap:wrap;margin-bottom:24px">
             <div>
               <div class="info-label" style="margin-bottom:8px">Начертание</div>
@@ -3658,6 +3663,7 @@ let selectedBold = false;
 let selectedScale = 1.0;
 let selectedNavScale = 1.0;
 let selectedColorTheme = 'gold';
+let selectedBackgroundTheme = 'black';
 let selectedHeroFont = 'cormorant';
 let selectedHeroBold = false;
 let selectedHeroTitleScale = 1.0;
@@ -3679,6 +3685,31 @@ const COLOR_THEMES = [
   {key: 'graphite',   label: 'Графит',        solid: '#8A8D91', gradient: 'linear-gradient(180deg,#F2F3F4 0%,#8A8D91 28%,#232426 50%,#8A8D91 72%,#F2F3F4 100%)'},
 ];
 
+// Темы ФОНА сайта — отдельная ось от COLOR_THEMES (там акцентный цвет
+// логотипа/кнопок, тут — сам фон страницы и цвет текста под него).
+// Первая опция ("black") — нынешний фон проекта, значения 1-в-1 совпадают
+// с текущими CSS-переменными, поэтому смена ничего не ломает по умолчанию.
+const BACKGROUND_THEMES = [
+  {key: 'black',     label: 'Чёрный',       swatch: '#0A0A0A',
+    bg: '#0A0A0A', card: '#141414', border: '#1E1E1E',
+    text_primary: '#F0E6C8', text_secondary: '#A89060', text_muted: '#5A4A30', white: '#FAF6EE'},
+  {key: 'white',     label: 'Белый',        swatch: '#FFFFFF',
+    bg: '#FFFFFF', card: '#F7F7F5', border: '#E5E3DD',
+    text_primary: '#1A1A1A', text_secondary: '#6B6B63', text_muted: '#A8A69C', white: '#0A0A0A'},
+  {key: 'pistachio', label: 'Фисташковый',  swatch: '#E8EDDC',
+    bg: '#E8EDDC', card: '#DEE6CE', border: '#C9D4B4',
+    text_primary: '#2B3620', text_secondary: '#5C6B47', text_muted: '#8A9678', white: '#1A2214'},
+  {key: 'cream',     label: 'Кремовый',     swatch: '#FAF6EE',
+    bg: '#FAF6EE', card: '#F0EADB', border: '#E0D6C0',
+    text_primary: '#2A2318', text_secondary: '#6B5D45', text_muted: '#A6957A', white: '#1C1710'},
+  {key: 'midnight',  label: 'Тёмно-синий',  swatch: '#0B1220',
+    bg: '#0B1220', card: '#131C2E', border: '#1E2A40',
+    text_primary: '#E8EDF5', text_secondary: '#93A3BD', text_muted: '#4C5A73', white: '#F5F8FC'},
+  {key: 'sand',      label: 'Песочный',     swatch: '#EDE3D0',
+    bg: '#EDE3D0', card: '#E3D7BE', border: '#D0C09E',
+    text_primary: '#2E2416', text_secondary: '#6B5738', text_muted: '#9C8968', white: '#1C160D'},
+];
+
 function renderColorPicker() {
   const el = document.getElementById('colorPicker');
   el.innerHTML = COLOR_THEMES.map(c => `
@@ -3689,10 +3720,27 @@ function renderColorPicker() {
   `).join('');
 }
 
+function renderBackgroundPicker() {
+  const el = document.getElementById('backgroundPicker');
+  el.innerHTML = BACKGROUND_THEMES.map(b => `
+    <div onclick="selectBackgroundTheme('${b.key}')" id="bgOpt-${b.key}" style="cursor:pointer;padding:12px 6px;text-align:center;border:1px solid ${b.key === selectedBackgroundTheme ? 'var(--gold)' : 'var(--black-border)'};background:var(--black-card);transition:border-color .2s">
+      <div style="width:100%;height:28px;border-radius:2px;margin-bottom:6px;background:${b.swatch};border:1px solid rgba(128,128,128,.25)"></div>
+      <div style="font-size:9px;color:var(--text-muted);letter-spacing:.05em">${b.label}</div>
+    </div>
+  `).join('');
+}
+
+function selectBackgroundTheme(key) {
+  selectedBackgroundTheme = key;
+  renderBackgroundPicker();
+  renderDesignPreview();
+}
+
 function selectColorTheme(key) {
   selectedColorTheme = key;
   renderColorPicker();
   renderDesignPreview();
+
 }
 
 const NAV_LABEL_KEYS = [
@@ -3937,6 +3985,8 @@ function renderDesignPreview() {
   const fontObj     = FONT_OPTIONS.find(f => f.key === selectedFont) || FONT_OPTIONS[0];
   const heroFontObj = HERO_FONT_OPTIONS.find(f => f.key === selectedHeroFont) || HERO_FONT_OPTIONS[0];
   const theme       = COLOR_THEMES.find(c => c.key === selectedColorTheme) || COLOR_THEMES[0];
+  const bgTheme     = BACKGROUND_THEMES.find(b => b.key === selectedBackgroundTheme) || BACKGROUND_THEMES[0];
+  if (heroBoxEl) heroBoxEl.style.background = bgTheme.card;
 
   const siteNameEl  = document.getElementById('settingsSiteName');
   const heroTitleIn = document.getElementById('settingsHeroTitle');
@@ -4002,6 +4052,7 @@ async function loadSiteSettings() {
     selectedScale = s.logo_scale || 1.0;
     selectedNavScale = s.nav_scale || 1.0;
     selectedColorTheme = s.color_theme || 'gold';
+    selectedBackgroundTheme = s.background_theme || 'black';
     navLabels = s.nav_labels || {};
     amenitiesData = (s.amenities && s.amenities.length ? s.amenities : []).slice(0, 12);
     while(amenitiesData.length < 12) amenitiesData.push({icon:'', name:''});
@@ -4019,6 +4070,7 @@ async function loadSiteSettings() {
     renderScalePicker();
     renderNavScalePicker();
     renderColorPicker();
+    renderBackgroundPicker();
     renderNavLabelsEditor();
     renderHeroFontPicker();
     renderHeroBoldToggle();
@@ -4115,6 +4167,7 @@ async function saveDesignSettings() {
     logo_scale:    selectedScale,
     nav_scale:     selectedNavScale,
     color_theme:   selectedColorTheme,
+    background_theme: selectedBackgroundTheme,
     nav_labels:    collectedNavLabels,
     hero_font:     selectedHeroFont,
     hero_bold:     selectedHeroBold,
