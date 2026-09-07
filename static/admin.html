@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Панель управления — Городская Пауза</title>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Montserrat:wght@300;400;500;600&family=IM+Fell+English&family=Playfair+Display:wght@700&family=UnifrakturMaguntia&family=Tangerine:wght@700&family=Pacifico&family=Bebas+Neue&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Montserrat:wght@300;400;500;600&family=IM+Fell+English&family=Playfair+Display:wght@700&family=UnifrakturMaguntia&family=Tangerine:wght@700&family=Pacifico&family=Bebas+Neue&family=Great+Vibes&family=Allura&display=swap" rel="stylesheet">
 <style>
 :root{
   --gold:#C9A84C;--gold-light:#E8C97A;--gold-muted:#6B5420;
@@ -3652,6 +3652,8 @@ const FONT_OPTIONS = [
   {key: 'unifraktur', label: 'UnifrakturMaguntia', family: "'UnifrakturMaguntia',serif", weight: 400},
   {key: 'tangerine',  label: 'Tangerine',        family: "'Tangerine',cursive",      weight: 700},
   {key: 'pacifico',   label: 'Pacifico',         family: "'Pacifico',cursive",       weight: 400},
+  {key: 'great_vibes', label: 'Great Vibes',     family: "'Great Vibes',cursive",    weight: 400},
+  {key: 'allura',     label: 'Allura',           family: "'Allura',cursive",         weight: 400},
   {key: 'bebas',      label: 'Bebas Neue',       family: "'Bebas Neue',sans-serif",  weight: 400},
 ];
 const HERO_FONT_OPTIONS = [
@@ -3683,6 +3685,7 @@ const COLOR_THEMES = [
   {key: 'teal',       label: 'Бирюза',        solid: '#1F8A8C', gradient: 'linear-gradient(180deg,#9FEAE5 0%,#1F8A8C 28%,#082D2E 50%,#1F8A8C 72%,#9FEAE5 100%)'},
   {key: 'copper',     label: 'Медь',          solid: '#B5651D', gradient: 'linear-gradient(180deg,#F3C495 0%,#B5651D 28%,#3E2008 50%,#B5651D 72%,#F3C495 100%)'},
   {key: 'graphite',   label: 'Графит',        solid: '#8A8D91', gradient: 'linear-gradient(180deg,#F2F3F4 0%,#8A8D91 28%,#232426 50%,#8A8D91 72%,#F2F3F4 100%)'},
+  {key: 'onyx',       label: 'Оникс',         solid: '#6E6A63', gradient: 'linear-gradient(180deg,#A39C90 0%,#6E6A63 28%,#000000 50%,#6E6A63 72%,#A39C90 100%)'},
 ];
 
 // Темы ФОНА сайта — отдельная ось от COLOR_THEMES (там акцентный цвет
@@ -3708,6 +3711,18 @@ const BACKGROUND_THEMES = [
   {key: 'sand',      label: 'Песочный',     swatch: '#EDE3D0',
     bg: '#EDE3D0', card: '#E3D7BE', border: '#D0C09E',
     text_primary: '#2E2416', text_secondary: '#6B5738', text_muted: '#9C8968', white: '#1C160D'},
+  {key: 'mocha',        label: 'Мокко',              swatch: '#3D2F28',
+    bg: '#3D2F28', card: '#4A3B32', border: '#5C4A3E',
+    text_primary: '#F0E4D8', text_secondary: '#C4A688', text_muted: '#8A6F5C', white: '#FCF6EF'},
+  {key: 'emerald_night', label: 'Изумрудная ночь',   swatch: '#0D2818',
+    bg: '#0D2818', card: '#153322', border: '#1F4530',
+    text_primary: '#E8F5EC', text_secondary: '#8FBFA0', text_muted: '#4A6B58', white: '#F5FAF7'},
+  {key: 'terracotta',    label: 'Терракотовый',      swatch: '#5C3226',
+    bg: '#5C3226', card: '#6B3D2F', border: '#7D4A3A',
+    text_primary: '#F5E6DC', text_secondary: '#D4A88F', text_muted: '#9C7360', white: '#FCF3EC'},
+  {key: 'indigo',        label: 'Индиго',            swatch: '#1A1440',
+    bg: '#1A1440', card: '#241D52', border: '#332968',
+    text_primary: '#EDEAFA', text_secondary: '#A79FD8', text_muted: '#5C5490', white: '#F7F5FC'},
 ];
 
 function renderColorPicker() {

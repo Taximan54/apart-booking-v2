@@ -14,7 +14,7 @@
 <meta name="description" content="Апартаменты премиум-класса в Новосибирске. Посуточная аренда — уютно, стильно, с полным сервисом.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Montserrat:wght@300;400;500;600&family=IM+Fell+English&family=Playfair+Display:wght@700&family=UnifrakturMaguntia&family=Tangerine:wght@700&family=Pacifico&family=Bebas+Neue&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Montserrat:wght@300;400;500;600&family=IM+Fell+English&family=Playfair+Display:wght@700&family=UnifrakturMaguntia&family=Tangerine:wght@700&family=Pacifico&family=Bebas+Neue&family=Great+Vibes&family=Allura&display=swap" rel="stylesheet">
 <style>
 :root {
   --gold:#D4A017;--gold-light:#F0C040;--gold-dark:#8B6914;--gold-muted:#6B5420;
@@ -983,6 +983,8 @@ async function init() {
       unifraktur: {family:"'UnifrakturMaguntia',serif",  weight:400},
       tangerine:  {family:"'Tangerine',cursive",         weight:700},
       pacifico:   {family:"'Pacifico',cursive",          weight:400},
+      great_vibes:{family:"'Great Vibes',cursive",       weight:400},
+      allura:     {family:"'Allura',cursive",            weight:400},
       bebas:      {family:"'Bebas Neue',sans-serif",     weight:400},
     };
     const font = FONT_MAP[settings.logo_font] || FONT_MAP.im_fell;
@@ -1013,6 +1015,10 @@ async function init() {
       cream:     {bg:'#FAF6EE', card:'#F0EADB', border:'#E0D6C0', text_primary:'#2A2318', text_secondary:'#6B5D45', text_muted:'#A6957A', white:'#1C1710', rgb:'250,246,238'},
       midnight:  {bg:'#0B1220', card:'#131C2E', border:'#1E2A40', text_primary:'#E8EDF5', text_secondary:'#93A3BD', text_muted:'#4C5A73', white:'#F5F8FC', rgb:'11,18,32'},
       sand:      {bg:'#EDE3D0', card:'#E3D7BE', border:'#D0C09E', text_primary:'#2E2416', text_secondary:'#6B5738', text_muted:'#9C8968', white:'#1C160D', rgb:'237,227,208'},
+      mocha:        {bg:'#3D2F28', card:'#4A3B32', border:'#5C4A3E', text_primary:'#F0E4D8', text_secondary:'#C4A688', text_muted:'#8A6F5C', white:'#FCF6EF', rgb:'61,47,40'},
+      emerald_night:{bg:'#0D2818', card:'#153322', border:'#1F4530', text_primary:'#E8F5EC', text_secondary:'#8FBFA0', text_muted:'#4A6B58', white:'#F5FAF7', rgb:'13,40,24'},
+      terracotta:   {bg:'#5C3226', card:'#6B3D2F', border:'#7D4A3A', text_primary:'#F5E6DC', text_secondary:'#D4A88F', text_muted:'#9C7360', white:'#FCF3EC', rgb:'92,50,38'},
+      indigo:       {bg:'#1A1440', card:'#241D52', border:'#332968', text_primary:'#EDEAFA', text_secondary:'#A79FD8', text_muted:'#5C5490', white:'#F7F5FC', rgb:'26,20,64'},
     };
     const bgTheme = BACKGROUND_THEMES[settings.background_theme] || BACKGROUND_THEMES.black;
     document.documentElement.style.setProperty('--black', bgTheme.bg);
@@ -1034,6 +1040,7 @@ async function init() {
       teal:       {gold:'#1F8A8C', light:'#6FD8D2', dark:'#0D4547', muted:'#166668', gradient:'linear-gradient(180deg,#9FEAE5 0%,#1F8A8C 28%,#082D2E 50%,#1F8A8C 72%,#9FEAE5 100%)'},
       copper:     {gold:'#B5651D', light:'#E8A15C', dark:'#5C310C', muted:'#8A4A15', gradient:'linear-gradient(180deg,#F3C495 0%,#B5651D 28%,#3E2008 50%,#B5651D 72%,#F3C495 100%)'},
       graphite:   {gold:'#8A8D91', light:'#E4E6E9', dark:'#3A3C3F', muted:'#5F6266', gradient:'linear-gradient(180deg,#F2F3F4 0%,#8A8D91 28%,#232426 50%,#8A8D91 72%,#F2F3F4 100%)'},
+      onyx:       {gold:'#6E6A63', light:'#A39C90', dark:'#000000', muted:'#3D3A35', gradient:'linear-gradient(180deg,#A39C90 0%,#6E6A63 28%,#000000 50%,#6E6A63 72%,#A39C90 100%)'},
     };
     const theme = COLOR_THEMES[settings.color_theme] || COLOR_THEMES.gold;
     document.documentElement.style.setProperty('--gold', theme.gold);
