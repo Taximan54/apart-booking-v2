@@ -3647,6 +3647,7 @@ async function saveHouseRules() {
 
 // SITE SETTINGS
 const FONT_OPTIONS = [
+  {key: 'cormorant',  label: 'Cormorant Garamond', family: "'Cormorant Garamond',serif", weight: 400},
   {key: 'im_fell',    label: 'PT Serif',         family: "'PT Serif',serif",         weight: 700},
   {key: 'playfair',   label: 'Playfair Display', family: "'Playfair Display',serif", weight: 700},
   {key: 'unifraktur', label: 'Yeseva One',       family: "'Yeseva One',serif",       weight: 400},
@@ -3656,10 +3657,7 @@ const FONT_OPTIONS = [
   {key: 'berkshire',  label: 'Bad Script',       family: "'Bad Script',cursive",     weight: 400},
   {key: 'poiret',     label: 'Poiret One',       family: "'Poiret One',sans-serif",   weight: 400},
 ];
-const HERO_FONT_OPTIONS = [
-  {key: 'cormorant',  label: 'Cormorant Garamond', family: "'Cormorant Garamond',serif", weight: 400},
-  ...FONT_OPTIONS,
-];
+const HERO_FONT_OPTIONS = FONT_OPTIONS;
 let selectedFont = 'im_fell';
 let selectedBold = false;
 let selectedScale = 1.0;
