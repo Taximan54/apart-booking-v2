@@ -143,7 +143,7 @@ class SiteSettings(BaseModel):
     site_name: str = "Городская Пауза"
     hero_title: str = "Искусство комфортного проживания"
     hero_subtitle: str = "Апартаменты премиум-класса · Посуточная аренда"
-    logo_font: str = "im_fell"  # im_fell / playfair / unifraktur / tangerine / pacifico / bebas
+    logo_font: str = "im_fell"  # im_fell(=PT Serif) / playfair / unifraktur(=Yeseva One) / tangerine(=Marck Script) / pacifico / great_vibes / berkshire(=Bad Script) / poiret — ключи исторические, реальные шрифты см. FONT_OPTIONS в admin.html
     logo_bold: bool = False
     logo_scale: float = 1.0     # 0.5 / 0.7 / 1.0 / 1.5 / 2.0 / 2.5 — размер логотипа и кнопки "Забронировать"
     nav_scale: float = 1.0      # 1.0–1.8 — размер пунктов меню (навигации)
