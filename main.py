@@ -2629,8 +2629,8 @@ async def set_door_code(d: DoorCode, _: bool = Depends(require_admin)):
 async def get_description():
     if os.path.exists(DESC_FILE):
         with open(DESC_FILE, "r") as f:
-            return f.read()
-    return ""
+            return PlainTextResponse(f.read())
+    return PlainTextResponse("")
 
 @app.post("/api/description")
 async def set_description(d: Description, _: bool = Depends(require_admin)):
