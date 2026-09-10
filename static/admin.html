@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Панель управления — Городская Пауза</title>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Montserrat:wght@300;400;500;600&family=PT+Serif:wght@400;700&family=Playfair+Display:wght@700&family=Yeseva+One&family=Marck+Script&family=Pacifico&family=Poiret+One&family=Great+Vibes&family=Bad+Script&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Montserrat:wght@300;400;500;600&family=PT+Serif:wght@400;700&family=IM+Fell+English&family=Yeseva+One&family=Marck+Script&family=Pacifico&family=Poiret+One&family=Great+Vibes&family=Bad+Script&display=swap" rel="stylesheet">
 <style>
 :root{
   --gold:#C9A84C;--gold-light:#E8C97A;--gold-muted:#6B5420;
@@ -1162,6 +1162,10 @@ input[type=date]::-webkit-calendar-picker-indicator:active{
             <div>
               <div class="info-label" style="margin-bottom:8px">Расположение на экране</div>
               <div id="heroPositionPicker" style="display:flex;gap:8px"></div>
+            </div>
+            <div>
+              <div class="info-label" style="margin-bottom:8px">Скорость смены слайдов (обложка/акции)</div>
+              <div id="heroCarouselSpeedPicker" style="display:flex;gap:6px;flex-wrap:wrap"></div>
             </div>
           </div>
 
@@ -3649,7 +3653,7 @@ async function saveHouseRules() {
 const FONT_OPTIONS = [
   {key: 'cormorant',  label: 'Cormorant Garamond', family: "'Cormorant Garamond',serif", weight: 400},
   {key: 'im_fell',    label: 'PT Serif',         family: "'PT Serif',serif",         weight: 700},
-  {key: 'playfair',   label: 'Playfair Display', family: "'Playfair Display',serif", weight: 700},
+  {key: 'playfair',   label: 'IM Fell English',  family: "'IM Fell English',serif", weight: 400},
   {key: 'unifraktur', label: 'Yeseva One',       family: "'Yeseva One',serif",       weight: 400},
   {key: 'tangerine',  label: 'Marck Script',     family: "'Marck Script',cursive",   weight: 400},
   {key: 'pacifico',   label: 'Pacifico',         family: "'Pacifico',cursive",       weight: 400},
@@ -3669,6 +3673,7 @@ let selectedHeroBold = false;
 let selectedHeroTitleScale = 1.0;
 let selectedHeroSubtitleScale = 1.0;
 let selectedHeroPosition = 'center';
+let selectedHeroCarouselSeconds = 6;
 const SCALE_OPTIONS = [0.5, 0.7, 1.0, 1.5, 2.0, 2.5];
 const HERO_SCALE_OPTIONS = [0.5, 0.7, 1.0, 1.5, 2.0];
 const NAV_SCALE_OPTIONS = [1.0, 1.2, 1.4, 1.6, 1.8];
@@ -3963,6 +3968,20 @@ function selectHeroPosition(v) {
   renderDesignPreview();
 }
 
+const HERO_CAROUSEL_SECONDS_OPTIONS = [3, 4, 5, 6, 8, 10, 12, 15];
+
+function renderHeroCarouselSpeedPicker() {
+  const el = document.getElementById('heroCarouselSpeedPicker');
+  el.innerHTML = HERO_CAROUSEL_SECONDS_OPTIONS.map(sec => `
+    <button type="button" onclick="selectHeroCarouselSeconds(${sec})" class="btn ${selectedHeroCarouselSeconds===sec ? 'btn-primary' : 'btn-ghost'} btn-sm">${sec} сек</button>
+  `).join('');
+}
+
+function selectHeroCarouselSeconds(sec) {
+  selectedHeroCarouselSeconds = sec;
+  renderHeroCarouselSpeedPicker();
+}
+
 function selectFont(key) {
   selectedFont = key;
   renderFontPicker();
@@ -4078,6 +4097,7 @@ async function loadSiteSettings() {
     selectedHeroTitleScale = s.hero_title_scale || 1.0;
     selectedHeroSubtitleScale = s.hero_subtitle_scale || 1.0;
     selectedHeroPosition = s.hero_position || 'center';
+    selectedHeroCarouselSeconds = s.hero_carousel_seconds || 6;
     renderFontPicker();
     renderBoldToggle();
     renderScalePicker();
@@ -4090,6 +4110,7 @@ async function loadSiteSettings() {
     renderHeroTitleScalePicker();
     renderHeroSubtitleScalePicker();
     renderHeroPositionPicker();
+    renderHeroCarouselSpeedPicker();
     renderDesignPreview();
     if(s.hero_photo) {
       const img = document.getElementById('heroPhotoImg');
@@ -4187,6 +4208,7 @@ async function saveDesignSettings() {
     hero_title_scale:    selectedHeroTitleScale,
     hero_subtitle_scale: selectedHeroSubtitleScale,
     hero_position: selectedHeroPosition,
+    hero_carousel_seconds: selectedHeroCarouselSeconds,
   };
   try {
     const current = await apiGet('/api/site-settings');

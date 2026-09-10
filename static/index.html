@@ -14,7 +14,7 @@
 <meta name="description" content="Апартаменты премиум-класса в Новосибирске. Посуточная аренда — уютно, стильно, с полным сервисом.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Montserrat:wght@300;400;500;600&family=PT+Serif:wght@400;700&family=Playfair+Display:wght@700&family=Yeseva+One&family=Marck+Script&family=Pacifico&family=Poiret+One&family=Great+Vibes&family=Bad+Script&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Montserrat:wght@300;400;500;600&family=PT+Serif:wght@400;700&family=IM+Fell+English&family=Yeseva+One&family=Marck+Script&family=Pacifico&family=Poiret+One&family=Great+Vibes&family=Bad+Script&display=swap" rel="stylesheet">
 <style>
 :root {
   --gold:#D4A017;--gold-light:#F0C040;--gold-dark:#8B6914;--gold-muted:#6B5420;
@@ -53,6 +53,7 @@ nav a:hover{color:var(--gold)}
 .hero-slide.pos-left{justify-content:flex-start}
 .hero-slide.pos-right{justify-content:flex-end}
 .hero-bg{position:absolute;inset:0;background-size:cover;background-position:center 40%;transform:scale(1.1);will-change:transform}
+.hero-bg.no-zoom{background-size:contain;background-position:center;background-repeat:no-repeat;transform:none;background-color:var(--black)}
 .hero-overlay{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.55) 0%,rgba(0,0,0,.3) 50%,rgba(0,0,0,.7) 100%)}
 .hero-lines{position:absolute;inset:0;background-image:linear-gradient(rgba(212,160,23,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(212,160,23,.03) 1px,transparent 1px);background-size:80px 80px;mask-image:radial-gradient(ellipse at center,black 20%,transparent 80%)}
 .hero-content{position:relative;z-index:10;text-align:center;max-width:900px;padding:0 60px}
@@ -917,11 +918,15 @@ async function initHeroCarousel() {
   // баннерами акций (главная → акция 1 → акция 2 → ... → снова главная).
   // Если акций нет, ничего не делаем — просто статичный hero, как раньше.
   const timeout = ms => new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms));
-  let discounts;
+  let discounts, settings;
   try {
     discounts = await Promise.race([API.discounts(), timeout(5000)]);
   } catch(e) { return; }
   if (!Array.isArray(discounts) || discounts.length === 0) return;
+  try {
+    settings = await Promise.race([fetch(`${API.BASE}/api/site-settings`).then(r=>r.json()), timeout(5000)]);
+  } catch(e) { settings = {}; }
+  const slideSeconds = Number(settings.hero_carousel_seconds) || 6;
 
   const track = document.getElementById('heroTrack');
   if (!track) return;
@@ -930,15 +935,14 @@ async function initHeroCarousel() {
     const slide = document.createElement('div');
     slide.className = 'hero-slide';
     const photoUrl = d.photo ? `/data/photos/${d.photo}` : '';
-    const shortDesc = (d.description || '').split('\n')[0];
+    // no-zoom: у баннеров акций текст часто нарисован близко к краю фото,
+    // поэтому им не подходит зум-обрезка обычного hero-фото (transform:scale
+    // и background-size:cover) — показываем целиком, без обрезки
     slide.innerHTML = `
-      <div class="hero-bg"${photoUrl ? ` style="background-image:url('${photoUrl}')"` : ''}></div>
+      <div class="hero-bg no-zoom"${photoUrl ? ` style="background-image:url('${photoUrl}')"` : ''}></div>
       <div class="hero-overlay"></div>
       <div class="hero-lines"></div>
       <div class="hero-content">
-        <div class="eyebrow">Акция</div>
-        <h1 style="color:var(--gold)">${d.name || ''}</h1>
-        <p class="hero-sub">${shortDesc}</p>
         <div class="hero-cta">
           <a href="discounts.html" class="btn-gold">Подробнее об акции</a>
         </div>
@@ -953,7 +957,7 @@ async function initHeroCarousel() {
     if (document.hidden) return; // не крутим на неактивной вкладке
     current = (current + 1) % totalSlides;
     track.style.transform = `translateX(-${current * 100}%)`;
-  }, 4000);
+  }, slideSeconds * 1000);
 }
 
 async function init() {
@@ -1031,7 +1035,7 @@ async function init() {
     const FONT_MAP = {
       cormorant:  {family:"'Cormorant Garamond',serif", weight:400},
       im_fell:    {family:"'PT Serif',serif",           weight:700},
-      playfair:   {family:"'Playfair Display',serif",   weight:700},
+      playfair:   {family:"'IM Fell English',serif",     weight:400},
       unifraktur: {family:"'Yeseva One',serif",         weight:400},
       tangerine:  {family:"'Marck Script',cursive",     weight:400},
       pacifico:   {family:"'Pacifico',cursive",          weight:400},
