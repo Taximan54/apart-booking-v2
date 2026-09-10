@@ -53,7 +53,7 @@ nav a:hover{color:var(--gold)}
 .hero-slide.pos-left{justify-content:flex-start}
 .hero-slide.pos-right{justify-content:flex-end}
 .hero-bg{position:absolute;inset:0;background-size:cover;background-position:center 40%;transform:scale(1.1);will-change:transform}
-.hero-bg.no-zoom{background-size:contain;background-position:center;background-repeat:no-repeat;transform:none;background-color:var(--black)}
+.hero-bg.no-zoom{position:absolute;top:160px;left:0;right:0;bottom:0;background-size:contain;background-position:center;background-repeat:no-repeat;transform:none;background-color:var(--black)}
 .hero-overlay{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.55) 0%,rgba(0,0,0,.3) 50%,rgba(0,0,0,.7) 100%)}
 .hero-lines{position:absolute;inset:0;background-image:linear-gradient(rgba(212,160,23,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(212,160,23,.03) 1px,transparent 1px);background-size:80px 80px;mask-image:radial-gradient(ellipse at center,black 20%,transparent 80%)}
 .hero-content{position:relative;z-index:10;text-align:center;max-width:900px;padding:0 60px}
@@ -916,20 +916,25 @@ const MONTHS=['Январь','Февраль','Март','Апрель','Май'
 async function initHeroCarousel() {
   // Если есть активные акции — крутим hero-обложку по кругу вместе с
   // баннерами акций (главная → акция 1 → акция 2 → ... → снова главная).
-  // Если акций нет, ничего не делаем — просто статичный hero, как раньше.
+  // Если акций нет (или карусель выключена в настройках), ничего не
+  // делаем — просто статичный hero, как раньше.
   const timeout = ms => new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms));
-  let discounts, settings;
+  let settings;
+  try {
+    settings = await Promise.race([fetch(`${API.BASE}/api/site-settings`).then(r=>r.json()), timeout(5000)]);
+  } catch(e) { return; }
+  if (settings.hero_carousel_enabled === false) return;
+  const slideSeconds = Number(settings.hero_carousel_seconds) || 6;
+
+  let discounts;
   try {
     discounts = await Promise.race([API.discounts(), timeout(5000)]);
   } catch(e) { return; }
   if (!Array.isArray(discounts) || discounts.length === 0) return;
-  try {
-    settings = await Promise.race([fetch(`${API.BASE}/api/site-settings`).then(r=>r.json()), timeout(5000)]);
-  } catch(e) { settings = {}; }
-  const slideSeconds = Number(settings.hero_carousel_seconds) || 6;
 
   const track = document.getElementById('heroTrack');
-  if (!track) return;
+  const mainSlide = document.getElementById('heroSlideMain');
+  if (!track || !mainSlide) return;
 
   discounts.forEach(d => {
     const slide = document.createElement('div');
@@ -951,11 +956,32 @@ async function initHeroCarousel() {
     track.appendChild(slide);
   });
 
-  const totalSlides = 1 + discounts.length;
+  // Дубль главного слайда в конце трека — нужен, чтобы карусель всегда
+  // ехала в одну сторону (справа налево). Без него при возврате с
+  // последней акции на обложку трек прыгал бы назад в обратную сторону.
+  // Доехав до дубля, мгновенно (без анимации) подменяем его на настоящий
+  // слайд 0 — глазом эта подмена незаметна, т.к. они выглядят одинаково.
+  const mainClone = mainSlide.cloneNode(true);
+  mainClone.removeAttribute('id');
+  mainClone.querySelectorAll('[id]').forEach(el => el.removeAttribute('id'));
+  track.appendChild(mainClone);
+
+  const totalSlides = discounts.length + 2; // главная + акции + дубль главной
   let current = 0;
+
+  track.addEventListener('transitionend', () => {
+    if (current === totalSlides - 1) {
+      track.style.transition = 'none';
+      current = 0;
+      track.style.transform = 'translateX(0%)';
+      void track.offsetWidth; // форсируем reflow, чтобы браузер применил transition:none
+      track.style.transition = '';
+    }
+  });
+
   setInterval(() => {
     if (document.hidden) return; // не крутим на неактивной вкладке
-    current = (current + 1) % totalSlides;
+    current++;
     track.style.transform = `translateX(-${current * 100}%)`;
   }, slideSeconds * 1000);
 }

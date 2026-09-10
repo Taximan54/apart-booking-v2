@@ -1167,6 +1167,13 @@ input[type=date]::-webkit-calendar-picker-indicator:active{
               <div class="info-label" style="margin-bottom:8px">Скорость смены слайдов (обложка/акции)</div>
               <div id="heroCarouselSpeedPicker" style="display:flex;gap:6px;flex-wrap:wrap"></div>
             </div>
+            <div>
+              <div class="info-label" style="margin-bottom:8px">Карусель hero (обложка ↔ акции)</div>
+              <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:var(--text-primary)">
+                <input type="checkbox" id="heroCarouselEnabledCheck" onchange="selectedHeroCarouselEnabled = this.checked" style="accent-color:var(--gold);width:16px;height:16px">
+                Включена (если выключить — на hero всегда только обложка, даже при активных акциях)
+              </label>
+            </div>
           </div>
 
           <button class="btn btn-primary" onclick="saveDesignSettings()">Сохранить оформление</button>
@@ -3673,6 +3680,7 @@ let selectedHeroBold = false;
 let selectedHeroTitleScale = 1.0;
 let selectedHeroSubtitleScale = 1.0;
 let selectedHeroPosition = 'center';
+let selectedHeroCarouselEnabled = true;
 let selectedHeroCarouselSeconds = 6;
 const SCALE_OPTIONS = [0.5, 0.7, 1.0, 1.5, 2.0, 2.5];
 const HERO_SCALE_OPTIONS = [0.5, 0.7, 1.0, 1.5, 2.0];
@@ -4098,6 +4106,8 @@ async function loadSiteSettings() {
     selectedHeroSubtitleScale = s.hero_subtitle_scale || 1.0;
     selectedHeroPosition = s.hero_position || 'center';
     selectedHeroCarouselSeconds = s.hero_carousel_seconds || 6;
+    selectedHeroCarouselEnabled = s.hero_carousel_enabled !== false;
+    document.getElementById('heroCarouselEnabledCheck').checked = selectedHeroCarouselEnabled;
     renderFontPicker();
     renderBoldToggle();
     renderScalePicker();
@@ -4209,6 +4219,7 @@ async function saveDesignSettings() {
     hero_subtitle_scale: selectedHeroSubtitleScale,
     hero_position: selectedHeroPosition,
     hero_carousel_seconds: selectedHeroCarouselSeconds,
+    hero_carousel_enabled: selectedHeroCarouselEnabled,
   };
   try {
     const current = await apiGet('/api/site-settings');
