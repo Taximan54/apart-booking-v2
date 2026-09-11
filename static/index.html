@@ -53,7 +53,7 @@ nav a:hover{color:var(--gold)}
 .hero-slide.pos-left{justify-content:flex-start}
 .hero-slide.pos-right{justify-content:flex-end}
 .hero-bg{position:absolute;inset:0;background-size:cover;background-position:center 40%;transform:scale(1.1);will-change:transform}
-.hero-bg.no-zoom{position:absolute;top:160px;left:0;right:0;bottom:0;background-size:contain;background-position:center;background-repeat:no-repeat;transform:none;background-color:var(--black)}
+.hero-bg.no-zoom{position:absolute;inset:0;background-size:cover;background-position:top center;background-repeat:no-repeat;transform:none}
 .hero-overlay{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.55) 0%,rgba(0,0,0,.3) 50%,rgba(0,0,0,.7) 100%)}
 .hero-lines{position:absolute;inset:0;background-image:linear-gradient(rgba(212,160,23,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(212,160,23,.03) 1px,transparent 1px);background-size:80px 80px;mask-image:radial-gradient(ellipse at center,black 20%,transparent 80%)}
 .hero-content{position:relative;z-index:10;text-align:center;max-width:900px;padding:0 60px}
@@ -942,12 +942,13 @@ async function initHeroCarousel() {
     const photoUrl = d.photo ? `/data/photos/${d.photo}` : '';
     // no-zoom: у баннеров акций текст часто нарисован близко к краю фото,
     // поэтому им не подходит зум-обрезка обычного hero-фото (transform:scale
-    // и background-size:cover) — показываем целиком, без обрезки
+    // и background-size:cover center) — показываем на весь экран, но с
+    // привязкой к верху фото (там у баннеров обычно главный текст акции)
     slide.innerHTML = `
       <div class="hero-bg no-zoom"${photoUrl ? ` style="background-image:url('${photoUrl}')"` : ''}></div>
       <div class="hero-overlay"></div>
       <div class="hero-lines"></div>
-      <div class="hero-content">
+      <div class="hero-content" style="align-self:flex-end;padding-bottom:110px">
         <div class="hero-cta">
           <a href="discounts.html" class="btn-gold">Подробнее об акции</a>
         </div>
