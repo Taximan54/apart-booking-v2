@@ -31,7 +31,12 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
 body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");pointer-events:none;z-index:0;opacity:.4}
 
 /* HEADER */
-header{position:fixed;top:0;left:0;right:0;z-index:1000;display:flex;align-items:center;justify-content:space-between;gap:24px;padding:16px 40px;background:linear-gradient(to bottom,rgba(var(--black-rgb),.98),rgba(var(--black-rgb),.85));backdrop-filter:blur(20px);border-bottom:1px solid rgba(201,168,76,.15);transition:padding .4s}
+header{position:fixed;top:0;left:0;right:0;z-index:1000;display:flex;align-items:center;justify-content:space-between;gap:24px;padding:16px 40px;background:linear-gradient(to bottom,rgba(var(--black-rgb),.98),rgba(var(--black-rgb),.85));backdrop-filter:blur(20px);border-bottom:1px solid rgba(201,168,76,.15);transition:padding .4s,background .5s}
+/* На слайдах-акциях баннер часто содержит текст у самого верхнего края
+   фото — шапка (даже полупрозрачная) частично его перекрывает. На время
+   показа такого слайда карусель временно делает шапку светлее (см. JS),
+   чтобы верх баннера было видно; на обычном hero-фото шапка не меняется. */
+header.header-over-promo{background:linear-gradient(to bottom,rgba(var(--black-rgb),.55),rgba(var(--black-rgb),.35))}
 .logo{flex-shrink:0;font-family:var(--logo-font);font-size:calc(32px * var(--logo-scale));font-weight:var(--logo-weight);letter-spacing:.08em;text-decoration:none;background:var(--accent-gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;filter:drop-shadow(0 2px 8px rgba(80,40,0,.8))}
 .logo span{font-weight:inherit}
 nav{flex:1;display:flex;flex-direction:column;align-items:center;row-gap:10px;min-width:0}
@@ -969,6 +974,13 @@ async function initHeroCarousel() {
 
   const totalSlides = discounts.length + 2; // главная + акции + дубль главной
   let current = 0;
+  const header = document.querySelector('header');
+  function updateHeaderTransparency(idx) {
+    // Шапка светлее только на слайдах акций (idx от 1 до discounts.length) —
+    // на обложке (0) и на слайде-дубле в конце (totalSlides-1) остаётся как обычно
+    const isPromo = idx >= 1 && idx <= discounts.length;
+    if (header) header.classList.toggle('header-over-promo', isPromo);
+  }
 
   track.addEventListener('transitionend', () => {
     if (current === totalSlides - 1) {
@@ -977,6 +989,7 @@ async function initHeroCarousel() {
       track.style.transform = 'translateX(0%)';
       void track.offsetWidth; // форсируем reflow, чтобы браузер применил transition:none
       track.style.transition = '';
+      updateHeaderTransparency(current);
     }
   });
 
@@ -984,6 +997,7 @@ async function initHeroCarousel() {
     if (document.hidden) return; // не крутим на неактивной вкладке
     current++;
     track.style.transform = `translateX(-${current * 100}%)`;
+    updateHeaderTransparency(current);
   }, slideSeconds * 1000);
 }
 
