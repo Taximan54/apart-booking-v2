@@ -970,6 +970,25 @@ async function initHeroCarousel() {
   const mainClone = mainSlide.cloneNode(true);
   mainClone.removeAttribute('id');
   mainClone.querySelectorAll('[id]').forEach(el => el.removeAttribute('id'));
+  // Клон создаётся сразу при запуске карусели — но фото/заголовок на
+  // РЕАЛЬНОМ heroSlideMain подставляет отдельный, независимый кусок кода,
+  // который может сработать чуть позже (гонка двух параллельных загрузок
+  // настроек). Если клон успел сделаться раньше — он остаётся пустым, и при
+  // возврате на "hero" вместо плавной картинки виден чёрный экран. Поэтому
+  // подставляем фото и тексты в клон явно, из уже загруженных здесь settings,
+  // не полагаясь на то, что успело примениться к оригиналу к этому моменту.
+  const cloneBg = mainClone.querySelector('.hero-bg');
+  if (cloneBg && settings.hero_photo) {
+    cloneBg.style.backgroundImage = `url('/data/photos/${settings.hero_photo}')`;
+  }
+  const cloneH1 = mainClone.querySelector('h1');
+  if (cloneH1 && settings.hero_title) cloneH1.textContent = settings.hero_title;
+  const cloneSub = mainClone.querySelector('.hero-sub');
+  if (cloneSub && settings.hero_subtitle) cloneSub.textContent = settings.hero_subtitle;
+  const cloneEyebrow = mainClone.querySelector('.eyebrow');
+  if (cloneEyebrow && settings.hero_eyebrow !== undefined && settings.hero_eyebrow !== '') {
+    cloneEyebrow.textContent = settings.hero_eyebrow;
+  }
   track.appendChild(mainClone);
 
   const totalSlides = discounts.length + 2; // главная + акции + дубль главной
