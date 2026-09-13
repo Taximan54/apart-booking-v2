@@ -166,6 +166,8 @@ class SiteSettings(BaseModel):
     hero_position: str = "center"   # left / center / right — расположение текста на hero-фото
     hero_carousel_enabled: bool = True  # можно полностью выключить смену слайдов hero (даже если есть акции)
     hero_carousel_seconds: int = 6  # 3..15 — сколько секунд держится каждый слайд hero-карусели (обложка/акции) перед сменой
+    header_opacity_level: int = 3   # 1..10 — прозрачность шапки навигации (1 = 10% непрозрачности, 10 = полностью непрозрачная)
+    header_blur_level: int = 2      # 1..10 — размытие фона под шапкой (1 = 2px, 10 = 20px)
     hero_eyebrow: str = "Апартаменты в городе"  # надпись над заголовком (с чёрточками); пусто = скрыть строку целиком
     nav_extra_label: str = ""       # 8-й (опциональный) пункт меню — если пусто, не отображается
     nav_extra_url: str = ""         # ссылка для 8-го пункта меню
@@ -2007,6 +2009,8 @@ DEFAULT_SETTINGS = {
     "hero_position": "center",
     "hero_carousel_enabled": True,
     "hero_carousel_seconds": 6,
+    "header_opacity_level": 3,
+    "header_blur_level": 2,
     "hero_eyebrow": "Апартаменты в городе",
     "nav_extra_label": "",
     "nav_extra_url": "",

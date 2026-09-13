@@ -1174,6 +1174,20 @@ input[type=date]::-webkit-calendar-picker-indicator:active{
                 Включена (если выключить — на hero всегда только обложка, даже при активных акциях)
               </label>
             </div>
+            <div>
+              <div class="info-label" style="margin-bottom:8px">Прозрачность шапки навигации: <span id="headerOpacityValue">3</span>/10</div>
+              <input type="range" min="1" max="10" step="1" id="headerOpacitySlider"
+                     oninput="document.getElementById('headerOpacityValue').textContent=this.value;selectedHeaderOpacityLevel=Number(this.value);renderDesignPreview()"
+                     style="width:100%;accent-color:var(--gold)">
+              <div style="font-size:9px;color:var(--text-muted);margin-top:4px">1 = почти прозрачная (10%), 10 = полностью непрозрачная</div>
+            </div>
+            <div>
+              <div class="info-label" style="margin-bottom:8px">Размытие фона под шапкой: <span id="headerBlurValue">2</span>/10</div>
+              <input type="range" min="1" max="10" step="1" id="headerBlurSlider"
+                     oninput="document.getElementById('headerBlurValue').textContent=this.value;selectedHeaderBlurLevel=Number(this.value)"
+                     style="width:100%;accent-color:var(--gold)">
+              <div style="font-size:9px;color:var(--text-muted);margin-top:4px">1 = лёгкое размытие (2px), 10 = сильное (20px)</div>
+            </div>
           </div>
 
           <button class="btn btn-primary" onclick="saveDesignSettings()">Сохранить оформление</button>
@@ -3682,6 +3696,8 @@ let selectedHeroSubtitleScale = 1.0;
 let selectedHeroPosition = 'center';
 let selectedHeroCarouselEnabled = true;
 let selectedHeroCarouselSeconds = 6;
+let selectedHeaderOpacityLevel = 3;
+let selectedHeaderBlurLevel = 2;
 const SCALE_OPTIONS = [0.5, 0.7, 1.0, 1.5, 2.0, 2.5];
 const HERO_SCALE_OPTIONS = [0.5, 0.7, 1.0, 1.5, 2.0];
 const NAV_SCALE_OPTIONS = [1.0, 1.2, 1.4, 1.6, 1.8];
@@ -4108,6 +4124,12 @@ async function loadSiteSettings() {
     selectedHeroCarouselSeconds = s.hero_carousel_seconds || 6;
     selectedHeroCarouselEnabled = s.hero_carousel_enabled !== false;
     document.getElementById('heroCarouselEnabledCheck').checked = selectedHeroCarouselEnabled;
+    selectedHeaderOpacityLevel = s.header_opacity_level || 3;
+    selectedHeaderBlurLevel = s.header_blur_level || 2;
+    document.getElementById('headerOpacitySlider').value = selectedHeaderOpacityLevel;
+    document.getElementById('headerOpacityValue').textContent = selectedHeaderOpacityLevel;
+    document.getElementById('headerBlurSlider').value = selectedHeaderBlurLevel;
+    document.getElementById('headerBlurValue').textContent = selectedHeaderBlurLevel;
     renderFontPicker();
     renderBoldToggle();
     renderScalePicker();
@@ -4220,6 +4242,8 @@ async function saveDesignSettings() {
     hero_position: selectedHeroPosition,
     hero_carousel_seconds: selectedHeroCarouselSeconds,
     hero_carousel_enabled: selectedHeroCarouselEnabled,
+    header_opacity_level: selectedHeaderOpacityLevel,
+    header_blur_level: selectedHeaderBlurLevel,
   };
   try {
     const current = await apiGet('/api/site-settings');
