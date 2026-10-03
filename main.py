@@ -2297,7 +2297,16 @@ def get_photos_list():
     purpose = order_data["purpose"]
     # Старые фото без метки purpose (загружены до этого изменения) по
     # умолчанию считаются галерейными — почистить можно вручную
-    gallery_files = [f for f in all_files if purpose.get(f, "gallery") == "gallery"]
+    # Фото акций (в т.ч. загруженные раньше с меткой gallery) — не галерея квартиры
+    discount_files = set()
+    for d in load_discounts():
+        for key in ("photo", "photo_mobile"):
+            if d.get(key):
+                discount_files.add(d[key])
+    gallery_files = [
+        f for f in all_files
+        if purpose.get(f, "gallery") == "gallery" and f not in discount_files
+    ]
     saved_order = [f for f in order_data["order"] if f in gallery_files]
     order = saved_order + [f for f in gallery_files if f not in saved_order]
     labels = order_data["labels"]
@@ -2318,12 +2327,12 @@ async def upload_photo(
     purpose: str = Form("gallery"),
     _: bool = Depends(require_admin)
 ):
-    """Загрузка нового фото. purpose: gallery / site / place."""
+    """Загрузка нового фото. purpose: gallery / site / place / discount."""
     os.makedirs(PHOTOS_DIR, exist_ok=True)
     ext = os.path.splitext(file.filename or "photo.jpg")[1].lower() or ".jpg"
     if ext not in (".jpg", ".jpeg", ".png", ".webp"):
         raise HTTPException(status_code=400, detail="Поддерживаются только jpg, png, webp")
-    if purpose not in ("gallery", "site", "place"):
+    if purpose not in ("gallery", "site", "place", "discount"):
         purpose = "gallery"
     filename = f"photo_{secrets.token_hex(6)}{ext}"
     filepath = os.path.join(PHOTOS_DIR, filename)
