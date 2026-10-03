@@ -155,6 +155,7 @@ section{position:relative;z-index:1;scroll-margin-top:100px}
 #prices{padding:100px 0;border-top:1px solid var(--black-border);border-bottom:1px solid var(--black-border)}
 .price-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--black-border);margin-top:64px}
 .price-card{background:var(--black);padding:48px 36px;display:flex;flex-direction:column;gap:16px;position:relative}
+.price-cards.two{grid-template-columns:repeat(2,1fr)}
 .price-card.featured{background:rgba(201,168,76,.05)}
 .price-card-label{font-size:10px;letter-spacing:.4em;color:var(--text-muted);text-transform:uppercase}
 .price-card-name{font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:300;color:var(--white)}
@@ -309,7 +310,7 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
   .gallery-main-grid .gitem{height:200px !important}
   .about-grid{grid-template-columns:1fr;gap:48px}
   .amenities-grid{grid-template-columns:1fr 1fr}
-  .price-cards{grid-template-columns:1fr}
+  .price-cards,.price-cards.two{grid-template-columns:1fr}
   .booking-wrap{grid-template-columns:1fr}
   .sec-inner,.cal-panel,.form-panel{padding:32px 24px}
   .cday{font-size:19px}
@@ -533,7 +534,7 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
       <div class="sec-eyebrow">Тарифы</div>
       <h2 class="sec-title">Стоимость проживания</h2>
     </div>
-    <div class="price-cards reveal">
+    <div class="price-cards two reveal">
       <div class="price-card">
         <div class="price-card-label">Понедельник — Четверг</div>
         <div class="price-card-name">Будние дни</div>
@@ -557,6 +558,11 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
         <div class="price-divider"></div>
         <div class="price-includes">Включены постельное бельё и полотенца</div>
       </div>
+    </div>
+    <div style="text-align:center;margin-top:32px">
+      <button type="button" class="btn-outline" id="extrasBtn" aria-expanded="false" aria-controls="extrasBox" onclick="toggleExtras()" style="padding:14px 32px">Дополнительные услуги <span id="extrasArrow">▾</span></button>
+    </div>
+    <div id="extrasBox" style="display:none;max-width:520px;margin:24px auto 0;border:1px solid var(--black-border)">
       <div class="price-card">
         <div class="price-card-label">Дополнительная услуга</div>
         <div class="price-card-name">Уборка</div>
@@ -908,6 +914,13 @@ const API = {
 // ============================================================
 // STATE
 // ============================================================
+function toggleExtras(){
+  const box=document.getElementById('extrasBox'), btn=document.getElementById('extrasBtn'), ar=document.getElementById('extrasArrow');
+  const open = box.style.display==='none';
+  box.style.display = open ? 'block' : 'none';
+  btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  if(ar) ar.textContent = open ? '▴' : '▾';
+}
 let CONFIG = { weekday:3500, weekend:4500, cleaning:1500, includedGuests:1, extraGuestPrice:100, stayDiscounts:[], holidayPeriods:[], doorCode:'0000', sbpLink:'', sbpPhone:'', qrUploaded:false, bookedDates:[], checkoutDates:[] };
 let selStart=null, selEnd=null, hoverDate=null;
 const _now=new Date(); let curYear=_now.getFullYear(), curMonth=_now.getMonth();
