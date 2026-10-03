@@ -20,6 +20,7 @@ h1{font-family:'Cormorant Garamond',serif;font-size:42px;font-weight:300;color:v
 .card{background:var(--black-card);border:1px solid var(--black-border);overflow:hidden;transition:border-color .3s}
 .card:hover{border-color:rgba(201,168,76,.4)}
 .card-photo{width:100%;background:#000;overflow:hidden}
+.card-photo picture{display:block}
 .card-photo img{width:100%;height:auto;display:block}
 .card-photo.placeholder{height:190px;display:flex;align-items:center;justify-content:center;font-size:36px;color:var(--text-muted)}
 .card-body{padding:22px}
@@ -61,7 +62,7 @@ async function loadDiscounts() {
     grid.innerHTML = items.map(d => `
       <div class="card">
         <div class="card-photo ${d.photo ? '' : 'placeholder'}">
-          ${d.photo ? `<img src="${API_BASE}/data/photos/${d.photo}" alt="${d.name}">` : '🏷️'}
+          ${d.photo ? `<picture>${d.photo_mobile ? `<source media="(max-width:1024px)" srcset="${API_BASE}/data/photos/${d.photo_mobile}">` : ''}<img src="${API_BASE}/data/photos/${d.photo}" alt="${d.name}"></picture>` : '🏷️'}
         </div>
         <div class="card-body">
           <div class="card-title">${d.name}</div>

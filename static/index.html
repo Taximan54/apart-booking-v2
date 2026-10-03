@@ -56,8 +56,9 @@ nav a:hover{color:var(--gold)}
 .hero-slide{position:relative;flex:0 0 100%;width:100%;height:100%;display:flex;align-items:center;justify-content:center;overflow:hidden}
 .hero-slide.pos-left{justify-content:flex-start}
 .hero-slide.pos-right{justify-content:flex-end}
-.hero-bg{position:absolute;inset:0;background-image:var(--hero-photo-desktop);background-size:cover;background-position:center 40%;transform:scale(1.1);will-change:transform}
-.hero-bg.no-zoom{position:absolute;inset:0;background-size:cover;background-position:top center;background-repeat:no-repeat;transform:none}
+.hero{--hero-shift:0px}
+.hero-bg{--hero-scale:1.1;position:absolute;inset:0;background-image:var(--hero-photo-desktop);background-size:cover;background-position:center 40%;transform:scale(var(--hero-scale)) translateY(var(--hero-shift));will-change:transform}
+.hero-bg.no-zoom{--hero-scale:1;position:absolute;inset:0;background-image:var(--slide-photo-desktop,none);background-size:cover;background-position:top center;background-repeat:no-repeat}
 .hero-overlay{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.55) 0%,rgba(0,0,0,.3) 50%,rgba(0,0,0,.7) 100%)}
 .hero-lines{position:absolute;inset:0;background-image:linear-gradient(rgba(212,160,23,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(212,160,23,.03) 1px,transparent 1px);background-size:80px 80px;mask-image:radial-gradient(ellipse at center,black 20%,transparent 80%)}
 .hero-content{position:relative;z-index:10;text-align:center;max-width:900px;padding:0 60px}
@@ -295,8 +296,10 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
   .logo{font-size:24px !important}
   .nav-btn{display:none !important}
   .hamburger{display:flex !important}
-  .hero-bg{background-position:center 30%;transform:scale(1.05);background-image:var(--hero-photo-mobile)}
-  .hero-bg.no-zoom{background-size:contain;background-position:top center;background-color:var(--black)}
+  .hero-bg{--hero-scale:1.05;background-position:center 30%;background-image:var(--hero-photo-mobile)}
+  .hero-bg.no-zoom{--hero-scale:1;background-size:contain;background-position:top center;background-color:var(--black);background-image:var(--slide-photo-mobile,none)}
+  /* Если для акции загружено отдельное мобильное фото — оно уже подготовлено под телефон, растягиваем на весь экран без чёрных полей */
+  .hero-bg.no-zoom.has-mobile-photo{background-size:cover;background-position:center top}
   .hero-content{padding:0 24px}
   .eyebrow{letter-spacing:.25em;font-size:10px}
   .hero-sub{letter-spacing:.06em;font-size:11px !important}
@@ -944,15 +947,13 @@ async function initHeroCarousel() {
   discounts.forEach(d => {
     const slide = document.createElement('div');
     slide.className = 'hero-slide';
-    const isMobileScreen = window.matchMedia('(max-width:1024px)').matches;
-    const discountPhoto = (isMobileScreen && d.photo_mobile) ? d.photo_mobile : d.photo;
-    const photoUrl = discountPhoto ? `/data/photos/${discountPhoto}` : '';
-    // no-zoom: у баннеров акций текст часто нарисован близко к краю фото,
-    // поэтому им не подходит зум-обрезка обычного hero-фото (transform:scale
-    // и background-size:cover center) — показываем на весь экран, но с
-    // привязкой к верху фото (там у баннеров обычно главный текст акции)
+    // Фото выбирает сам CSS по ширине экрана (десктоп/мобильное), как и у обложки —
+    // так оно переключается и при повороте телефона без перезагрузки.
+    const toUrl = f => f ? `url('/data/photos/${f}')` : 'none';
+    const deskUrl = toUrl(d.photo);
+    const mobUrl  = d.photo_mobile ? toUrl(d.photo_mobile) : deskUrl;
     slide.innerHTML = `
-      <div class="hero-bg no-zoom"${photoUrl ? ` style="background-image:url('${photoUrl}')"` : ''}></div>
+      <div class="hero-bg no-zoom${d.photo_mobile ? ' has-mobile-photo' : ''}" style="--slide-photo-desktop:${deskUrl};--slide-photo-mobile:${mobUrl}"></div>
       <div class="hero-overlay"></div>
       <div class="hero-lines"></div>
       <div class="hero-content" style="align-self:flex-end;padding-bottom:110px">
@@ -1289,29 +1290,6 @@ function closeMobileNav() {
   document.getElementById('mobileNav').classList.remove('open');
   document.getElementById('hamburgerBtn').classList.remove('open');
 }
-
-// ============================================================
-// PARALLAX HERO
-// ============================================================
-(function(){
-  const bg = document.getElementById('heroBg');
-  if(!bg) return;
-  let ticking = false;
-  window.addEventListener('scroll', function(){
-    if(!ticking){
-      requestAnimationFrame(function(){
-        const scrolled = window.pageYOffset;
-        const limit = window.innerHeight;
-        if(scrolled <= limit){
-          const pct = scrolled / limit;
-          bg.style.transform = 'scale(1.1) translateY(' + (pct * 15) + '%)';
-        }
-        ticking = false;
-      });
-      ticking = true;
-    }
-  }, {passive: true});
-})();
 
 // ============================================================
 // REVIEWS
@@ -2270,20 +2248,17 @@ window.addEventListener('scroll',()=>{
   document.getElementById('mainHeader').style.padding=window.scrollY>80?'14px 60px':'20px 60px';
 });
 
-// Лёгкий параллакс на hero-фото при скролле
+// Параллакс hero: считаем сдвиг один раз и кладём в CSS-переменную на .hero —
+// её подхватывают ВСЕ фоны (обложка, клон обложки, слайды акций), поэтому
+// все слайды карусели двигаются одинаково.
 let parallaxTicking = false;
 window.addEventListener('scroll', () => {
   if(parallaxTicking) return;
   parallaxTicking = true;
   requestAnimationFrame(() => {
-    const bg = document.getElementById('heroBg');
     const hero = document.getElementById('heroSection');
-    if(bg && hero){
-      const heroHeight = hero.offsetHeight;
-      if(window.scrollY < heroHeight){
-        const offset = window.scrollY * 0.35;
-        bg.style.transform = `scale(1.1) translateY(${offset}px)`;
-      }
+    if(hero && window.scrollY < hero.offsetHeight){
+      hero.style.setProperty('--hero-shift', (window.scrollY * 0.35) + 'px');
     }
     parallaxTicking = false;
   });
