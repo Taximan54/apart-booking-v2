@@ -1262,7 +1262,7 @@ function showPanel(id, el) {
   document.querySelectorAll('.sb-item').forEach(i=>i.classList.remove('active'));
   if(el) el.classList.add('active');
   closeAdminSidebar();
-  const titles = {dashboard:'Дашборд',bookings:'Все брони',manualbooking:'Ручная бронь (внешние площадки)',calendar:'Управление календарём',prices:'Цены',promo:'Промокоды',settings:'Настройки',contract:'Договор',contracts:'Архив договоров',checkin:'Памятка гостю',checkout:'Чек-лист выезда',houserules:'Правила проживания',sitesettings:'Настройки сайта',reviews:'Отзывы',places:'Куда сходить',discounts:'Скидки и акции',contacts:'Контакты',photos:'Фотографии'};
+  const titles = {dashboard:'Дашборд',bookings:'Все брони',manualbooking:'Ручная бронь (внешние площадки)',calendar:'Управление календарём',prices:'Цены',promo:'Промокоды',settings:'Настройки',contract:'Договор',contracts:'Архив договоров',checkin:'Памятка гостю',checkout:'Чек-лист выезда',houserules:'Правила проживания',sitesettings:'Настройки сайта',reviews:'Отзывы',places:'Куда сходить',discounts:'Скидки и акции',contacts:'Контакты',photos:'Фото и медиа'};
   document.getElementById('topbarTitle').textContent = titles[id]||id;
   if(id==='settings') { loadTimezone(); loadNotif(); }
   if(id==='contract')   { if(typeof loadContractForEditor==='function') loadContractForEditor(); }
@@ -1275,7 +1275,7 @@ function showPanel(id, el) {
   if(id==='places')      { if(typeof loadPlacesAdmin==='function') loadPlacesAdmin(); }
   if(id==='discounts')   { if(typeof loadDiscountsAdmin==='function') loadDiscountsAdmin(); }
   if(id==='contacts') { if(typeof loadContacts==='function') loadContacts(); }
-  if(id==='photos')   { if(typeof loadPhotosAdmin==='function') loadPhotosAdmin(); }
+  if(id==='photos')   { if(typeof loadPhotosAdmin==='function') loadPhotosAdmin(); if(typeof loadSiteSettings==='function') loadSiteSettings(); }
   if(id==='dashboard'){ if(typeof renderDashStrip==='function') renderDashStrip(); if(typeof renderCheckoutSchedule==='function') renderCheckoutSchedule(); }
 }
 

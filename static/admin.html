@@ -47,21 +47,30 @@
       </a>
     </div>
     <div class="sb-section">
-      <div class="sb-section-label">Управление</div>
+      <div class="sb-section-label">Бронирование</div>
       <a class="sb-item" onclick="showPanel('calendar',this)"><span class="sb-icon">⊞</span>Календарь</a>
       <a class="sb-item" onclick="showPanel('prices',this)"><span class="sb-icon">◎</span>Цены</a>
       <a class="sb-item" onclick="showPanel('promo',this)"><span class="sb-icon">%</span>Промокоды</a>
+      <a class="sb-item" id="sbDiscounts" onclick="showPanel('discounts',this)"><span class="sb-icon">🏷️</span>Скидки и акции</a>
+    </div>
+    <div class="sb-section">
+      <div class="sb-section-label">Договоры и гости</div>
       <a class="sb-item" onclick="showPanel('contract',this)"><span class="sb-icon">✎</span>Договор</a>
       <a class="sb-item" onclick="showPanel('contracts',this)"><span class="sb-icon">📁</span>Архив договоров</a>
       <a class="sb-item" onclick="showPanel('checkin',this)"><span class="sb-icon">🔑</span>Памятка гостю</a>
       <a class="sb-item" onclick="showPanel('checkout',this)"><span class="sb-icon">✓</span>Чек-лист выезда</a>
       <a class="sb-item" onclick="showPanel('houserules',this)"><span class="sb-icon">📋</span>Правила проживания</a>
+    </div>
+    <div class="sb-section">
+      <div class="sb-section-label">Сайт</div>
       <a class="sb-item" onclick="showPanel('sitesettings',this)"><span class="sb-icon">⚙</span>Настройки сайта</a>
+      <a class="sb-item" onclick="showPanel('photos',this)"><span class="sb-icon">🖼</span>Фото и медиа</a>
+      <a class="sb-item" id="sbPlaces" onclick="showPanel('places',this)"><span class="sb-icon">📍</span>Куда сходить</a>
       <a class="sb-item" onclick="showPanel('reviews',this)"><span class="sb-icon">★</span>Отзывы</a>
-      <a class="sb-item" onclick="showPanel('places',this)"><span class="sb-icon">📍</span>Куда сходить</a>
-      <a class="sb-item" onclick="showPanel('discounts',this)"><span class="sb-icon">🏷️</span>Скидки и акции</a>
       <a class="sb-item" onclick="showPanel('contacts',this)"><span class="sb-icon">☎</span>Контакты</a>
-      <a class="sb-item" onclick="showPanel('photos',this)"><span class="sb-icon">🖼</span>Фотографии</a>
+    </div>
+    <div class="sb-section">
+      <div class="sb-section-label">Система</div>
       <a class="sb-item" onclick="showPanel('settings',this)"><span class="sb-icon">⊛</span>Настройки</a>
       <a class="sb-item" onclick="logout()"><span class="sb-icon">⏻</span>Выйти</a>
     </div>
@@ -531,14 +540,58 @@
     </div>
 
     <!-- PHOTOS -->
-    <div class="panel" id="panel-photos">
-      <div class="card">
+<div class="panel" id="panel-photos">
+      <!-- Секция 1: Главный экран -->
+      <div class="card" style="max-width:900px">
+        <div class="card-header"><span class="card-title">Главный экран (обложка)</span></div>
+        <div class="card-body">
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:20px;padding:12px 16px;background:rgba(201,168,76,.04);border:1px solid rgba(201,168,76,.1);line-height:1.7">
+            Где на сайте: самый первый экран на всю высоту, фон под заголовком. Фото обрезается по краям (режим «cover»), поэтому важное держите ближе к центру.<br>
+            <b>Компьютер:</b> горизонтальное 16:9, например 1920×1080.<br>
+            <b>Телефон:</b> вертикальное 9:16, например 1080×1920. Если не загружено, на телефоне используется фото для компьютера.
+          </div>
+          <div class="info-field" style="margin-bottom:20px">
+            <div class="info-label">Фото для компьютера</div>
+            <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+              <div id="heroPhotoPreview" style="width:120px;height:70px;background:var(--black-card);border:1px solid var(--black-border);overflow:hidden;flex-shrink:0;position:relative">
+                <img id="heroPhotoImg" src="" style="width:100%;height:100%;object-fit:cover;display:none">
+                <div id="heroPhotoEmpty" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:24px">🖼</div>
+              </div>
+              <div style="flex:1">
+                <input type="file" id="heroPhotoFile" accept="image/jpeg,image/png,image/webp" style="display:none" onchange="uploadSettingsPhoto('hero')">
+                <button class="btn btn-primary btn-sm" onclick="document.getElementById('heroPhotoFile').click()" style="margin-bottom:6px;display:block">Загрузить фото обложки</button>
+                <div style="font-size:10px;color:var(--text-muted)">Текущий файл: <span id="heroPhotoName">не выбрано</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="info-field" style="margin-bottom:20px">
+            <div class="info-label">Фото для телефона (необязательно)</div>
+            <div style="font-size:10px;color:var(--text-muted);margin-bottom:10px">На телефонах экран узкий и высокий — фото под ноутбук часто обрезается неудачно. Загрузите отдельное фото, заранее подготовленное под вертикальный формат (например, кадр по центру важной части картинки). Если не загружать — на телефонах будет использоваться обычная обложка выше.</div>
+            <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+              <div id="heroPhotoMobilePreview" style="width:70px;height:110px;background:var(--black-card);border:1px solid var(--black-border);overflow:hidden;flex-shrink:0;position:relative">
+                <img id="heroPhotoMobileImg" src="" style="width:100%;height:100%;object-fit:cover;display:none">
+                <div id="heroPhotoMobileEmpty" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:24px">📱</div>
+              </div>
+              <div style="flex:1">
+                <input type="file" id="heroPhotoMobileFile" accept="image/jpeg,image/png,image/webp" style="display:none" onchange="uploadSettingsPhoto('hero_mobile')">
+                <button class="btn btn-outline btn-sm" onclick="document.getElementById('heroPhotoMobileFile').click()" style="margin-bottom:6px;display:block">Загрузить мобильную обложку</button>
+                <div style="font-size:10px;color:var(--text-muted)">Текущий файл: <span id="heroPhotoMobileName">не выбрано</span></div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Секция 2: Галерея -->
+      <div class="card" style="max-width:900px">
         <div class="card-header">
-          <span class="card-title">Фотографии галереи</span>
+          <span class="card-title">Галерея квартиры</span>
         </div>
         <div class="card-body">
           <div style="margin-bottom:24px;padding:16px;background:rgba(201,168,76,.04);border:1px solid rgba(201,168,76,.1);font-size:11px;color:var(--text-muted);line-height:1.7">
-            Фотографии отображаются на сайте в галерее. Перетащите карточки для изменения порядка. Максимальный размер файла — 5 МБ, форматы: JPG, PNG, WebP.
+            Где на сайте: блок «Галерея» на главной странице. Лучше горизонтальные кадры 3:2 (например 1800×1200); на телефоне они уменьшаются целиком. Перетащите карточки для изменения порядка. Максимальный размер файла — 5 МБ, форматы: JPG, PNG, WebP.
           </div>
           <!-- Загрузка -->
           <div style="margin-bottom:24px;display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
@@ -559,7 +612,48 @@
           </div>
         </div>
       </div>
+
+      <!-- Секция 3: Карта -->
+      <div class="card" style="max-width:900px">
+        <div class="card-header"><span class="card-title">Фото карты («Расположение»)</span></div>
+        <div class="card-body">
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:20px;padding:12px 16px;background:rgba(201,168,76,.04);border:1px solid rgba(201,168,76,.1);line-height:1.7">
+            Где на сайте: блок «Расположение», картинка с картой; по клику открывается ссылка на карту. Показывается высотой 420 px и обрезается по краям (на телефоне сильнее), поэтому всё важное держите по центру. Подойдёт скриншот карты 3:2, например 1500×1000.
+          </div>
+          <div class="info-field" style="margin-bottom:16px">
+            <div class="info-label">Фото локации</div>
+            <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+              <div style="width:120px;height:70px;background:var(--black-card);border:1px solid var(--black-border);overflow:hidden;flex-shrink:0;position:relative">
+                <img id="mapPhotoImg" src="" style="width:100%;height:100%;object-fit:cover;display:none">
+                <div id="mapPhotoEmpty" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:24px">🗺</div>
+              </div>
+              <div style="flex:1">
+                <input type="file" id="mapPhotoFile" accept="image/jpeg,image/png,image/webp" style="display:none" onchange="uploadSettingsPhoto('map')">
+                <button class="btn btn-primary btn-sm" onclick="document.getElementById('mapPhotoFile').click()" style="margin-bottom:6px;display:block">Загрузить фото карты</button>
+                <div style="font-size:10px;color:var(--text-muted)">Текущий файл: <span id="mapPhotoName">не выбрано</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div style="font-size:10px;color:var(--text-muted)">Ссылка на карту и выбор сервиса остались в «Настройки сайта».</div>
+        </div>
+      </div>
+
+      <!-- Секция 4: Фото акций и мест (пока в своих разделах) -->
+      <div class="card" style="max-width:900px">
+        <div class="card-header"><span class="card-title">Фото акций и «Куда сходить»</span></div>
+        <div class="card-body">
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:20px;padding:12px 16px;background:rgba(201,168,76,.04);border:1px solid rgba(201,168,76,.1);line-height:1.7">
+            Эти фото привязаны к конкретной акции или месту и пока загружаются в их формах. Следующим шагом перенесём их сюда.
+          </div>
+          <div style="display:flex;gap:12px;flex-wrap:wrap">
+            <button class="btn btn-ghost btn-sm" onclick="showPanel('discounts',document.getElementById('sbDiscounts'))">Баннеры акций →</button>
+            <button class="btn btn-ghost btn-sm" onclick="showPanel('places',document.getElementById('sbPlaces'))">Фото мест →</button>
+          </div>
+        </div>
+      </div>
     </div>
+
 
     <!-- CONTACTS -->
     <div class="panel" id="panel-contacts">
@@ -966,59 +1060,11 @@
 
       <div class="card" style="max-width:700px">
         <div class="card-header">
-          <span class="card-title">Медиа и карта</span>
+          <span class="card-title">Карта: ссылка и сервис</span>
         </div>
         <div class="card-body">
           <div style="font-size:11px;color:var(--text-muted);margin-bottom:24px;padding:12px 16px;background:rgba(201,168,76,.04);border:1px solid rgba(201,168,76,.1)">
-            Укажите имена файлов из раздела «Фотографии» — например <code>photo_ec777cb650cf.jpg</code>
-          </div>
-
-          <div class="info-field" style="margin-bottom:20px">
-            <div class="info-label">Обложка сайта (Hero-фото)</div>
-            <div style="display:flex;gap:12px;align-items:center">
-              <div id="heroPhotoPreview" style="width:120px;height:70px;background:var(--black-card);border:1px solid var(--black-border);overflow:hidden;flex-shrink:0;position:relative">
-                <img id="heroPhotoImg" src="" style="width:100%;height:100%;object-fit:cover;display:none">
-                <div id="heroPhotoEmpty" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:24px">🖼</div>
-              </div>
-              <div style="flex:1">
-                <input type="file" id="heroPhotoFile" accept="image/jpeg,image/png,image/webp" style="display:none" onchange="uploadSettingsPhoto('hero')">
-                <button class="btn btn-primary btn-sm" onclick="document.getElementById('heroPhotoFile').click()" style="margin-bottom:6px;display:block">Загрузить фото обложки</button>
-                <div style="font-size:10px;color:var(--text-muted)">Текущий файл: <span id="heroPhotoName">не выбрано</span></div>
-              </div>
-            </div>
-          </div>
-
-          <div class="info-field" style="margin-bottom:20px">
-            <div class="info-label">Обложка сайта — мобильная версия (необязательно)</div>
-            <div style="font-size:10px;color:var(--text-muted);margin-bottom:10px">На телефонах экран узкий и высокий — фото под ноутбук часто обрезается неудачно. Загрузите отдельное фото, заранее подготовленное под вертикальный формат (например, кадр по центру важной части картинки). Если не загружать — на телефонах будет использоваться обычная обложка выше.</div>
-            <div style="display:flex;gap:12px;align-items:center">
-              <div id="heroPhotoMobilePreview" style="width:70px;height:110px;background:var(--black-card);border:1px solid var(--black-border);overflow:hidden;flex-shrink:0;position:relative">
-                <img id="heroPhotoMobileImg" src="" style="width:100%;height:100%;object-fit:cover;display:none">
-                <div id="heroPhotoMobileEmpty" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:24px">📱</div>
-              </div>
-              <div style="flex:1">
-                <input type="file" id="heroPhotoMobileFile" accept="image/jpeg,image/png,image/webp" style="display:none" onchange="uploadSettingsPhoto('hero_mobile')">
-                <button class="btn btn-outline btn-sm" onclick="document.getElementById('heroPhotoMobileFile').click()" style="margin-bottom:6px;display:block">Загрузить мобильную обложку</button>
-                <div style="font-size:10px;color:var(--text-muted)">Текущий файл: <span id="heroPhotoMobileName">не выбрано</span></div>
-              </div>
-            </div>
-          </div>
-
-          <div style="border-top:1px solid var(--black-border);margin:24px 0"></div>
-
-          <div class="info-field" style="margin-bottom:16px">
-            <div class="info-label">Фото локации (карта)</div>
-            <div style="display:flex;gap:12px;align-items:center">
-              <div style="width:120px;height:70px;background:var(--black-card);border:1px solid var(--black-border);overflow:hidden;flex-shrink:0;position:relative">
-                <img id="mapPhotoImg" src="" style="width:100%;height:100%;object-fit:cover;display:none">
-                <div id="mapPhotoEmpty" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:24px">🗺</div>
-              </div>
-              <div style="flex:1">
-                <input type="file" id="mapPhotoFile" accept="image/jpeg,image/png,image/webp" style="display:none" onchange="uploadSettingsPhoto('map')">
-                <button class="btn btn-primary btn-sm" onclick="document.getElementById('mapPhotoFile').click()" style="margin-bottom:6px;display:block">Загрузить фото карты</button>
-                <div style="font-size:10px;color:var(--text-muted)">Текущий файл: <span id="mapPhotoName">не выбрано</span></div>
-              </div>
-            </div>
+            Фото обложки и фото карты теперь загружаются в разделе «Фото и медиа». Здесь — только ссылка на карту и выбор сервиса.
           </div>
 
           <div class="info-field" style="margin-bottom:16px">
