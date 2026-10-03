@@ -56,7 +56,7 @@ nav a:hover{color:var(--gold)}
 .hero-slide{position:relative;flex:0 0 100%;width:100%;height:100%;display:flex;align-items:center;justify-content:center;overflow:hidden}
 .hero-slide.pos-left{justify-content:flex-start}
 .hero-slide.pos-right{justify-content:flex-end}
-.hero-bg{position:absolute;inset:0;background-size:cover;background-position:center 40%;transform:scale(1.1);will-change:transform}
+.hero-bg{position:absolute;inset:0;background-image:var(--hero-photo-desktop);background-size:cover;background-position:center 40%;transform:scale(1.1);will-change:transform}
 .hero-bg.no-zoom{position:absolute;inset:0;background-size:cover;background-position:top center;background-repeat:no-repeat;transform:none}
 .hero-overlay{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.55) 0%,rgba(0,0,0,.3) 50%,rgba(0,0,0,.7) 100%)}
 .hero-lines{position:absolute;inset:0;background-image:linear-gradient(rgba(212,160,23,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(212,160,23,.03) 1px,transparent 1px);background-size:80px 80px;mask-image:radial-gradient(ellipse at center,black 20%,transparent 80%)}
@@ -295,7 +295,7 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
   .logo{font-size:24px !important}
   .nav-btn{display:none !important}
   .hamburger{display:flex !important}
-  .hero-bg{background-position:center 30%;transform:scale(1.05)}
+  .hero-bg{background-position:center 30%;transform:scale(1.05);background-image:var(--hero-photo-mobile)}
   .hero-bg.no-zoom{background-size:contain;background-position:top center;background-color:var(--black)}
   .hero-content{padding:0 24px}
   .eyebrow{letter-spacing:.25em;font-size:10px}
@@ -944,7 +944,9 @@ async function initHeroCarousel() {
   discounts.forEach(d => {
     const slide = document.createElement('div');
     slide.className = 'hero-slide';
-    const photoUrl = d.photo ? `/data/photos/${d.photo}` : '';
+    const isMobileScreen = window.matchMedia('(max-width:1024px)').matches;
+    const discountPhoto = (isMobileScreen && d.photo_mobile) ? d.photo_mobile : d.photo;
+    const photoUrl = discountPhoto ? `/data/photos/${discountPhoto}` : '';
     // no-zoom: у баннеров акций текст часто нарисован близко к краю фото,
     // поэтому им не подходит зум-обрезка обычного hero-фото (transform:scale
     // и background-size:cover center) — показываем на весь экран, но с
@@ -977,10 +979,8 @@ async function initHeroCarousel() {
   // возврате на "hero" вместо плавной картинки виден чёрный экран. Поэтому
   // подставляем фото и тексты в клон явно, из уже загруженных здесь settings,
   // не полагаясь на то, что успело примениться к оригиналу к этому моменту.
-  const cloneBg = mainClone.querySelector('.hero-bg');
-  if (cloneBg && settings.hero_photo) {
-    cloneBg.style.backgroundImage = `url('/data/photos/${settings.hero_photo}')`;
-  }
+  // Фон клона НЕ задаём inline — он унаследует то же CSS-правило var(--hero-photo-desktop/mobile),
+  // что и настоящий #heroBg, и тогда мобильное/десктопное фото совпадает с оригиналом само собой.
   const cloneH1 = mainClone.querySelector('h1');
   if (cloneH1 && settings.hero_title) cloneH1.textContent = settings.hero_title;
   const cloneSub = mainClone.querySelector('.hero-sub');
@@ -1244,8 +1244,16 @@ async function init() {
     }
 
     if(settings.hero_photo) {
-      const bg = document.getElementById('heroBg');
-      if(bg) bg.style.backgroundImage = `url('/data/photos/${settings.hero_photo}')`;
+      // Фон hero задаётся CSS-переменными, а не inline-стилем: тогда медиа-запрос
+      // в CSS сам выбирает нужное фото по ширине экрана (включая поворот телефона
+      // без перезагрузки), а клон hero-слайда в карусели получает то же фото
+      // автоматически — без риска, что на десктопе и мобильном они разойдутся.
+      const desktopUrl = `url('/data/photos/${settings.hero_photo}')`;
+      const mobileUrl  = settings.hero_photo_mobile
+        ? `url('/data/photos/${settings.hero_photo_mobile}')`
+        : desktopUrl; // мобильного фото нет — на телефоне то же, что и на десктопе
+      document.documentElement.style.setProperty('--hero-photo-desktop', desktopUrl);
+      document.documentElement.style.setProperty('--hero-photo-mobile', mobileUrl);
     }
     if(settings.map_photo) {
       window._mapPhoto = settings.map_photo;

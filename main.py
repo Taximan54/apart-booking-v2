@@ -137,6 +137,7 @@ class PaymentSettings(BaseModel):
 
 class SiteSettings(BaseModel):
     hero_photo: str = ""        # имя файла из /data/photos/
+    hero_photo_mobile: str = ""  # отдельное фото hero для мобильных экранов (если пусто — используется hero_photo)
     map_photo: str = ""         # имя файла из /data/photos/
     map_url: str = ""           # ссылка на карту (Яндекс/2ГИС/Google)
     map_service: str = "yandex" # yandex / 2gis / google
@@ -215,6 +216,7 @@ class Discount(BaseModel):
     id: Optional[str] = None
     name: str
     photo: str = ""
+    photo_mobile: str = ""  # отдельное фото для мобильной версии (если пусто — используется photo)
     description: str = ""
     visible: bool = True
 
@@ -1982,7 +1984,7 @@ async def set_house_rules(r: HouseRulesText, _: bool = Depends(require_admin)):
 # =====================================================
 
 DEFAULT_SETTINGS = {
-    "hero_photo": "", "map_photo": "", "map_url": "", "map_service": "yandex",
+    "hero_photo": "", "hero_photo_mobile": "", "map_photo": "", "map_url": "", "map_service": "yandex",
     "site_name": "Городская Пауза",
     "hero_title": "Искусство комфортного проживания",
     "hero_subtitle": "Апартаменты премиум-класса · Посуточная аренда",
@@ -2339,16 +2341,23 @@ async def upload_photo(
     return {"ok": True, "filename": filename, "url": f"/data/photos/{filename}"}
 
 def find_photo_usages(filename):
-    """Возвращает список мест использования фото (hero/карта/место), если оно где-то занято."""
+    """Возвращает список мест использования фото (hero/карта/место/акция), если оно где-то занято."""
     usages = []
     settings = get_site_settings_dict()
     if settings.get("hero_photo") == filename:
         usages.append("обложка сайта (hero-фото)")
+    if settings.get("hero_photo_mobile") == filename:
+        usages.append("обложка сайта для мобильной версии (hero-фото)")
     if settings.get("map_photo") == filename:
         usages.append("фото карты в разделе «Расположение»")
     for p in load_places():
         if p.get("photo") == filename:
             usages.append(f"место «{p.get('name', '')}» на странице «Куда сходить?»")
+    for d in load_discounts():
+        if d.get("photo") == filename:
+            usages.append(f"акция «{d.get('name', '')}»")
+        if d.get("photo_mobile") == filename:
+            usages.append(f"акция «{d.get('name', '')}» (мобильная версия)")
     return usages
 
 @app.delete("/api/photos/{filename}")

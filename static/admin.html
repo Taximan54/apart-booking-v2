@@ -967,6 +967,22 @@ input[type=date]::-webkit-calendar-picker-indicator:active{
               </div>
               <input type="hidden" id="discountPhotoValue">
             </div>
+            <div class="info-field" style="margin-bottom:20px">
+              <div class="info-label">Фото для мобильной версии (необязательно)</div>
+              <div style="font-size:10px;color:var(--text-muted);margin-bottom:8px">Если не загружать — на телефонах будет использовано обычное фото акции выше, показанное целиком без обрезки.</div>
+              <div style="display:flex;gap:12px;align-items:center">
+                <div style="width:70px;height:100px;background:var(--black);border:1px solid var(--black-border);overflow:hidden;flex-shrink:0">
+                  <img id="discountPhotoMobilePreview" src="" style="width:100%;height:100%;object-fit:cover;display:none">
+                </div>
+                <div>
+                  <input type="file" id="discountPhotoMobileFile" accept="image/jpeg,image/png,image/webp" style="display:none" onchange="uploadDiscountPhoto('mobile')">
+                  <button class="btn btn-ghost btn-sm" onclick="document.getElementById('discountPhotoMobileFile').click()">Загрузить мобильное фото</button>
+                  <div style="font-size:10px;color:var(--text-muted);margin-top:6px"><span id="discountPhotoMobileName">не выбрано</span></div>
+                </div>
+              </div>
+              <input type="hidden" id="discountPhotoMobileValue">
+            </div>
+
             <div style="display:flex;gap:12px">
               <button class="btn btn-primary" onclick="saveDiscount()">Сохранить</button>
               <button class="btn btn-ghost" onclick="cancelDiscountForm()">Отмена</button>
@@ -1214,6 +1230,22 @@ input[type=date]::-webkit-calendar-picker-indicator:active{
                 <input type="file" id="heroPhotoFile" accept="image/jpeg,image/png,image/webp" style="display:none" onchange="uploadSettingsPhoto('hero')">
                 <button class="btn btn-primary btn-sm" onclick="document.getElementById('heroPhotoFile').click()" style="margin-bottom:6px;display:block">Загрузить фото обложки</button>
                 <div style="font-size:10px;color:var(--text-muted)">Текущий файл: <span id="heroPhotoName">не выбрано</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="info-field" style="margin-bottom:20px">
+            <div class="info-label">Обложка сайта — мобильная версия (необязательно)</div>
+            <div style="font-size:10px;color:var(--text-muted);margin-bottom:10px">На телефонах экран узкий и высокий — фото под ноутбук часто обрезается неудачно. Загрузите отдельное фото, заранее подготовленное под вертикальный формат (например, кадр по центру важной части картинки). Если не загружать — на телефонах будет использоваться обычная обложка выше.</div>
+            <div style="display:flex;gap:12px;align-items:center">
+              <div id="heroPhotoMobilePreview" style="width:70px;height:110px;background:var(--black-card);border:1px solid var(--black-border);overflow:hidden;flex-shrink:0;position:relative">
+                <img id="heroPhotoMobileImg" src="" style="width:100%;height:100%;object-fit:cover;display:none">
+                <div id="heroPhotoMobileEmpty" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:24px">📱</div>
+              </div>
+              <div style="flex:1">
+                <input type="file" id="heroPhotoMobileFile" accept="image/jpeg,image/png,image/webp" style="display:none" onchange="uploadSettingsPhoto('hero_mobile')">
+                <button class="btn btn-outline btn-sm" onclick="document.getElementById('heroPhotoMobileFile').click()" style="margin-bottom:6px;display:block">Загрузить мобильную обложку</button>
+                <div style="font-size:10px;color:var(--text-muted)">Текущий файл: <span id="heroPhotoMobileName">не выбрано</span></div>
               </div>
             </div>
           </div>
@@ -3453,6 +3485,9 @@ function showDiscountForm() {
   document.getElementById('discountPhotoValue').value = '';
   document.getElementById('discountPhotoName').textContent = 'не выбрано';
   document.getElementById('discountPhotoPreview').style.display = 'none';
+  document.getElementById('discountPhotoMobileValue').value = '';
+  document.getElementById('discountPhotoMobileName').textContent = 'не выбрано';
+  document.getElementById('discountPhotoMobilePreview').style.display = 'none';
   document.getElementById('discountFormTitle').textContent = 'Новая акция';
   document.getElementById('discountFormWrap').style.display = 'block';
 }
@@ -3464,11 +3499,17 @@ function editDiscount(id) {
   document.getElementById('discountName').value = d.name || '';
   document.getElementById('discountDescription').value = d.description || '';
   document.getElementById('discountPhotoValue').value = d.photo || '';
+  document.getElementById('discountPhotoMobileValue').value = d.photo_mobile || '';
+  document.getElementById('discountPhotoMobileName').textContent = d.photo_mobile || 'не выбрано';
+  document.getElementById('discountPhotoMobilePreview').style.display = d.photo_mobile ? 'block' : 'none';
   if(d.photo) {
     const img = document.getElementById('discountPhotoPreview');
     img.src = `${API_BASE}/data/photos/${d.photo}`;
     img.style.display = 'block';
     document.getElementById('discountPhotoName').textContent = d.photo;
+  }
+  if(d.photo_mobile) {
+    document.getElementById('discountPhotoMobilePreview').src = `${API_BASE}/data/photos/${d.photo_mobile}`;
   }
   document.getElementById('discountFormTitle').textContent = 'Редактировать акцию';
   document.getElementById('discountFormWrap').style.display = 'block';
@@ -3478,8 +3519,13 @@ function cancelDiscountForm() {
   document.getElementById('discountFormWrap').style.display = 'none';
 }
 
-async function uploadDiscountPhoto() {
-  const file = document.getElementById('discountPhotoFile').files[0];
+async function uploadDiscountPhoto(variant) {
+  const isMobile = variant === 'mobile';
+  const fileInputId = isMobile ? 'discountPhotoMobileFile' : 'discountPhotoFile';
+  const valueId      = isMobile ? 'discountPhotoMobileValue' : 'discountPhotoValue';
+  const nameId       = isMobile ? 'discountPhotoMobileName'  : 'discountPhotoName';
+  const previewId    = isMobile ? 'discountPhotoMobilePreview' : 'discountPhotoPreview';
+  const file = document.getElementById(fileInputId).files[0];
   if(!file) return;
   if(file.size > 10 * 1024 * 1024) { showToast('Файл слишком большой (макс. 10 МБ)', 'err'); return; }
   const formData = new FormData();
@@ -3493,9 +3539,9 @@ async function uploadDiscountPhoto() {
       body: formData
     });
     const data = await resp.json();
-    document.getElementById('discountPhotoValue').value = data.filename;
-    document.getElementById('discountPhotoName').textContent = data.filename;
-    const img = document.getElementById('discountPhotoPreview');
+    document.getElementById(valueId).value = data.filename;
+    document.getElementById(nameId).textContent = data.filename;
+    const img = document.getElementById(previewId);
     img.src = `${API_BASE}/data/photos/${data.filename}`;
     img.style.display = 'block';
     showToast('Фото загружено', 'gold');
@@ -3508,6 +3554,7 @@ async function saveDiscount() {
     name:        document.getElementById('discountName').value.trim(),
     description: document.getElementById('discountDescription').value.trim(),
     photo:       document.getElementById('discountPhotoValue').value.trim(),
+    photo_mobile: document.getElementById('discountPhotoMobileValue').value.trim(),
     visible:     true
   };
   if(!payload.name) { showToast('Введите название акции', 'err'); return; }
@@ -4151,6 +4198,13 @@ async function loadSiteSettings() {
       document.getElementById('heroPhotoEmpty').style.display = 'none';
       document.getElementById('heroPhotoName').textContent = s.hero_photo;
     }
+    if(s.hero_photo_mobile) {
+      const img = document.getElementById('heroPhotoMobileImg');
+      img.src = `${API_BASE}/data/photos/${s.hero_photo_mobile}`;
+      img.style.display = 'block';
+      document.getElementById('heroPhotoMobileEmpty').style.display = 'none';
+      document.getElementById('heroPhotoMobileName').textContent = s.hero_photo_mobile;
+    }
     if(s.map_photo) {
       const img = document.getElementById('mapPhotoImg');
       img.src = `${API_BASE}/data/photos/${s.map_photo}`;
@@ -4161,15 +4215,22 @@ async function loadSiteSettings() {
   } catch(e) {}
 }
 
+const PHOTO_UPLOAD_CONFIG = {
+  hero:        { fileInputId: 'heroPhotoFile',       label: 'Обложка сайта',              settingsKey: 'hero_photo',        imgId: 'heroPhotoImg',       emptyId: 'heroPhotoEmpty',       nameId: 'heroPhotoName' },
+  hero_mobile: { fileInputId: 'heroPhotoMobileFile', label: 'Обложка сайта (мобильная)',   settingsKey: 'hero_photo_mobile', imgId: 'heroPhotoMobileImg', emptyId: 'heroPhotoMobileEmpty', nameId: 'heroPhotoMobileName' },
+  map:         { fileInputId: 'mapPhotoFile',        label: 'Фото карты',                 settingsKey: 'map_photo',         imgId: 'mapPhotoImg',        emptyId: 'mapPhotoEmpty',        nameId: 'mapPhotoName' },
+};
+
 async function uploadSettingsPhoto(type) {
-  const fileInput = document.getElementById(type === 'hero' ? 'heroPhotoFile' : 'mapPhotoFile');
+  const cfg = PHOTO_UPLOAD_CONFIG[type];
+  if (!cfg) return;
+  const fileInput = document.getElementById(cfg.fileInputId);
   const file = fileInput.files[0];
   if(!file) return;
   if(file.size > 10 * 1024 * 1024) { showToast('Файл слишком большой (макс. 10 МБ)', 'err'); return; }
-  const label = type === 'hero' ? 'Обложка сайта' : 'Фото карты';
   const formData = new FormData();
   formData.append('file', file);
-  formData.append('label', label);
+  formData.append('label', cfg.label);
   formData.append('purpose', 'site');
   try {
     showToast('Загружаю фото...', 'gold');
@@ -4183,19 +4244,14 @@ async function uploadSettingsPhoto(type) {
     const filename = data.filename;
     // Сохраняем в настройки
     const current = await apiGet('/api/site-settings');
-    const payload = {...current};
-    if(type === 'hero') payload.hero_photo = filename;
-    else payload.map_photo = filename;
+    const payload = {...current, [cfg.settingsKey]: filename};
     await apiPost('/api/site-settings', payload);
     // Обновляем превью
-    const imgId = type === 'hero' ? 'heroPhotoImg' : 'mapPhotoImg';
-    const emptyId = type === 'hero' ? 'heroPhotoEmpty' : 'mapPhotoEmpty';
-    const nameId = type === 'hero' ? 'heroPhotoName' : 'mapPhotoName';
-    const img = document.getElementById(imgId);
+    const img = document.getElementById(cfg.imgId);
     img.src = `${API_BASE}/data/photos/${filename}`;
     img.style.display = 'block';
-    document.getElementById(emptyId).style.display = 'none';
-    document.getElementById(nameId).textContent = filename;
+    document.getElementById(cfg.emptyId).style.display = 'none';
+    document.getElementById(cfg.nameId).textContent = filename;
     showToast('Фото загружено и сохранено', 'gold');
   } catch(e) {
     showToast('Ошибка: ' + e.message, 'err');
