@@ -157,11 +157,21 @@ def generate_signed_contract_pdf(booking):
     main_text = generate_contract(booking) + "\n\n" + EDO_AGREEMENT_TEXT
     photos = _passport_photos_with_grid(booking_ref)
     signature_text = _signature_block(booking, "contract", doc_id)
-    return generate_contract_pdf(
-        main_text, booking_ref + "_podpisan",
-        extra_blocks=photos + [signature_text],
-        header_text=f"Городская Пауза {doc_id}",
-    )
+    try:
+        return generate_contract_pdf(
+            main_text, booking_ref + "_podpisan",
+            extra_blocks=photos + [signature_text],
+            header_text=f"Городская Пауза {doc_id}",
+        )
+    except Exception as e:
+        # Страховка: если из-за фото PDF не собрался, гость всё равно получает
+        # договор (без страницы с фото), а ошибка остаётся в журнале сервера.
+        print(f"ERROR: PDF договора {booking_ref} с фото паспорта не собрался: {e}. Собираю без фото.")
+        return generate_contract_pdf(
+            main_text, booking_ref + "_podpisan",
+            extra_blocks=[signature_text],
+            header_text=f"Городская Пауза {doc_id}",
+        )
 
 def generate_signed_consent_pdf(booking):
     """Согласие на обработку ПД + блок ПЭП — тот же принцип, что и с договором."""

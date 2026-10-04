@@ -470,6 +470,7 @@ def generate_contract_pdf(contract_text, booking_ref, extra_blocks=None, header_
         textColor=colors.HexColor("#9a8148"), alignment=1,  # центр
     )
     max_img_width = A4[0] - 40 * mm
+    max_img_height = A4[1] - 36 * mm - 60  # высота кадра минус запас на отступы и интервал
     max_box_width = A4[0] - 44 * mm  # чуть уже полей, чтобы была видна рамка
 
     def _add_text_block(text, story, break_before_appendix=False):
@@ -537,11 +538,14 @@ def generate_contract_pdf(contract_text, booking_ref, extra_blocks=None, header_
             while i < len(blocks) and not isinstance(blocks[i], str):
                 img = blocks[i]
                 iw, ih = img.size
-                scale = max_img_width / iw
+                # Масштаб: по ширине страницы, но не выше самой страницы —
+                # иначе очень вытянутое фото (например, 9:16) не помещается
+                # в кадр и PDF не создаётся вовсе.
+                scale = min(max_img_width / iw, max_img_height / ih)
                 buf = io.BytesIO()
                 img.save(buf, format="JPEG", quality=88)
                 buf.seek(0)
-                img_group.append(RLImage(buf, width=max_img_width, height=ih * scale))
+                img_group.append(RLImage(buf, width=iw * scale, height=ih * scale))
                 img_group.append(Spacer(1, 12))
                 i += 1
             story.append(PageBreak())
