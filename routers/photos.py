@@ -1,15 +1,17 @@
 """API: фотографии (галерея, обложка, места, акции) и защищённые фото паспортов."""
+import io
 import json
 import os
 import secrets
 from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException
-from fastapi.responses import FileResponse
+from fastapi.responses import Response
+from PIL import Image
 
 from core.auth import require_admin
 from core.constants import PHOTOS_ORDER_FILE, PHOTOS_DIR, PASSPORT_DIR
 from core.data_store import load_discounts, get_site_settings_dict, load_places, load_properties
 from core.models import PhotoOrder, PhotoLabel
-from core.passports import compress_passport_image, load_passport_map
+from core.passports import compress_passport_image, load_passport_map, apply_passport_watermark
 
 router = APIRouter()
 
@@ -196,4 +198,14 @@ async def get_passport_photo(booking_ref: str, slot: str, _: bool = Depends(requ
     filepath = os.path.join(PASSPORT_DIR, filename)
     if not os.path.exists(filepath):
         raise HTTPException(status_code=404, detail="Файл не найден на диске")
-    return FileResponse(filepath, media_type="image/jpeg")
+    # Админ (в карточке брони и в архиве) всегда видит фото с защитной сеткой;
+    # оригинал на диске остаётся без изменений.
+    try:
+        with Image.open(filepath) as im:
+            marked = apply_passport_watermark(im)
+        buf = io.BytesIO()
+        marked.save(buf, format="JPEG", quality=88)
+    except Exception as e:
+        print(f"WARNING: не удалось наложить сетку на фото паспорта {filename}: {e}")
+        raise HTTPException(status_code=500, detail="Не удалось подготовить фото")
+    return Response(content=buf.getvalue(), media_type="image/jpeg", headers={"Cache-Control": "no-store"})

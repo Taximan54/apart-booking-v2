@@ -2,7 +2,7 @@
 import hashlib
 import json
 import os
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image
 from datetime import datetime
 
 from config import BASE_URL
@@ -19,14 +19,13 @@ from core.constants import (
     MAIL_ADMIN,
 )
 from core.contract_docs import (
-    _get_cyrillic_ttf_path,
     generate_contract,
     generate_contract_pdf,
     generate_consent,
     save_contract,
 )
 from core.mailer import send_email
-from core.passports import load_passport_map
+from core.passports import load_passport_map, apply_passport_watermark
 
 
 def get_landlord_phone():
@@ -133,9 +132,6 @@ def _passport_photos_with_grid(booking_ref):
     if not isinstance(entry, dict):
         return []
 
-    ttf_path = _get_cyrillic_ttf_path()
-    watermark_text = "ЗАПРЕЩЕНО КОПИРОВАТЬ И ИСПОЛЬЗОВАТЬ ОТДЕЛЬНО ОТ ДАННОГО ДОКУМЕНТА  •  "
-
     images = []
     for slot in ("main", "reg1"):
         filename = entry.get(slot)
@@ -145,39 +141,7 @@ def _passport_photos_with_grid(booking_ref):
         if not os.path.exists(filepath):
             continue
         try:
-            img = Image.open(filepath).convert("RGB")
-            w, h = img.size
-
-            # Диагональная плашка с повторяющимся текстом рисуется на отдельном,
-            # заведомо большом холсте, затем поворачивается на 30° и накладывается
-            # поверх фото — так надпись покрывает всё изображение по диагонали.
-            diag = int((w ** 2 + h ** 2) ** 0.5) + 40
-            tile = Image.new("RGBA", (diag, 60), (0, 0, 0, 0))
-            tdraw = ImageDraw.Draw(tile)
-            font = None
-            if ttf_path:
-                try:
-                    font = ImageFont.truetype(ttf_path, 16)
-                except Exception:
-                    font = None
-            if font is None:
-                font = ImageFont.load_default()
-            full_line = watermark_text * max(3, diag // max(1, tdraw.textlength(watermark_text, font=font) or 1) + 2)
-            tdraw.text((0, 18), full_line, font=font, fill=(201, 168, 76, 130))
-
-            overlay = Image.new("RGBA", (diag, diag), (0, 0, 0, 0))
-            step_y = 70
-            for y in range(0, diag, step_y):
-                row = tile.copy()
-                overlay.paste(row, (0, y), row)
-            overlay = overlay.rotate(30, expand=False)
-
-            # Обрезаем повёрнутый водяной знак по размеру фото и накладываем по центру
-            ox = (overlay.width - w) // 2
-            oy = (overlay.height - h) // 2
-            overlay_cropped = overlay.crop((ox, oy, ox + w, oy + h))
-
-            images.append(Image.alpha_composite(img.convert("RGBA"), overlay_cropped).convert("RGB"))
+            images.append(apply_passport_watermark(Image.open(filepath)))
         except Exception as e:
             print(f"WARNING: не удалось наложить водяной знак на фото паспорта {filename}: {e}")
     return images
