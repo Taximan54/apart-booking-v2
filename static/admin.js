@@ -1270,7 +1270,7 @@ function showPanel(id, el) {
   if(id==='checkin')     { if(typeof loadCheckinMemo==='function') loadCheckinMemo(); }
   if(id==='checkout')    { if(typeof loadCheckoutChecklist==='function') loadCheckoutChecklist(); }
   if(id==='houserules')  { if(typeof loadHouseRules==='function') loadHouseRules(); }
-  if(id==='sitesettings'){ if(typeof loadSiteSettings==='function') loadSiteSettings(); loadDesc(); }
+  if(id==='sitesettings'){ if(typeof loadSiteSettings==='function') loadSiteSettings(); loadDesc(); showSiteTab(currentSiteTab); }
   if(id==='reviews')     { if(typeof loadReviewsAdmin==='function') loadReviewsAdmin(); }
   if(id==='places')      { if(typeof loadPlacesAdmin==='function') loadPlacesAdmin(); }
   if(id==='discounts')   { if(typeof loadDiscountsAdmin==='function') loadDiscountsAdmin(); }
@@ -2210,6 +2210,16 @@ async function mediaRemove(kind, id, field) {
   } catch(e) {
     showToast('Ошибка: ' + e.message, 'err');
   }
+}
+
+// ВКЛАДКИ В «НАСТРОЙКАХ САЙТА»
+let currentSiteTab = 'brand';
+function showSiteTab(name) {
+  currentSiteTab = name;
+  document.querySelectorAll('#ssTabs .ss-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+  document.querySelectorAll('#panel-sitesettings [data-ss-tab]').forEach(el => {
+    el.style.display = el.dataset.ssTab.split(' ').includes(name) ? '' : 'none';
+  });
 }
 
 // REVIEWS ADMIN

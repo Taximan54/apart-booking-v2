@@ -927,7 +927,15 @@
 
     <!-- SITE SETTINGS -->
     <div class="panel" id="panel-sitesettings">
-      <div class="card" style="max-width:700px;margin-bottom:20px">
+      <div class="ss-tabs" id="ssTabs">
+        <button type="button" class="ss-tab active" data-tab="brand" onclick="showSiteTab('brand')">Бренд</button>
+        <button type="button" class="ss-tab" data-tab="hero" onclick="showSiteTab('hero')">Главный экран</button>
+        <button type="button" class="ss-tab" data-tab="menu" onclick="showSiteTab('menu')">Меню и шапка</button>
+        <button type="button" class="ss-tab" data-tab="about" onclick="showSiteTab('about')">О квартире</button>
+        <button type="button" class="ss-tab" data-tab="location" onclick="showSiteTab('location')">Расположение</button>
+      </div>
+
+      <div class="card" data-ss-tab="brand hero menu" style="max-width:700px;margin-bottom:20px">
         <div class="card-header">
           <span class="card-title">Оформление</span>
         </div>
@@ -946,11 +954,37 @@
             </div>
           </div>
 
+          <div data-ss-tab="brand">
           <div class="info-field" style="margin-bottom:16px">
             <div class="info-label">Название сайта</div>
             <input type="text" class="info-input" id="settingsSiteName" placeholder="Городская Пауза" style="width:100%" oninput="renderDesignPreview()">
           </div>
+          <div class="info-field" style="margin-bottom:8px">
+            <div class="info-label">Шрифт логотипа и навигации</div>
+          </div>
+          <div id="fontPicker" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-bottom:20px"></div>
 
+          <div class="info-field" style="margin-bottom:8px">
+            <div class="info-label">Цветовая схема</div>
+          </div>
+          <div id="colorPicker" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-bottom:24px"></div>
+
+          <div class="info-field" style="margin-bottom:8px">
+            <div class="info-label">Фон сайта</div>
+          </div>
+          <div id="backgroundPicker" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-bottom:24px"></div>
+          <div style="display:flex;gap:24px;flex-wrap:wrap;margin-bottom:24px">
+            <div>
+              <div class="info-label" style="margin-bottom:8px">Начертание</div>
+              <div id="boldToggle" style="display:flex;gap:8px"></div>
+            </div>
+            <div>
+              <div class="info-label" style="margin-bottom:8px">Размер логотипа и кнопки «Забронировать»</div>
+              <div id="scalePicker" style="display:flex;gap:8px"></div>
+            </div>
+          </div>
+          </div>
+          <div data-ss-tab="hero">
           <div class="info-field" style="margin-bottom:16px">
             <div class="info-label">Надпись над заголовком (с чёрточками по бокам)</div>
             <input type="text" class="info-input" id="settingsHeroEyebrow" placeholder="Апартаменты в городе" style="width:100%" oninput="renderDesignPreview()">
@@ -966,72 +1000,10 @@
             <div class="info-label">Подзаголовок на главном экране</div>
             <input type="text" class="info-input" id="settingsHeroSubtitle" placeholder="Апартаменты премиум-класса · Посуточная аренда" style="width:100%" oninput="renderDesignPreview()">
           </div>
-
-          <div class="info-field" style="margin-bottom:8px">
-            <div class="info-label">Описание квартиры (текст для сайта)</div>
-            <textarea class="info-input" id="aptDesc" rows="5" placeholder="Описание апартаментов..." style="width:100%;resize:vertical;line-height:1.6"></textarea>
-          </div>
-          <button class="btn btn-primary" onclick="saveDesc()" style="margin-bottom:24px">Сохранить описание</button>
-
-          <div class="info-field" style="margin-bottom:8px">
-            <div class="info-label">Шрифт логотипа и навигации</div>
-          </div>
-          <div id="fontPicker" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-bottom:20px"></div>
-
-          <div class="info-field" style="margin-bottom:8px">
-            <div class="info-label">Цветовая схема</div>
-          </div>
-          <div id="colorPicker" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-bottom:24px"></div>
-
-          <div class="info-field" style="margin-bottom:8px">
-            <div class="info-label">Фон сайта</div>
-          </div>
-          <div id="backgroundPicker" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-bottom:24px"></div>
-
-          <div style="display:flex;gap:24px;flex-wrap:wrap;margin-bottom:24px">
-            <div>
-              <div class="info-label" style="margin-bottom:8px">Начертание</div>
-              <div id="boldToggle" style="display:flex;gap:8px"></div>
-            </div>
-            <div>
-              <div class="info-label" style="margin-bottom:8px">Размер логотипа и кнопки «Забронировать»</div>
-              <div id="scalePicker" style="display:flex;gap:8px"></div>
-            </div>
-            <div>
-              <div class="info-label" style="margin-bottom:8px">Размер меню (навигации)</div>
-              <div id="navScalePicker" style="display:flex;gap:8px"></div>
-              <div style="font-size:10px;color:var(--text-muted);margin-top:6px;max-width:220px">При увеличении меню может перенестись в 3 строки вместо 2</div>
-            </div>
-          </div>
-
-          <div class="info-field" style="margin-bottom:8px">
-            <div class="info-label">Текст пунктов навигации</div>
-          </div>
-          <div id="navLabelsEditor" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:16px"></div>
-          <div style="font-size:10px;color:var(--text-muted);margin-bottom:24px">Оставьте поле пустым — пункт меню перестанет отображаться на сайте (и в десктопной, и в мобильной навигации)</div>
-
-          <div class="info-field" style="margin-bottom:8px">
-            <div class="info-label">Дополнительный пункт меню (по желанию)</div>
-          </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:8px">
-            <div class="info-field">
-              <div class="info-label" style="font-size:9px">Название</div>
-              <input type="text" class="info-input" id="navExtraLabel" placeholder="Например: Отзывы гостей">
-            </div>
-            <div class="info-field">
-              <div class="info-label" style="font-size:9px">Ссылка</div>
-              <input type="text" class="info-input" id="navExtraUrl" placeholder="#reviews или /static/page.html">
-            </div>
-          </div>
-          <div style="font-size:10px;color:var(--text-muted);margin-bottom:24px">Пока «Название» не заполнено — пункт нигде не отображается</div>
-
-          <div style="border-top:1px solid var(--black-border);margin:8px 0 20px"></div>
-
           <div class="info-field" style="margin-bottom:8px">
             <div class="info-label">Шрифт заголовка и подзаголовка (Hero)</div>
           </div>
           <div id="heroFontPicker" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-bottom:20px"></div>
-
           <div style="display:flex;gap:24px;flex-wrap:wrap;margin-bottom:24px">
             <div>
               <div class="info-label" style="margin-bottom:8px">Начертание</div>
@@ -1060,6 +1032,37 @@
                 Включена (если выключить — на hero всегда только обложка, даже при активных акциях)
               </label>
             </div>
+          </div>
+          </div>
+          <div data-ss-tab="menu">
+          <div style="display:flex;gap:24px;flex-wrap:wrap;margin-bottom:24px">
+            <div>
+              <div class="info-label" style="margin-bottom:8px">Размер меню (навигации)</div>
+              <div id="navScalePicker" style="display:flex;gap:8px"></div>
+              <div style="font-size:10px;color:var(--text-muted);margin-top:6px;max-width:220px">При увеличении меню может перенестись в 3 строки вместо 2</div>
+            </div>
+          </div>
+          <div class="info-field" style="margin-bottom:8px">
+            <div class="info-label">Текст пунктов навигации</div>
+          </div>
+          <div id="navLabelsEditor" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:16px"></div>
+          <div style="font-size:10px;color:var(--text-muted);margin-bottom:24px">Оставьте поле пустым — пункт меню перестанет отображаться на сайте (и в десктопной, и в мобильной навигации)</div>
+
+          <div class="info-field" style="margin-bottom:8px">
+            <div class="info-label">Дополнительный пункт меню (по желанию)</div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:8px">
+            <div class="info-field">
+              <div class="info-label" style="font-size:9px">Название</div>
+              <input type="text" class="info-input" id="navExtraLabel" placeholder="Например: Отзывы гостей">
+            </div>
+            <div class="info-field">
+              <div class="info-label" style="font-size:9px">Ссылка</div>
+              <input type="text" class="info-input" id="navExtraUrl" placeholder="#reviews или /static/page.html">
+            </div>
+          </div>
+          <div style="font-size:10px;color:var(--text-muted);margin-bottom:24px">Пока «Название» не заполнено — пункт нигде не отображается</div>
+          <div style="display:flex;gap:24px;flex-wrap:wrap;margin-bottom:24px">
             <div>
               <div class="info-label" style="margin-bottom:8px">Прозрачность шапки навигации: <span id="headerOpacityValue">3</span>/10</div>
               <input type="range" min="1" max="10" step="1" id="headerOpacitySlider"
@@ -1075,12 +1078,25 @@
               <div style="font-size:9px;color:var(--text-muted);margin-top:4px">1 = лёгкое размытие (2px), 10 = сильное (20px)</div>
             </div>
           </div>
+          </div>
 
           <button class="btn btn-primary" onclick="saveDesignSettings()">Сохранить оформление</button>
         </div>
       </div>
 
-      <div class="card" style="max-width:700px">
+      <div class="card" data-ss-tab="about" style="max-width:700px;margin-bottom:20px">
+        <div class="card-header"><span class="card-title">Описание квартиры</span></div>
+        <div class="card-body">
+          <div class="info-field" style="margin-bottom:8px">
+            <div class="info-label">Описание квартиры (текст для сайта)</div>
+            <textarea class="info-input" id="aptDesc" rows="5" placeholder="Описание апартаментов..." style="width:100%;resize:vertical;line-height:1.6"></textarea>
+          </div>
+          <button class="btn btn-primary" onclick="saveDesc()" style="margin-bottom:24px">Сохранить описание</button>
+        </div>
+      </div>
+
+
+      <div class="card" data-ss-tab="location" style="max-width:700px">
         <div class="card-header">
           <span class="card-title">Карта: ссылка и сервис</span>
         </div>
@@ -1107,7 +1123,7 @@
         </div>
       </div>
 
-      <div class="card" style="max-width:900px">
+      <div class="card" data-ss-tab="location" style="max-width:900px">
         <div class="card-header">
           <span class="card-title">Расположение — ближайшие места</span>
         </div>
@@ -1120,7 +1136,7 @@
         </div>
       </div>
 
-      <div class="card" style="max-width:900px">
+      <div class="card" data-ss-tab="about" style="max-width:900px">
         <div class="card-header">
           <span class="card-title">Удобства</span>
         </div>
