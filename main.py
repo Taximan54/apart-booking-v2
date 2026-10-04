@@ -2769,7 +2769,6 @@ async def get_bookings(admin: Optional[str] = None, authorization: Optional[str]
                 d += timedelta(days=1)
     return {"booked_dates": booked, "checkout_dates": checkout_dates}
 
-@app.post("/api/bookings")
 def _phone_digits_ok(phone: str) -> bool:
     """Ровно 10 цифр после кода +7 (итого 11 цифр, начиная с 7)."""
     digits = re.sub(r"\D", "", phone or "")
@@ -2784,6 +2783,7 @@ def _passport_digits_ok(passport: str) -> bool:
     digits = re.sub(r"\D", "", passport or "")
     return len(digits) == 10
 
+@app.post("/api/bookings")
 async def create_booking(b: BookingCreate):
     # Проверка минимального срока бронирования
     try:
