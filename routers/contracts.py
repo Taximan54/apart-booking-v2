@@ -25,7 +25,7 @@ from core.contract_docs import (
     generate_contract_pdf,
 )
 from core.data_store import get_default_deposit
-from core.db import get_db
+from core.db import get_db, booking_ref_alt, find_booking_row
 from core.models import ContractTemplate, CheckinMemo
 from core.passports import load_passport_map
 from core.runtime import now_nsk
@@ -135,12 +135,8 @@ async def list_contracts(_: bool = Depends(require_admin)):
     conn = get_db()
     result = []
     for ref, flags in refs_seen.items():
-        ref_alt = ref.replace("GP-", "\u0413\u041f-")
-        row = conn.execute(
-            "SELECT guest_name, guest_email, check_in, check_out, total_price, status "
-            "FROM bookings WHERE username=? OR username=? OR CAST(id AS TEXT)=? LIMIT 1",
-            (ref, ref_alt, ref)
-        ).fetchone()
+        ref_alt = booking_ref_alt(ref)
+        row = find_booking_row(conn, ref, "guest_name, guest_email, check_in, check_out, total_price, status")
         pm_key = ref if ref in pm else (ref_alt if ref_alt in pm else ref)
         pm_entry = pm.get(pm_key)
         passport_slots = [s for s in ("main", "reg1") if isinstance(pm_entry, dict) and pm_entry.get(s)]
@@ -176,12 +172,8 @@ async def get_contract(booking_ref: str, _: bool = Depends(require_admin)):
         with open(path, "r", encoding="utf-8") as f:
             return PlainTextResponse(f.read())
     # Генерируем на лету — ищем по обоим вариантам префикса
-    ref_alt = booking_ref.replace("GP-", "\u0413\u041f-")
     conn = get_db()
-    row = conn.execute(
-        "SELECT * FROM bookings WHERE username=? OR username=? OR CAST(id AS TEXT)=? LIMIT 1",
-        (booking_ref, ref_alt, booking_ref)
-    ).fetchone()
+    row = find_booking_row(conn, booking_ref)
     conn.close()
     if not row:
         raise HTTPException(status_code=404, detail="Booking not found")
@@ -198,8 +190,7 @@ async def get_signed_contract_pdf(booking_ref: str, doc_type: str, _: bool = Dep
     suffix = {"contract": "_podpisan.pdf", "consent": "_soglasie_pd.pdf"}.get(doc_type)
     if not suffix:
         raise HTTPException(status_code=400, detail="Неверный doc_type — ожидается 'contract' или 'consent'")
-    ref_alt = booking_ref.replace("GP-", "\u0413\u041f-")
-    for candidate in (booking_ref, ref_alt):
+    for candidate in (booking_ref, booking_ref_alt(booking_ref)):
         path = os.path.join(CONTRACTS_DIR, candidate + suffix)
         if os.path.exists(path):
             filename = ("dogovor_podpisan_" if doc_type == "contract" else "soglasie_pd_") + booking_ref + ".pdf"

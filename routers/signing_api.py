@@ -1,14 +1,12 @@
 """API: подписание договора гостем и донаполнение данных ручной брони."""
 import os
-import secrets
 from fastapi import APIRouter, Request, UploadFile, Form, File, HTTPException
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 
-from core.constants import PASSPORT_DIR
 from core.contract_docs import contract_text_to_html, generate_contract, generate_consent
 from core.db import get_db
-from core.passports import load_passport_map, compress_passport_image, save_passport_map
+from core.passports import load_passport_map, save_uploaded_passport_photo, set_passport_slot
 from core.runtime import now_nsk
 from core.signing import email_contract_signed
 from core.validators import _phone_digits_ok, _passport_digits_ok
@@ -151,28 +149,9 @@ async def upload_complete_photo(token: str, slot: str = Form(...), file: UploadF
     if booking.get("signed_at"):
         raise HTTPException(status_code=400, detail="Договор уже подписан")
 
-    content = await file.read()
-    if len(content) > 20 * 1024 * 1024:
-        raise HTTPException(status_code=400, detail="Файл слишком большой (макс. 20МБ)")
-    try:
-        compressed = compress_passport_image(content)
-    except Exception as e:
-        logger.error(f"Ошибка обработки фото паспорта (файл '{file.filename}', {len(content)} байт): {e}", exc_info=True)
-        raise HTTPException(status_code=400, detail="Не удалось обработать изображение — попробуйте другое фото (или переснимите не в формате HEIC)")
-
+    filename, _size = await save_uploaded_passport_photo(file)
     booking_ref = str(booking.get("username") or booking.get("id", ""))
-    os.makedirs(PASSPORT_DIR, exist_ok=True)
-    filename = f"passport_{secrets.token_hex(12)}.jpg"
-    with open(os.path.join(PASSPORT_DIR, filename), "wb") as f:
-        f.write(compressed)
-
-    pm = load_passport_map()
-    entry = pm.get(booking_ref)
-    if not isinstance(entry, dict):
-        entry = {}
-    entry[slot] = filename
-    pm[booking_ref] = entry
-    save_passport_map(pm)
+    set_passport_slot(booking_ref, slot, filename)
 
     return {"ok": True}
 

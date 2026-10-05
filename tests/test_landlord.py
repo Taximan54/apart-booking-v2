@@ -87,26 +87,41 @@ def test_contract_uses_current_defaults_when_nothing_saved(files, monkeypatch):
     assert plain(cd.generate_contract(dict(BOOKING))) == "Городская Пауза|г. Новосибирск, ул. Дачная, д. 5, квартира 286, 22 этаж|citypause.ru"
 
 
-def test_api_requires_admin_and_validates(files):
-    import main
-    from fastapi.testclient import TestClient
+def test_api_requires_admin():
+    """Оба адреса защищены проверкой администратора."""
+    import inspect
     from core.auth import require_admin
-    client = TestClient(main.app)
-    assert client.get("/api/landlord").status_code in (401, 403)
-    assert client.post("/api/landlord", json={}).status_code in (401, 403)
-    main.app.dependency_overrides[require_admin] = lambda: True
-    try:
-        assert client.get("/api/landlord").status_code == 200
-        bad = client.post("/api/landlord", json={"brand_name": "", "domain": "не домен", "address": ""})
-        assert bad.status_code == 400
-        too_long = client.post("/api/landlord", json={"brand_name": "x" * 81, "domain": "", "address": ""})
-        assert too_long.status_code == 400
-        ok = client.post("/api/landlord", json={"brand_name": " Мой Дом ", "domain": "https://www.Moy-Dom.ru/", "address": "г. Томск, ул. Ленина, 1"})
-        assert ok.status_code == 200
-        assert ok.json() == {"brand_name": "Мой Дом", "domain": "moy-dom.ru", "address": "г. Томск, ул. Ленина, 1"}
-        assert client.get("/api/landlord").json()["domain"] == "moy-dom.ru"
-    finally:
-        main.app.dependency_overrides.clear()
+    from routers.content import get_landlord_settings, set_landlord_settings
+    for func in (get_landlord_settings, set_landlord_settings):
+        default = inspect.signature(func).parameters["_"].default
+        assert getattr(default, "dependency", None) is require_admin, f"{func.__name__} без проверки админа"
+
+
+def test_api_validates_and_saves(files):
+    """Проверка данных и сохранение (обработчики вызываются напрямую, без HTTP-клиента)."""
+    import asyncio
+
+    from fastapi import HTTPException
+
+    from core.models import LandlordSettings
+    from routers.content import get_landlord_settings, set_landlord_settings
+
+    def save(**kw):
+        return asyncio.run(set_landlord_settings(LandlordSettings(**kw), True))
+
+    with pytest.raises(HTTPException) as e1:
+        save(brand_name="", domain="не домен", address="")
+    assert e1.value.status_code == 400
+    with pytest.raises(HTTPException) as e2:
+        save(brand_name="x" * 81, domain="", address="")
+    assert e2.value.status_code == 400
+    with pytest.raises(HTTPException) as e3:
+        save(brand_name="", domain="", address="y" * 201)
+    assert e3.value.status_code == 400
+
+    ok = save(brand_name=" Мой Дом ", domain="https://www.Moy-Dom.ru/", address="г. Томск, ул. Ленина, 1")
+    assert ok == {"brand_name": "Мой Дом", "domain": "moy-dom.ru", "address": "г. Томск, ул. Ленина, 1"}
+    assert asyncio.run(get_landlord_settings(True))["domain"] == "moy-dom.ru"
 
 
 def test_signed_pdf_header_uses_brand(files, monkeypatch, tmp_path):

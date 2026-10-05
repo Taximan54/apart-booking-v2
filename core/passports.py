@@ -2,10 +2,16 @@
 import io
 import json
 import os
+import secrets
+
+from fastapi import HTTPException, UploadFile
 from PIL import Image, ImageDraw, ImageFont
 
-from core.constants import PASSPORT_MAP_FILE
+from core.constants import PASSPORT_DIR, PASSPORT_MAP_FILE
 from core.contract_docs import _get_cyrillic_ttf_path
+from core.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 # =====================================================
@@ -39,6 +45,38 @@ def load_passport_map():
 def save_passport_map(data):
     with open(PASSPORT_MAP_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False)
+
+
+async def save_uploaded_passport_photo(file: UploadFile):
+    """
+    Принимает загруженное фото паспорта: проверяет размер, сжимает и сохраняет
+    в защищённую папку под случайным именем. Возвращает (имя_файла, размер_в_байтах).
+    При проблеме с файлом отвечает ошибкой 400 с понятным текстом.
+    """
+    content = await file.read()
+    if len(content) > 20 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="Файл слишком большой (макс. 20МБ)")
+    try:
+        compressed = compress_passport_image(content)
+    except Exception as e:
+        logger.error(f"Ошибка обработки фото паспорта (файл '{file.filename}', {len(content)} байт): {e}", exc_info=True)
+        raise HTTPException(status_code=400, detail="Не удалось обработать изображение — попробуйте другое фото (или переснимите не в формате HEIC)")
+    os.makedirs(PASSPORT_DIR, exist_ok=True)
+    filename = f"passport_{secrets.token_hex(12)}.jpg"
+    with open(os.path.join(PASSPORT_DIR, filename), "wb") as f:
+        f.write(compressed)
+    return filename, len(compressed)
+
+
+def set_passport_slot(booking_ref: str, slot: str, filename: str):
+    """Привязывает фото к брони: slot — «main» (разворот) или «reg1» (прописка)."""
+    pm = load_passport_map()
+    entry = pm.get(booking_ref)
+    if not isinstance(entry, dict):
+        entry = {}
+    entry[slot] = filename
+    pm[booking_ref] = entry
+    save_passport_map(pm)
 
 
 PASSPORT_WATERMARK_TEXT = "ЗАПРЕЩЕНО КОПИРОВАТЬ И ИСПОЛЬЗОВАТЬ ОТДЕЛЬНО ОТ ДАННОГО ДОКУМЕНТА  •  "

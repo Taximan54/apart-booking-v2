@@ -55,3 +55,22 @@ def get_db():
         except Exception:
             pass
     return conn
+
+
+def booking_ref_alt(ref: str) -> str:
+    """
+    Запасной вариант номера брони: у старых броней префикс «GP-» мог быть
+    записан русскими буквами «ГП-». Для обычных номеров возвращает тот же номер.
+    """
+    return (ref or "").replace("GP-", "\u0413\u041f-")
+
+
+def find_booking_row(conn, ref: str, columns: str = "*"):
+    """
+    Ищет бронь по номеру (username), по запасному номеру «ГП-…» или по id.
+    Возвращает строку базы или None. Соединение conn открывает и закрывает вызывающий.
+    """
+    return conn.execute(
+        f"SELECT {columns} FROM bookings WHERE username=? OR username=? OR CAST(id AS TEXT)=? LIMIT 1",
+        (ref, booking_ref_alt(ref), ref),
+    ).fetchone()

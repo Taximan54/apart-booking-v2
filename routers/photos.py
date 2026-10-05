@@ -11,7 +11,7 @@ from core.auth import require_admin
 from core.constants import PHOTOS_ORDER_FILE, PHOTOS_DIR, PASSPORT_DIR
 from core.data_store import load_discounts, get_site_settings_dict, load_places, load_properties
 from core.models import PhotoOrder, PhotoLabel
-from core.passports import compress_passport_image, load_passport_map, apply_passport_watermark
+from core.passports import apply_passport_watermark, load_passport_map, save_uploaded_passport_photo
 from core.logger import get_logger
 
 logger = get_logger(__name__)
@@ -171,22 +171,8 @@ async def upload_passport_photo(file: UploadFile = File(...)):
     бронировании (до создания самой брони). Возвращает имя файла, которое
     нужно передать в /api/bookings полем passport_photo.
     """
-    content = await file.read()
-    if len(content) > 20 * 1024 * 1024:
-        raise HTTPException(status_code=400, detail="Файл слишком большой (макс. 20МБ)")
-    try:
-        compressed = compress_passport_image(content)
-    except Exception as e:
-        logger.error(f"Ошибка обработки фото паспорта (файл '{file.filename}', {len(content)} байт): {e}", exc_info=True)
-        raise HTTPException(status_code=400, detail="Не удалось обработать изображение — попробуйте другое фото (или переснимите не в формате HEIC)")
-
-    os.makedirs(PASSPORT_DIR, exist_ok=True)
-    filename = f"passport_{secrets.token_hex(12)}.jpg"
-    filepath = os.path.join(PASSPORT_DIR, filename)
-    with open(filepath, "wb") as f:
-        f.write(compressed)
-
-    return {"ok": True, "filename": filename, "size_kb": round(len(compressed) / 1024, 1)}
+    filename, size = await save_uploaded_passport_photo(file)
+    return {"ok": True, "filename": filename, "size_kb": round(size / 1024, 1)}
 
 @router.get("/api/admin/passport-photo/{booking_ref}/{slot}")
 async def get_passport_photo(booking_ref: str, slot: str, _: bool = Depends(require_admin)):

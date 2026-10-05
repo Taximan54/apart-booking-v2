@@ -1,6 +1,10 @@
 """Pydantic-модели запросов API."""
+import copy
+from typing import Dict, List, Optional
+
 from pydantic import BaseModel, Field
-from typing import List, Dict, Optional
+
+from core.constants import DEFAULT_SETTINGS
 
 
 # =====================================================
@@ -76,16 +80,7 @@ class SiteSettings(BaseModel):
     nav_scale: float = 1.0      # 1.0–1.8 — размер пунктов меню (навигации)
     color_theme: str = "gold"   # gold / emerald / sapphire / burgundy / amethyst / dusty_rose / teal / copper / graphite
     background_theme: str = "black"  # black / white / pistachio / cream / midnight / charcoal — фон сайта
-    nav_labels: Dict[str, str] = Field(default_factory=lambda: {
-        "gallery": "Галерея",
-        "amenities": "Удобства",
-        "location": "Расположение",
-        "prices": "Цены",
-        "house_rules": "Правила проживания",
-        "places": "Куда сходить?",
-        "contacts": "Контакты",
-        "booking": "Забронировать",
-    })
+    nav_labels: Dict[str, str] = Field(default_factory=lambda: copy.deepcopy(DEFAULT_SETTINGS["nav_labels"]))
     hero_font: str = "cormorant"    # cormorant / im_fell / playfair / unifraktur / tangerine / pacifico / bebas
     hero_bold: bool = False
     hero_title_scale: float = 1.0    # 0.5 / 0.7 / 1.0 / 1.5 / 2.0 — размер hero-заголовка
@@ -104,27 +99,8 @@ class SiteSettings(BaseModel):
     notify_owner_time: str = "09:00"       # время отправки владельцу сводки выездов (планирование уборки)
     notify_email: str = ""                # email владельца для уведомлений (о выездах и т.д.)
     notify_telegram_chat_id: str = ""      # Telegram Chat ID владельца для уведомлений
-    amenities: List[Dict[str, str]] = Field(default_factory=lambda: [
-        {"icon": "📶", "name": "Wi-Fi 300 Мбит"},
-        {"icon": "❄️", "name": "Кондиционер"},
-        {"icon": "🍳", "name": "Полная кухня"},
-        {"icon": "🧺", "name": "Стиральная машина"},
-        {"icon": "📺", "name": "Smart TV 43\""},
-        {"icon": "🅿️", "name": "Парковка"},
-        {"icon": "🔑", "name": "Умный замок"},
-        {"icon": "🛁", "name": "Банные принадлежности"},
-        {"icon": "", "name": ""},
-        {"icon": "", "name": ""},
-        {"icon": "", "name": ""},
-        {"icon": "", "name": ""},
-    ])
-    location_points: List[Dict[str, str]] = Field(default_factory=lambda: [
-        {"icon": "🦁", "name": "Новосибирский зоопарк", "distance": "1.2 км · 15 мин пешком", "description": "Один из крупнейших зоопарков России — 770 видов животных"},
-        {"icon": "🚇", "name": "Метро Заельцовская", "distance": "700 м · 8 мин пешком", "description": "Площадь Калинина — прямое сообщение с центром города"},
-        {"icon": "🛍", "name": "ТЦ Роял Парк", "distance": "700 м · 8 мин пешком", "description": "Крупный торгово-развлекательный центр на Красном проспекте"},
-        {"icon": "🍎", "name": "Золотое Яблоко", "distance": "9 мин пешком", "description": "Магазин косметики и парфюмерии премиум-класса"},
-        {"icon": "", "name": "", "distance": "", "description": ""},
-    ])
+    amenities: List[Dict[str, str]] = Field(default_factory=lambda: copy.deepcopy(DEFAULT_SETTINGS["amenities"]))
+    location_points: List[Dict[str, str]] = Field(default_factory=lambda: copy.deepcopy(DEFAULT_SETTINGS["location_points"]))
 
 class HouseRulesText(BaseModel):
     text: str = ""

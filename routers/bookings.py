@@ -14,7 +14,7 @@ from core.auth import require_admin, verify_token
 from core.constants import PROMO_FILE, CODE_FILE, CONTRACTS_DIR, PASSPORT_DIR, MAIL_ADMIN
 from core.contract_docs import save_contract, generate_contract
 from core.data_store import get_default_deposit
-from core.db import get_db
+from core.db import get_db, booking_ref_alt, find_booking_row
 from core.mailer import send_email
 from core.models import (
     BookingCreate,
@@ -533,7 +533,7 @@ def _delete_contract_files_and_photos(ref):
     это отдельная операция (см. delete_booking_api). Работает и для
     "осиротевших" файлов, у которых брони в БД уже нет.
     """
-    for candidate in {ref, ref.replace("GP-", "\u0413\u041f-")}:
+    for candidate in {ref, booking_ref_alt(ref)}:
         for suffix in (".txt", "_podpisan.pdf", "_soglasie_pd.pdf"):
             path = os.path.join(CONTRACTS_DIR, candidate + suffix)
             if os.path.exists(path):
@@ -543,7 +543,7 @@ def _delete_contract_files_and_photos(ref):
                     logger.warning(f"Не удалось удалить файл договора {path}: {e}")
 
     pm = load_passport_map()
-    for candidate in {ref, ref.replace("GP-", "\u0413\u041f-")}:
+    for candidate in {ref, booking_ref_alt(ref)}:
         entry = pm.get(candidate)
         if isinstance(entry, dict):
             for slot_file in entry.values():
@@ -566,12 +566,8 @@ async def delete_booking_api(booking_ref: str, _: bool = Depends(require_admin))
     основном для очистки тестовых броней. Подтверждение запрашивается на
     клиенте перед вызовом — это необратимое действие.
     """
-    ref_alt = booking_ref.replace("GP-", "\u0413\u041f-")
     conn = get_db()
-    row = conn.execute(
-        "SELECT * FROM bookings WHERE username=? OR username=? OR CAST(id AS TEXT)=? LIMIT 1",
-        (booking_ref, ref_alt, booking_ref)
-    ).fetchone()
+    row = find_booking_row(conn, booking_ref)
     if not row:
         conn.close()
         raise HTTPException(status_code=404, detail="Booking not found")
@@ -595,12 +591,8 @@ async def delete_contract_archive_entry(ref: str, _: bool = Depends(require_admi
     """
     _delete_contract_files_and_photos(ref)
 
-    ref_alt = ref.replace("GP-", "\u0413\u041f-")
     conn = get_db()
-    row = conn.execute(
-        "SELECT id FROM bookings WHERE username=? OR username=? OR CAST(id AS TEXT)=? LIMIT 1",
-        (ref, ref_alt, ref)
-    ).fetchone()
+    row = find_booking_row(conn, ref, "id")
     if row:
         conn.execute("DELETE FROM bookings WHERE id=?", (row["id"],))
         conn.commit()
