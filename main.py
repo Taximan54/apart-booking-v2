@@ -1,5 +1,6 @@
 """Точка входа: приложение FastAPI, подключение роутеров, запуск и остановка."""
 import asyncio
+from aiogram.exceptions import TelegramNetworkError
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -48,6 +49,11 @@ async def startup():
         while True:
             try:
                 await dp.start_polling(bot)
+            except TelegramNetworkError as e:
+                # Telegram с сервера часто недоступен (сетевые блокировки): это ожидаемо,
+                # поэтому одна короткая строка без длинного трейсбека.
+                logger.warning("Telegram недоступен, повтор через 30 сек: %s", e)
+                await asyncio.sleep(30)
             except Exception as e:
                 logger.error("Bot polling error: " + str(e), exc_info=True)
                 await asyncio.sleep(30)
