@@ -26,6 +26,9 @@ from core.contract_docs import (
 )
 from core.mailer import send_email
 from core.passports import load_passport_map, apply_passport_watermark
+from core.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 def get_landlord_phone():
@@ -37,8 +40,8 @@ def get_landlord_phone():
             phone = saved.get("phone", "").strip()
             if phone:
                 return phone
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("Не удалось прочитать телефон из контактов: %s", e)
     return "не указан"
 
 def _sig_hash(*parts) -> str:
@@ -143,7 +146,7 @@ def _passport_photos_with_grid(booking_ref):
         try:
             images.append(apply_passport_watermark(Image.open(filepath)))
         except Exception as e:
-            print(f"WARNING: не удалось наложить водяной знак на фото паспорта {filename}: {e}")
+            logger.warning(f"не удалось наложить водяной знак на фото паспорта {filename}: {e}")
     return images
 
 def generate_signed_contract_pdf(booking):
@@ -166,7 +169,7 @@ def generate_signed_contract_pdf(booking):
     except Exception as e:
         # Страховка: если из-за фото PDF не собрался, гость всё равно получает
         # договор (без страницы с фото), а ошибка остаётся в журнале сервера.
-        print(f"ERROR: PDF договора {booking_ref} с фото паспорта не собрался: {e}. Собираю без фото.")
+        logger.error(f"PDF договора {booking_ref} с фото паспорта не собрался: {e}. Собираю без фото.", exc_info=True)
         return generate_contract_pdf(
             main_text, booking_ref + "_podpisan",
             extra_blocks=[signature_text],
@@ -224,8 +227,8 @@ def email_contract_signed(booking):
             with open(CONTACTS_FILE, "r", encoding="utf-8") as f:
                 saved_contacts = json.load(f)
             landlord_email = (saved_contacts.get("email") or "").strip() or LANDLORD_EMAIL
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("Не удалось прочитать email хозяина из контактов: %s", e)
     if landlord_email and landlord_email != guest_email:
         try:
             send_email(
@@ -236,7 +239,7 @@ def email_contract_signed(booking):
                 ]
             )
         except Exception as e:
-            print(f"Copy to landlord email failed: {e}")
+            logger.error(f"Copy to landlord email failed: {e}", exc_info=True)
 
 def email_manual_contract(booking, target_email):
     """

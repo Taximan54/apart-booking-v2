@@ -9,6 +9,9 @@ from core.db import get_db
 from core.runtime import dp
 from core.signing import email_booking_confirmed
 from handlers.admin import load_door_code
+from core.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 # =====================================================
@@ -39,8 +42,8 @@ async def web_payment_confirm(callback: CallbackQuery):
             threading.Thread(target=email_booking_confirmed, args=(booking, door_code)).start()
     try:
         await callback.message.edit_text(callback.message.text + "\n\n\u2705 \u041f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u043e")
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning("Telegram: не удалось обновить сообщение: %s", e)
     await callback.answer("\u2705")
 
 @dp.callback_query(lambda c: c.data.startswith("web_reject_"))
@@ -54,6 +57,6 @@ async def web_payment_reject(callback: CallbackQuery):
     conn.close()
     try:
         await callback.message.edit_text(callback.message.text + "\n\n\u274c \u041e\u0442\u043c\u0435\u043d\u0435\u043d\u043e")
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning("Telegram: не удалось обновить сообщение: %s", e)
     await callback.answer("\u274c")

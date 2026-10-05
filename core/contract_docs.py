@@ -26,6 +26,9 @@ from xml.sax.saxutils import escape as xml_escape
 from core.constants import DATA_DIR, CONTRACT_FILE, CONTRACT_STATIC, CONTRACTS_DIR
 from core.data_store import get_default_deposit
 from core.runtime import now_nsk
+from core.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 # =====================================================
@@ -227,7 +230,7 @@ def _register_cyrillic_font():
                 return name
             except Exception:
                 continue
-    print("WARNING: не найден TTF-шрифт с кириллицей (нужен пакет fonts-dejavu-core) — "
+    logger.warning("не найден TTF-шрифт с кириллицей (нужен пакет fonts-dejavu-core) — "
           "PDF-договор может отобразиться некорректно")
     _CYRILLIC_FONT_NAME = "Helvetica"
     return _CYRILLIC_FONT_NAME

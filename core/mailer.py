@@ -5,6 +5,9 @@ from email import encoders
 from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from core.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 # =====================================================
@@ -21,7 +24,7 @@ def send_email(to, subject, html_body, attachments=None):
       - {"filename": "dogovor_123.pdf", "filepath": "/data/contracts/GP-XXXXXX.pdf"} — бинарный файл с диска (PDF и т.п.)
     """
     if not MAIL_PASSWORD:
-        print("WARNING: MAIL_PASSWORD not set")
+        logger.warning("MAIL_PASSWORD not set")
         return
     try:
         from email.header import Header
@@ -52,6 +55,6 @@ def send_email(to, subject, html_body, attachments=None):
         with smtplib.SMTP_SSL("smtp.mail.ru", 465) as server:
             server.login(MAIL_FROM, MAIL_PASSWORD)
             server.sendmail(MAIL_FROM, [to], msg.as_string())
-        print("OK EMAIL sent to " + to)
+        logger.info("OK EMAIL sent to " + to)
     except Exception as e:
-        print("ERROR email: " + str(e))
+        logger.error("ERROR email: " + str(e), exc_info=True)

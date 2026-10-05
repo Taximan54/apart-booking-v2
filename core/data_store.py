@@ -12,6 +12,9 @@ from core.constants import (
     PROPERTIES_FILE,
     OWNER_NOTIFY_FILE,
 )
+from core.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 def get_default_deposit():
@@ -21,8 +24,8 @@ def get_default_deposit():
             with open(PRICE_FILE, "r") as f:
                 saved = json.load(f)
             return int(saved.get("deposit", DEFAULT_PRICES["deposit"]))
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("Не удалось прочитать депозит из файла цен: %s", e)
     return DEFAULT_PRICES["deposit"]
 
 def get_site_settings_dict():

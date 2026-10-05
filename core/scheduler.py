@@ -25,6 +25,9 @@ from core.signing import (
     email_review_request,
 )
 from services.booking_service import get_bookings_checkout_today, get_bookings_checkout_yesterday
+from core.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 # =====================================================
@@ -76,8 +79,8 @@ async def send_notifications():
                     for admin_id in telegram_targets:
                         try:
                             await asyncio.wait_for(bot.send_message(admin_id, owner_message), timeout=5.0)
-                        except Exception:
-                            pass
+                        except Exception as e:
+                            logger.warning("Telegram: не отправлено напоминание о выездах (%s): %s", admin_id, e)
 
                     # Email — на случай если Telegram недоступен/заблокирован
                     configured_email = settings.get("notify_email", "").strip()
@@ -88,8 +91,8 @@ async def send_notifications():
                                 target=email_owner_checkout_reminder,
                                 args=(configured_email, checkouts_today, properties_map)
                             ).start()
-                        except Exception:
-                            pass
+                        except Exception as e:
+                            logger.warning("Не удалось запустить письмо владельцу о выездах: %s", e)
                 set_last_owner_notify_date(today_str)
 
             # Чек-лист гостям кто выезжает сегодня (время настраивается в админке)
@@ -122,8 +125,8 @@ async def send_notifications():
                                 "\u2610 \u0412\u044b\u043a\u043b\u044e\u0447\u0438\u0442\u044c \u0441\u0432\u0435\u0442 \u0438 \u0442\u0435\u0445\u043d\u0438\u043a\u0443\n"
                                 "\u2610 \u0417\u0430\u043f\u0440\u0435\u0442\u044c \u0434\u0432\u0435\u0440\u044c"
                             ), timeout=5.0)
-                        except Exception:
-                            pass
+                        except Exception as e:
+                            logger.warning("Telegram: не отправлен чек-лист выезда: %s", e)
 
             # Отзыв + промокод гостям кто выехал вчера (время настраивается в админке)
             if hour == review_hour and minute < 30:
@@ -143,8 +146,8 @@ async def send_notifications():
                             codes[promo_code] = discount_pct
                             with open(PROMO_FILE, "w", encoding="utf-8") as pf:
                                 json.dump(codes, pf, ensure_ascii=False)
-                        except Exception:
-                            pass
+                        except Exception as e:
+                            logger.warning("Не удалось сохранить промокод за отзыв: %s", e)
                         import threading
                         threading.Thread(target=email_review_request, args=(
                             b.get("guest_name",""),
@@ -166,8 +169,8 @@ async def send_notifications():
                                 "\ud83d\ude4f \u0421\u043f\u0430\u0441\u0438\u0431\u043e \u0437\u0430 \u0432\u0438\u0437\u0438\u0442!\n\n"
                                 "\u0411\u0443\u0434\u0435\u043c \u0440\u0430\u0434\u044b \u0432\u0438\u0434\u0435\u0442\u044c \u0432\u0430\u0441 \u0441\u043d\u043e\u0432\u0430! \ud83c\udfe0\u2728"
                             ), timeout=5.0)
-                        except Exception:
-                            pass
+                        except Exception as e:
+                            logger.warning("Telegram: не отправлена просьба об отзыве: %s", e)
 
             # Резервное копирование БД + ключевых настроек — раз в сутки, в 04:00
             # (минимум нагрузки на сайт), отправляется админам в Telegram и
@@ -177,9 +180,9 @@ async def send_notifications():
                     zip_path = create_backup_zip()
                     await send_backup_everywhere(zip_path)
                 except Exception as e:
-                    print("Backup error: " + str(e))
+                    logger.error("Backup error: " + str(e), exc_info=True)
                 set_last_backup_date(today_str)
 
         except Exception as e:
-            print("Scheduler error: " + str(e))
+            logger.error("Scheduler error: " + str(e), exc_info=True)
         await asyncio.sleep(30 * 60)

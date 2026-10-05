@@ -12,6 +12,9 @@ from core.constants import PHOTOS_ORDER_FILE, PHOTOS_DIR, PASSPORT_DIR
 from core.data_store import load_discounts, get_site_settings_dict, load_places, load_properties
 from core.models import PhotoOrder, PhotoLabel
 from core.passports import compress_passport_image, load_passport_map, apply_passport_watermark
+from core.logger import get_logger
+
+logger = get_logger(__name__)
 
 router = APIRouter()
 
@@ -174,7 +177,7 @@ async def upload_passport_photo(file: UploadFile = File(...)):
     try:
         compressed = compress_passport_image(content)
     except Exception as e:
-        print(f"Ошибка обработки фото паспорта (файл '{file.filename}', {len(content)} байт): {e}")
+        logger.error(f"Ошибка обработки фото паспорта (файл '{file.filename}', {len(content)} байт): {e}", exc_info=True)
         raise HTTPException(status_code=400, detail="Не удалось обработать изображение — попробуйте другое фото (или переснимите не в формате HEIC)")
 
     os.makedirs(PASSPORT_DIR, exist_ok=True)
@@ -206,6 +209,6 @@ async def get_passport_photo(booking_ref: str, slot: str, _: bool = Depends(requ
         buf = io.BytesIO()
         marked.save(buf, format="JPEG", quality=88)
     except Exception as e:
-        print(f"WARNING: не удалось наложить сетку на фото паспорта {filename}: {e}")
+        logger.warning(f"не удалось наложить сетку на фото паспорта {filename}: {e}")
         raise HTTPException(status_code=500, detail="Не удалось подготовить фото")
     return Response(content=buf.getvalue(), media_type="image/jpeg", headers={"Cache-Control": "no-store"})

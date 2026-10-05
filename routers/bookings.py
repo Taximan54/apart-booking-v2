@@ -38,6 +38,9 @@ from core.signing import (
 from core.validators import _phone_digits_ok, _passport_digits_ok
 from handlers.admin import load_door_code
 from services.booking_service import db_lock, is_dates_available, DEFAULT_PROPERTY_ID
+from core.logger import get_logger
+
+logger = get_logger(__name__)
 
 router = APIRouter()
 
@@ -182,8 +185,8 @@ async def create_booking(b: BookingCreate):
                     "\u0421\u0442\u0430\u0442\u0443\u0441: \u0436\u0434\u0451\u0442 \u043e\u043f\u043b\u0430\u0442\u044b"
                 ), timeout=3.0
             )
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("Telegram: не отправлено уведомление о новой брони: %s", e)
 
     if b.passport_photo_main or b.passport_photo_reg1:
         pm = load_passport_map()
@@ -450,8 +453,8 @@ async def confirm_booking(booking_ref: str, _: bool = Depends(require_admin)):
                     str(booking.get("username", booking["id"]))
                 ), timeout=3.0
             )
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("Telegram: не отправлено уведомление о подтверждении брони: %s", e)
 
     return {"ok": True, "booking_id": booking.get("username"), "door_code": door_code}
 
@@ -497,8 +500,8 @@ async def full_payment(booking_ref: str, _: bool = Depends(require_admin)):
                     "\u041f\u0430\u043c\u044f\u0442\u043a\u0430 \u0441 \u043a\u043e\u0434\u043e\u043c \u043e\u0442\u043f\u0440\u0430\u0432\u043b\u0435\u043d\u0430 \u0433\u043e\u0441\u0442\u044e"
                 ), timeout=3.0
             )
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("Telegram: не отправлена памятка с кодом замка: %s", e)
 
     return {"ok": True, "status": "fully_paid"}
 
@@ -536,7 +539,7 @@ def _delete_contract_files_and_photos(ref):
                 try:
                     os.remove(path)
                 except Exception as e:
-                    print(f"Не удалось удалить файл договора {path}: {e}")
+                    logger.warning(f"Не удалось удалить файл договора {path}: {e}")
 
     pm = load_passport_map()
     for candidate in {ref, ref.replace("GP-", "\u0413\u041f-")}:
@@ -550,7 +553,7 @@ def _delete_contract_files_and_photos(ref):
                     try:
                         os.remove(fpath)
                     except Exception as e:
-                        print(f"Не удалось удалить фото паспорта {fpath}: {e}")
+                        logger.warning(f"Не удалось удалить фото паспорта {fpath}: {e}")
             pm.pop(candidate, None)
     save_passport_map(pm)
 
@@ -650,6 +653,6 @@ async def payment_notify(p: PaymentNotify):
                 ), timeout=3.0
             )
         except Exception as e:
-            print("TG notify error: " + str(e))
+            logger.error("TG notify error: " + str(e), exc_info=True)
 
     return {"ok": True}

@@ -26,6 +26,9 @@ from core.constants import (
 from core.data_store import get_site_settings_dict
 from core.mailer import send_email
 from core.runtime import now_nsk, bot
+from core.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 # =====================================================
@@ -81,8 +84,8 @@ def create_backup_zip():
         oldest = backups.pop(0)
         try:
             os.remove(os.path.join(BACKUP_DIR, oldest))
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("Не удалось удалить старую резервную копию %s: %s", oldest, e)
 
     return zip_path
 
@@ -104,7 +107,7 @@ async def send_backup_everywhere(zip_path):
 
     sent_telegram = False
     if file_size_mb > 49:
-        print(f"Backup skipped for Telegram — файл {file_size_mb:.1f}МБ превышает лимит бота (50МБ). Копия осталась только локально/на почте.")
+        logger.warning(f"Backup skipped for Telegram — файл {file_size_mb:.1f}МБ превышает лимит бота (50МБ). Копия осталась только локально/на почте.")
     else:
         for admin_id in telegram_targets:
             try:
@@ -112,7 +115,7 @@ async def send_backup_everywhere(zip_path):
                 await asyncio.wait_for(bot.send_document(admin_id, doc, caption=caption), timeout=60.0)
                 sent_telegram = True
             except Exception as e:
-                print(f"Backup send to {admin_id} failed: {e}")
+                logger.error(f"Backup send to {admin_id} failed: {e}", exc_info=True)
 
     sent_email = False
     contacts = DEFAULT_CONTACTS
@@ -120,11 +123,11 @@ async def send_backup_everywhere(zip_path):
         try:
             with open(CONTACTS_FILE, "r", encoding="utf-8") as f:
                 contacts = {**DEFAULT_CONTACTS, **json.load(f)}
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("Не удалось прочитать контакты для резервной копии: %s", e)
     backup_email = (contacts.get("email") or "").strip() or LANDLORD_EMAIL
     if backup_email and file_size_mb > 20:
-        print(f"Backup skipped for email — файл {file_size_mb:.1f}МБ, вероятно превысит лимит почтового сервера. Проверяйте копию локально на сервере (BACKUP_DIR) или в Telegram.")
+        logger.warning(f"Backup skipped for email — файл {file_size_mb:.1f}МБ, вероятно превысит лимит почтового сервера. Проверяйте копию локально на сервере (BACKUP_DIR) или в Telegram.")
     elif backup_email:
         try:
             html = (
@@ -138,5 +141,5 @@ async def send_backup_everywhere(zip_path):
             )
             sent_email = True
         except Exception as e:
-            print(f"Backup email failed: {e}")
+            logger.error(f"Backup email failed: {e}", exc_info=True)
     return {"telegram": sent_telegram, "email": sent_email}

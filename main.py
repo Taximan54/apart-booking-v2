@@ -8,13 +8,16 @@ from core.runtime import bot, dp
 from core.scheduler import send_notifications
 from routers import pages, admin_auth, pricing, content, photos, contracts, bookings, signing_api
 from services.booking_service import init_db
+from core.logger import get_logger
 import core.telegram_callbacks  # noqa: F401  (регистрирует обработчики кнопок Telegram на dp)
+
+logger = get_logger(__name__)
 
 try:
     import pillow_heif
     pillow_heif.register_heif_opener()  # чтобы Image.open() понимал .heic/.heif с iPhone
 except ImportError:
-    print("WARNING: pillow-heif не установлен — фото паспорта в формате HEIC (iPhone) "
+    logger.warning("pillow-heif не установлен — фото паспорта в формате HEIC (iPhone) "
           "не будут прикрепляться. Установите: pip install pillow-heif --break-system-packages")
 
 init_db()
@@ -40,21 +43,21 @@ app.include_router(signing_api.router)
 
 @app.on_event("startup")
 async def startup():
-    print("APPLICATION STARTED")
+    logger.info("APPLICATION STARTED")
     async def safe_polling():
         while True:
             try:
                 await dp.start_polling(bot)
             except Exception as e:
-                print("Bot polling error: " + str(e))
+                logger.error("Bot polling error: " + str(e), exc_info=True)
                 await asyncio.sleep(30)
     asyncio.create_task(safe_polling())
     asyncio.create_task(send_notifications())
-    print("SCHEDULER STARTED")
+    logger.info("SCHEDULER STARTED")
 
 @app.on_event("shutdown")
 async def shutdown():
-    print("APPLICATION STOPPED")
+    logger.info("APPLICATION STOPPED")
     await bot.session.close()
 
 

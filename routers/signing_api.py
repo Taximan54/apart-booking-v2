@@ -12,6 +12,9 @@ from core.passports import load_passport_map, compress_passport_image, save_pass
 from core.runtime import now_nsk
 from core.signing import email_contract_signed
 from core.validators import _phone_digits_ok, _passport_digits_ok
+from core.logger import get_logger
+
+logger = get_logger(__name__)
 
 router = APIRouter()
 
@@ -154,7 +157,7 @@ async def upload_complete_photo(token: str, slot: str = Form(...), file: UploadF
     try:
         compressed = compress_passport_image(content)
     except Exception as e:
-        print(f"Ошибка обработки фото паспорта (файл '{file.filename}', {len(content)} байт): {e}")
+        logger.error(f"Ошибка обработки фото паспорта (файл '{file.filename}', {len(content)} байт): {e}", exc_info=True)
         raise HTTPException(status_code=400, detail="Не удалось обработать изображение — попробуйте другое фото (или переснимите не в формате HEIC)")
 
     booking_ref = str(booking.get("username") or booking.get("id", ""))
