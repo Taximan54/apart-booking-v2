@@ -23,9 +23,10 @@ from reportlab.platypus import (
 )
 from xml.sax.saxutils import escape as xml_escape
 
-from core.constants import DATA_DIR, CONTRACT_FILE, CONTRACT_STATIC, CONTRACTS_DIR
+from core.constants import DATA_DIR, CONTRACT_FILE, CONTRACT_STATIC, CONTRACTS_DIR, DEFAULT_LANDLORD
 from core.data_store import get_default_deposit
 from core.runtime import now_nsk
+from core.landlord import landlord_address, landlord_brand, landlord_domain, get_landlord_email
 from core.logger import get_logger
 
 logger = get_logger(__name__)
@@ -147,10 +148,10 @@ def _contract_placeholders(booking):
 
     return {
         "ДАТА_ДОГОВОРА":  today,
-        "АРЕНДОДАТЕЛЬ":   "Городская Пауза",
+        "АРЕНДОДАТЕЛЬ":   landlord_brand(),
         "ФИО":            booking.get("guest_name", ""),
         "ПАСПОРТ":        booking.get("passport", "____________"),
-        "АДРЕС":          "г. Новосибирск, ул. Дачная, д. 5, квартира 286, 22 этаж",
+        "АДРЕС":          landlord_address(),
         "НОЧЕЙ":          str(nights),
         "ДАТА_ЗАЕЗДА":    checkin_fmt,
         "ДАТА_ВЫЕЗДА":    checkout_fmt,
@@ -158,14 +159,14 @@ def _contract_placeholders(booking):
         "ЦЕНА_В_СУТКИ":   _sum_with_words(per_night),
         "ИТОГО":          _sum_with_words(total),
         "ДЕПОЗИТ":        _sum_with_words(deposit),
-        "EMAIL":          "citypause@mail.ru",
-        "САЙТ":           "citypause.ru",
+        "EMAIL":          get_landlord_email(),
+        "САЙТ":           landlord_domain(),
         "НОМЕР_БРОНИ":    str(booking.get("username") or booking.get("id", "")),
         # Также поддерживаем латинские плейсхолдеры
         "DATA_DOGOVORA":  today,
         "FIO":            booking.get("guest_name", ""),
         "PASPORT":        booking.get("passport", "____________"),
-        "ADRES":          "g. Novosibirsk, ul. Dachnaya, d. 5, kv. 286, 22 etazh",
+        "ADRES":          ("g. Novosibirsk, ul. Dachnaya, d. 5, kv. 286, 22 etazh" if landlord_address() == DEFAULT_LANDLORD["address"] else landlord_address()),
         "NOCHEY":         str(nights),
         "DATA_ZAEZDA":    checkin_fmt,
         "DATA_VYEZDA":    checkout_fmt,

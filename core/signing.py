@@ -26,6 +26,7 @@ from core.contract_docs import (
 )
 from core.mailer import send_email
 from core.passports import load_passport_map, apply_passport_watermark
+from core.landlord import landlord_brand, landlord_domain, get_landlord_email, site_url
 from core.logger import get_logger
 
 logger = get_logger(__name__)
@@ -62,7 +63,7 @@ def _signature_block(booking, doc_type, doc_id):
     """
     landlord_phone = get_landlord_phone()
     # Хэш арендодателя одинаковый для всех документов, пока не меняется телефон в контактах.
-    landlord_sign_hash = _sig_hash(LANDLORD_EMAIL, landlord_phone, "Городская Пауза")
+    landlord_sign_hash = _sig_hash(LANDLORD_EMAIL, landlord_phone, landlord_brand())
 
     booking_ref = str(booking.get("username") or booking.get("id", ""))
     guest_hash = _sig_hash(booking_ref, doc_type, booking.get("guest_phone", ""), booking.get("signed_at", ""))
@@ -74,7 +75,7 @@ def _signature_block(booking, doc_type, doc_id):
         f"Идентификатор документа: {doc_id}\n\n"
         "Подпись Арендодателя:\n"
         f"{landlord_sign_hash}\n"
-        "Городская Пауза\n"
+        f"{landlord_brand()}\n"
         f"Email: {LANDLORD_EMAIL}\n"
         f"Телефон: {landlord_phone}\n\n"
         "Подпись Арендатора:\n"
@@ -105,21 +106,21 @@ EDO_AGREEMENT_TEXT = """СОГЛАШЕНИЕ ОБ ЭЛЕКТРОННОМ ДОК�
 (уникальным) идентификатором. Актуальной (действующей) редакцией
 Документа является редакция, утверждённая Сторонами посредством
 подтверждения подписания по персональной ссылке, направленной на
-электронную почту Арендатора в системе бронирования citypause.ru,
+электронную почту Арендатора в системе бронирования {DOMAIN},
 и отправки данной редакции на его электронную почту.
 
 Электронный документ считается подписанным аналогом собственноручной
 подписи, если он соответствует совокупности следующих требований:
 
  - Электронный документ подписан с использованием системы бронирования
-   citypause.ru путём перехода Арендатора по персональной ссылке,
+   {DOMAIN} путём перехода Арендатора по персональной ссылке,
    направленной на указанный им адрес электронной почты, и подтверждения
    подписания на соответствующей странице;
  - В текст электронного документа включены электронная почта, номер
    телефона и паспортные (или иные идентифицирующие) данные Арендатора
    и Арендодателя;
  - В текст электронного документа включён идентификатор электронного
-   документа, сгенерированный системой citypause.ru.
+   документа, сгенерированный системой {DOMAIN}.
 """
 
 def _passport_photos_with_grid(booking_ref):
@@ -157,14 +158,14 @@ def generate_signed_contract_pdf(booking):
     """
     booking_ref = str(booking.get("username") or booking.get("id", ""))
     doc_id = _doc_id_for(booking, "contract")
-    main_text = generate_contract(booking) + "\n\n" + EDO_AGREEMENT_TEXT
+    main_text = generate_contract(booking) + "\n\n" + EDO_AGREEMENT_TEXT.replace("{DOMAIN}", landlord_domain())
     photos = _passport_photos_with_grid(booking_ref)
     signature_text = _signature_block(booking, "contract", doc_id)
     try:
         return generate_contract_pdf(
             main_text, booking_ref + "_podpisan",
             extra_blocks=photos + [signature_text],
-            header_text=f"Городская Пауза {doc_id}",
+            header_text=f"{landlord_brand()} {doc_id}",
         )
     except Exception as e:
         # Страховка: если из-за фото PDF не собрался, гость всё равно получает
@@ -173,7 +174,7 @@ def generate_signed_contract_pdf(booking):
         return generate_contract_pdf(
             main_text, booking_ref + "_podpisan",
             extra_blocks=[signature_text],
-            header_text=f"Городская Пауза {doc_id}",
+            header_text=f"{landlord_brand()} {doc_id}",
         )
 
 def generate_signed_consent_pdf(booking):
@@ -183,7 +184,7 @@ def generate_signed_consent_pdf(booking):
     text = generate_consent(booking) + _signature_block(booking, "consent", doc_id)
     return generate_contract_pdf(
         text, booking_ref + "_soglasie_pd",
-        header_text=f"Городская Пауза {doc_id}",
+        header_text=f"{landlord_brand()} {doc_id}",
         flat_numbering=True,
     )
 
@@ -201,7 +202,7 @@ def email_contract_signed(booking):
         "<div style='font-family:Arial,sans-serif;max-width:600px;margin:0 auto;"
         "background:#0A0A0A;color:#F0E6C8;padding:40px'>"
         "<div style='text-align:center;margin-bottom:32px'>"
-        "<div style='font-size:28px;letter-spacing:4px;color:#C9A84C'>ГОРОДСКАЯ ПАУЗА</div></div>"
+        "<div style='font-size:28px;letter-spacing:4px;color:#C9A84C'>" + landlord_brand().upper() + "</div></div>"
         "<div style='background:#141414;border:1px solid rgba(201,168,76,0.3);padding:32px;margin-bottom:24px'>"
         "<div style='font-size:16px;color:#C9A84C;margin-bottom:12px'>✅ Договор подписан</div>"
         f"<div style='font-size:13px;color:#A89060;margin-bottom:16px'>Бронь {booking_ref}</div>"
@@ -210,7 +211,7 @@ def email_contract_signed(booking):
         "подпись (ПЭП) в соответствии с 63-ФЗ. Подписанный экземпляр договора "
         "(вместе с соглашением об электронном документообороте) и согласие на "
         "обработку персональных данных приложены к этому письму.</div></div>"
-        "<div style='text-align:center;font-size:11px;color:#5A4A30'>citypause@mail.ru | citypause.ru</div></div>"
+        "<div style='text-align:center;font-size:11px;color:#5A4A30'>" + get_landlord_email() + " | " + landlord_domain() + "</div></div>"
     )
     send_email(
         guest_email, f"Договор подписан — {booking_ref}", html,
@@ -257,7 +258,7 @@ def email_manual_contract(booking, target_email):
     html = f"""
     <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#0A0A0A;color:#F0E6C8;padding:40px">
       <div style="text-align:center;margin-bottom:32px">
-        <div style="font-size:28px;letter-spacing:4px;color:#C9A84C">ГОРОДСКАЯ ПАУЗА</div>
+        <div style="font-size:28px;letter-spacing:4px;color:#C9A84C">{landlord_brand().upper()}</div>
       </div>
       <div style="background:#141414;border:1px solid #1E1E1E;padding:32px;margin-bottom:24px">
         <div style="font-size:16px;color:#C9A84C;margin-bottom:16px">Договор аренды апартаментов</div>
@@ -275,7 +276,7 @@ def email_manual_contract(booking, target_email):
           файлом ({contract_filename}). Пожалуйста, ознакомьтесь с условиями перед заездом.
         </div>
       </div>
-      <div style="text-align:center;font-size:11px;color:#5A4A30">citypause@mail.ru &nbsp;|&nbsp; citypause.ru</div>
+      <div style="text-align:center;font-size:11px;color:#5A4A30">{get_landlord_email()} &nbsp;|&nbsp; {landlord_domain()}</div>
     </div>
     """
     save_contract(booking_ref, contract_text)
@@ -307,7 +308,7 @@ def email_complete_data_request(booking):
     html = f"""
     <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#0A0A0A;color:#F0E6C8;padding:40px">
       <div style="text-align:center;margin-bottom:32px">
-        <div style="font-size:28px;letter-spacing:4px;color:#C9A84C">ГОРОДСКАЯ ПАУЗА</div>
+        <div style="font-size:28px;letter-spacing:4px;color:#C9A84C">{landlord_brand().upper()}</div>
       </div>
       <div style="background:#141414;border:1px solid #1E1E1E;padding:32px;margin-bottom:24px">
         <div style="font-size:16px;color:#C9A84C;margin-bottom:16px">Бронирование подтверждено</div>
@@ -331,7 +332,7 @@ def email_complete_data_request(booking):
             Заполнить данные и подписать договор</a>
         </div>
       </div>
-      <div style="text-align:center;font-size:11px;color:#5A4A30">citypause@mail.ru &nbsp;|&nbsp; citypause.ru</div>
+      <div style="text-align:center;font-size:11px;color:#5A4A30">{get_landlord_email()} &nbsp;|&nbsp; {landlord_domain()}</div>
     </div>
     """
     send_email(guest_email, f"Бронирование подтверждено — {booking_ref}", html)
@@ -385,7 +386,7 @@ def email_checkin_memo(guest_name, guest_email, booking_ref, check_in, door_code
         + memo_text + "</pre>"
         "</div>"
         "<div style='text-align:center;font-size:10px;color:#5A4A30;margin-top:24px'>"
-        "citypause.ru \u2014 citypause@mail.ru</div>"
+        "" + landlord_domain() + " \u2014 " + get_landlord_email() + "</div>"
         "</div>"
     )
     send_email(guest_email,
@@ -414,7 +415,7 @@ def email_checkout_checklist(guest_name, guest_email, booking_ref, check_out):
         + checklist_text + "</pre>"
         "</div>"
         "<div style='text-align:center;font-size:10px;color:#5A4A30;margin-top:24px'>"
-        "citypause.ru \u2014 citypause@mail.ru</div>"
+        "" + landlord_domain() + " \u2014 " + get_landlord_email() + "</div>"
         "</div>"
     )
     send_email(guest_email,
@@ -445,8 +446,8 @@ def email_review_request(guest_name, guest_email, booking_ref, promo_code, disco
         "</div>"
         "</div>"
         "<div style='text-align:center;margin-top:24px'>"
-        "<a href='https://citypause.ru' style='color:#C9A84C;font-size:13px;"
-        "letter-spacing:2px'>CITYPAUSE.RU</a>"
+        "<a href='" + site_url() + "' style='color:#C9A84C;font-size:13px;"
+        "letter-spacing:2px'>" + landlord_domain().upper() + "</a>"
         "</div>"
         "</div>"
     )
@@ -530,10 +531,10 @@ def email_booking_created(booking_id, guest_name, guest_email, check_in, check_o
         "4. \u0417\u0430\u0435\u0437\u0434 \u0441 15:00, \u0432\u044b\u0435\u0437\u0434 \u0434\u043e 12:00"
         "</div></div>"
         "<div style='text-align:center;font-size:11px;color:#5A4A30'>"
-        "citypause@mail.ru | citypause.ru</div></div>"
+        "" + get_landlord_email() + " | " + landlord_domain() + "</div></div>"
     )
     send_email(guest_email,
-               "\u0411\u0440\u043e\u043d\u044c " + booking_id + " \u2014 \u0413\u043e\u0440\u043e\u0434\u0441\u043a\u0430\u044f \u041f\u0430\u0443\u0437\u0430",
+               "\u0411\u0440\u043e\u043d\u044c " + booking_id + " \u2014 " + landlord_brand(),
                html)
 
 def email_booking_confirmed(booking, door_code=None):
@@ -603,7 +604,7 @@ def email_booking_confirmed(booking, door_code=None):
         ) +
         "</div>"
         "<div style='text-align:center;font-size:11px;color:#5A4A30'>"
-        "citypause@mail.ru | citypause.ru</div></div>"
+        "" + get_landlord_email() + " | " + landlord_domain() + "</div></div>"
     )
     send_email(guest_email,
                "\u0411\u0440\u043e\u043d\u044c \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0430 \u2014 " + booking_ref,
@@ -656,8 +657,8 @@ def email_admin_new_booking(booking_id, guest_name, guest_phone, guest_email,
         "</table></div>"
         "<div style='padding:16px;background:rgba(201,168,76,0.05);border:1px solid rgba(201,168,76,0.2);font-size:12px;color:#A89060'>"
         "\u041f\u043e\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u0442\u0435 \u043e\u043f\u043b\u0430\u0442\u0443 \u0432 \u0430\u0434\u043c\u0438\u043d\u043a\u0435: "
-        "<a href='https://citypause.ru/static/admin.html' style='color:#C9A84C'>"
-        "citypause.ru/static/admin.html</a>"
+        "<a href='" + site_url() + "/static/admin.html' style='color:#C9A84C'>"
+        "" + landlord_domain() + "/static/admin.html</a>"
         "</div></div>"
     )
     send_email(MAIL_ADMIN,

@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Панель управления — Городская Пауза</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Montserrat:wght@300;400;500;600&family=PT+Serif:wght@400;700&family=IM+Fell+English&family=Yeseva+One&family=Marck+Script&family=Pacifico&family=Poiret+One&family=Great+Vibes&family=Bad+Script&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/static/admin.css?v=20261004a">
+<link rel="stylesheet" href="/static/admin.css?v=20261005a">
 </head>
 <body>
 
@@ -1199,6 +1199,29 @@
 
     <!-- SETTINGS -->
     <div class="panel" id="panel-settings">
+      <div class="card" style="max-width:900px;margin-bottom:24px">
+        <div class="card-header"><span class="card-title">Данные арендодателя</span></div>
+        <div class="card-body">
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:20px;padding:12px 16px;background:rgba(201,168,76,.04);border:1px solid rgba(201,168,76,.1);line-height:1.7">
+            Подставляются в договор, подписанные документы и письма гостям. Пустое поле — используется значение по умолчанию.<br>
+            Почта арендодателя берётся из раздела «Контакты». Ссылки на подписание договора строятся от адреса сайта в настройках сервера (config.py), здесь они не меняются.
+          </div>
+          <div class="info-field" style="margin-bottom:20px">
+            <div class="info-label">Название (бренд)</div>
+            <input type="text" class="info-input" id="landlordBrand" maxlength="80" placeholder="Городская Пауза">
+          </div>
+          <div class="info-field" style="margin-bottom:20px">
+            <div class="info-label">Домен сайта</div>
+            <input type="text" class="info-input" id="landlordDomain" maxlength="100" placeholder="citypause.ru">
+            <div style="font-size:10px;color:var(--text-muted);margin-top:6px">Без https:// и без www, например example.ru</div>
+          </div>
+          <div class="info-field" style="margin-bottom:20px">
+            <div class="info-label">Адрес объекта (для договора)</div>
+            <input type="text" class="info-input" id="landlordAddress" maxlength="200" placeholder="г. Город, ул. Улица, д. 1, кв. 1">
+          </div>
+          <button class="btn btn-primary" onclick="saveLandlord()">Сохранить</button>
+        </div>
+      </div>
       <div class="grid-2col" style="display:grid;grid-template-columns:1fr 1fr;gap:24px;max-width:900px">
         <div class="card">
           <div class="card-header"><span class="card-title">Код замка</span></div>
@@ -1341,6 +1364,6 @@
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
-<script src="/static/admin.js?v=20261004a"></script>
+<script src="/static/admin.js?v=20261005a"></script>
 </body>
 </html>

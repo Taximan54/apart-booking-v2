@@ -1264,7 +1264,7 @@ function showPanel(id, el) {
   closeAdminSidebar();
   const titles = {dashboard:'Дашборд',bookings:'Все брони',manualbooking:'Ручная бронь (внешние площадки)',calendar:'Управление календарём',prices:'Цены',promo:'Промокоды',settings:'Настройки',contract:'Договор',contracts:'Архив договоров',checkin:'Памятка гостю',checkout:'Чек-лист выезда',houserules:'Правила проживания',sitesettings:'Настройки сайта',reviews:'Отзывы',places:'Куда сходить',discounts:'Скидки и акции',contacts:'Контакты',photos:'Фото и медиа'};
   document.getElementById('topbarTitle').textContent = titles[id]||id;
-  if(id==='settings') { loadTimezone(); loadNotif(); }
+  if(id==='settings') { loadTimezone(); loadNotif(); loadLandlord(); }
   if(id==='contract')   { if(typeof loadContractForEditor==='function') loadContractForEditor(); }
   if(id==='contracts')  { if(typeof loadContractsArchive==='function') loadContractsArchive(); }
   if(id==='checkin')     { if(typeof loadCheckinMemo==='function') loadCheckinMemo(); }
@@ -2220,6 +2220,32 @@ function showSiteTab(name) {
   document.querySelectorAll('#panel-sitesettings [data-ss-tab]').forEach(el => {
     el.style.display = el.dataset.ssTab.split(' ').includes(name) ? '' : 'none';
   });
+}
+
+// ДАННЫЕ АРЕНДОДАТЕЛЯ (Настройки → Система)
+async function loadLandlord() {
+  try {
+    const d = await apiGet('/api/landlord');
+    document.getElementById('landlordBrand').value = d.brand_name || '';
+    document.getElementById('landlordDomain').value = d.domain || '';
+    document.getElementById('landlordAddress').value = d.address || '';
+  } catch(e) {}
+}
+
+async function saveLandlord() {
+  try {
+    const d = await apiPost('/api/landlord', {
+      brand_name: document.getElementById('landlordBrand').value.trim(),
+      domain:     document.getElementById('landlordDomain').value.trim(),
+      address:    document.getElementById('landlordAddress').value.trim()
+    });
+    document.getElementById('landlordBrand').value = d.brand_name || '';
+    document.getElementById('landlordDomain').value = d.domain || '';
+    document.getElementById('landlordAddress').value = d.address || '';
+    showToast('Данные арендодателя сохранены', 'gold');
+  } catch(e) {
+    showToast('Ошибка: ' + e.message, 'err');
+  }
 }
 
 // REVIEWS ADMIN

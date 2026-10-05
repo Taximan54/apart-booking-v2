@@ -32,6 +32,8 @@ EXPECTED = {
     ("GET", "/api/discounts"): "get_discounts",
     ("GET", "/api/places"): "get_places",
     ("GET", "/api/site-settings"): "get_site_settings",
+    ("GET", "/api/landlord"): "get_landlord_settings",
+    ("POST", "/api/landlord"): "set_landlord_settings",
 }
 
 

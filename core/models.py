@@ -52,6 +52,11 @@ class Contacts(BaseModel):
     whatsapp: str = ""
     max: str = ""
 
+class LandlordSettings(BaseModel):
+    brand_name: str = ""   # название бренда в письмах и документах
+    domain: str = ""       # домен сайта, например example.ru
+    address: str = ""      # адрес объекта для договора
+
 class PaymentSettings(BaseModel):
     sbp_link: str = ""    # ссылка на приём оплаты по СБП (из банковского приложения)
     sbp_phone: str = ""   # номер телефона для перевода по СБП (может отличаться от контактного)

@@ -15,6 +15,7 @@ from core.constants import (
     CONTRACT_FILE,
     PASSPORT_MAP_FILE,
     SETTINGS_FILE,
+    LANDLORD_FILE,
     DISCOUNTS_FILE,
     PLACES_FILE,
     CONTRACTS_DIR,
@@ -60,7 +61,7 @@ def create_backup_zip():
     files_to_backup = [
         DB_FILE, PRICE_FILE, CONTACTS_FILE, PAYMENT_FILE,
         PROMO_FILE, CONTRACT_FILE, PASSPORT_MAP_FILE,
-        SETTINGS_FILE, DISCOUNTS_FILE, PLACES_FILE,
+        SETTINGS_FILE, DISCOUNTS_FILE, PLACES_FILE, LANDLORD_FILE,
     ]
     with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
         for path in files_to_backup:
@@ -132,7 +133,7 @@ async def send_backup_everywhere(zip_path):
         try:
             html = (
                 "<div style='font-family:Arial,sans-serif;padding:20px;color:#333'>"
-                f"<p>Резервная копия базы данных, настроек, договоров и фото паспортов Городской Паузы — {when_str}.</p>"
+                f"<p>Резервная копия базы данных, настроек, договоров и фото паспортов — {when_str}.</p>"
                 "<p>Файл во вложении. Хранить в надёжном месте.</p></div>"
             )
             send_email(

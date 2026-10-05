@@ -72,6 +72,7 @@ SETTINGS_FILE    = f"{DATA_DIR}/settings.json"
 REVIEW_FILE      = f"{DATA_DIR}/review_template.txt"
 REVIEWS_FILE     = f"{DATA_DIR}/reviews.json"
 CONTACTS_FILE    = f"{DATA_DIR}/contacts.json"
+LANDLORD_FILE    = f"{DATA_DIR}/landlord.json"   # название бренда, домен сайта, адрес объекта
 PAYMENT_FILE     = f"{DATA_DIR}/payment_settings.json"
 PAYMENT_QR_PATH  = f"{DATA_DIR}/payment_qr.jpg"
 DEFAULT_PAYMENT_SETTINGS = {"sbp_link": "", "sbp_phone": ""}
@@ -182,6 +183,13 @@ DEFAULT_SETTINGS = {
 # =====================================================
 
 DEFAULT_CONTACTS = {"phone": "", "email": "", "telegram": "", "whatsapp": "", "max": ""}
+
+# Данные арендодателя по умолчанию (используются, пока в админке не заданы свои)
+DEFAULT_LANDLORD = {
+    "brand_name": "Городская Пауза",
+    "domain": "citypause.ru",
+    "address": "г. Новосибирск, ул. Дачная, д. 5, квартира 286, 22 этаж",
+}
 
 OWNER_NOTIFY_FILE = f"{DATA_DIR}/owner_notify_log.json"
 BACKUP_DIR         = f"{DATA_DIR}/backups"

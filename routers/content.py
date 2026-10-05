@@ -1,8 +1,9 @@
-"""API: отзывы, правила, настройки сайта, места, акции, контакты, оплата, код замка, описание."""
+"""API: отзывы, правила, настройки сайта, места, акции, контакты, данные арендодателя, оплата, код замка, описание."""
 import asyncio
 import io
 import json
 import os
+import re
 import secrets
 from PIL import Image
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
@@ -17,6 +18,7 @@ from core.constants import (
     PLACES_FILE,
     DISCOUNTS_FILE,
     CONTACTS_FILE,
+    LANDLORD_FILE,
     DEFAULT_CONTACTS,
     DEFAULT_PAYMENT_SETTINGS,
     PAYMENT_FILE,
@@ -27,6 +29,7 @@ from core.constants import (
 )
 from core.data_store import get_site_settings_dict, load_places, load_discounts
 from core.db import get_db
+from core.landlord import clean_domain, get_landlord
 from core.models import (
     Review,
     HouseRulesText,
@@ -34,6 +37,7 @@ from core.models import (
     Place,
     Discount,
     Contacts,
+    LandlordSettings,
     PaymentSettings,
     DoorCode,
     Description,
@@ -279,6 +283,31 @@ async def set_contacts(c: Contacts, _: bool = Depends(require_admin)):
     with open(CONTACTS_FILE, "w", encoding="utf-8") as f:
         json.dump(c.dict(), f, ensure_ascii=False)
     return {"ok": True}
+
+# =====================================================
+# API — ДАННЫЕ АРЕНДОДАТЕЛЯ (бренд, домен, адрес объекта)
+# =====================================================
+
+@router.get("/api/landlord")
+async def get_landlord_settings(_: bool = Depends(require_admin)):
+    """Текущие данные арендодателя (пустые поля заменены значениями по умолчанию)."""
+    return get_landlord()
+
+
+@router.post("/api/landlord")
+async def set_landlord_settings(data: LandlordSettings, _: bool = Depends(require_admin)):
+    brand = data.brand_name.strip()
+    address = data.address.strip()
+    domain = clean_domain(data.domain)
+    if len(brand) > 80:
+        raise HTTPException(status_code=400, detail="Название слишком длинное (макс. 80 символов)")
+    if len(address) > 200:
+        raise HTTPException(status_code=400, detail="Адрес слишком длинный (макс. 200 символов)")
+    if domain and not re.fullmatch(r"[a-z0-9]([a-z0-9\-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9\-]*[a-z0-9])?)+", domain):
+        raise HTTPException(status_code=400, detail="Домен указан неверно, пример: example.ru")
+    with open(LANDLORD_FILE, "w", encoding="utf-8") as f:
+        json.dump({"brand_name": brand, "domain": domain, "address": address}, f, ensure_ascii=False)
+    return get_landlord()
 
 # =====================================================
 # API — ОПЛАТА (СБП: ссылка, телефон, свой QR-код)

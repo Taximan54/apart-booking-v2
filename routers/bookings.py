@@ -38,6 +38,7 @@ from core.signing import (
 from core.validators import _phone_digits_ok, _passport_digits_ok
 from handlers.admin import load_door_code
 from services.booking_service import db_lock, is_dates_available, DEFAULT_PROPERTY_ID
+from core.landlord import site_url
 from core.logger import get_logger
 
 logger = get_logger(__name__)
@@ -635,7 +636,7 @@ async def payment_notify(p: PaymentNotify):
         "<p>\u0422\u0435\u043b: " + p.guest_phone + "</p>"
         "<p>\u0421\u0443\u043c\u043c\u0430: " + str(p.total_price) + " \u20bd</p>"
         "<p>\u041f\u0440\u0435\u0434\u043e\u043f\u043b\u0430\u0442\u0430 20%: " + str(prepay) + " \u20bd</p>"
-        "<p><a href='https://citypause.ru/static/admin.html' style='color:#C9A84C'>"
+        "<p><a href='" + site_url() + "/static/admin.html' style='color:#C9A84C'>"
         "\u041f\u043e\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u0442\u0435 \u0432 \u0430\u0434\u043c\u0438\u043d\u043a\u0435</a></p>"
         "</div>"
     )).start()
