@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
 from fastapi.responses import FileResponse, PlainTextResponse
 
 from core.auth import require_admin
-from core.backup import create_backup_zip, send_backup_everywhere
+from core.backup import create_backup_zip, is_backup_encrypted, send_backup_everywhere
 from core.constants import (
     REVIEWS_FILE,
     HOUSE_RULES_FILE,
@@ -44,6 +44,9 @@ from core.models import (
 )
 from core.runtime import now_nsk
 from handlers.admin import load_door_code
+from core.logger import get_logger
+
+logger = get_logger(__name__)
 
 router = APIRouter()
 
@@ -184,8 +187,12 @@ async def backup_now(_: bool = Depends(require_admin)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Ошибка создания резервной копии: {e}")
 
-    asyncio.create_task(send_backup_everywhere(zip_path))
-    return {"ok": True, "started": True, "filename": os.path.basename(zip_path)}
+    encrypted = is_backup_encrypted(zip_path)
+    if encrypted:
+        asyncio.create_task(send_backup_everywhere(zip_path))
+    else:
+        logger.error("Ручная копия %s создана без пароля и не отправлена", os.path.basename(zip_path))
+    return {"ok": True, "started": encrypted, "encrypted": encrypted, "filename": os.path.basename(zip_path)}
 
 def save_places(places):
     with open(PLACES_FILE, "w", encoding="utf-8") as f:

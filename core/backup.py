@@ -2,10 +2,13 @@
 import asyncio
 import json
 import os
+import zipfile
 
+import config
 from config import ADMIN_IDS
 from core.constants import (
     BACKUP_LOG_FILE,
+    BACKUP_PASSWORD_FILE,
     BACKUP_DIR,
     DB_FILE,
     PRICE_FILE,
@@ -46,14 +49,56 @@ def set_last_backup_date(date_str):
     with open(BACKUP_LOG_FILE, "w", encoding="utf-8") as f:
         json.dump({"last_date": date_str}, f)
 
+def get_backup_password() -> str:
+    """
+    Пароль для шифрования резервных копий. Берётся из config.py
+    (BACKUP_PASSWORD = "...") или, если там нет, из файла
+    backup_password.txt в папке данных. Пустая строка — пароль не задан.
+    """
+    password = (getattr(config, "BACKUP_PASSWORD", "") or "").strip()
+    if password:
+        return password
+    if os.path.exists(BACKUP_PASSWORD_FILE):
+        try:
+            with open(BACKUP_PASSWORD_FILE, "r", encoding="utf-8") as f:
+                return f.read().strip()
+        except Exception as e:
+            logger.warning("Не удалось прочитать файл пароля резервных копий: %s", e)
+    return ""
+
+def is_backup_encrypted(zip_path: str) -> bool:
+    """True, если в архиве все файлы зашифрованы (архив не откроется без пароля)."""
+    try:
+        with zipfile.ZipFile(zip_path) as zf:
+            infos = zf.infolist()
+            return bool(infos) and all(i.flag_bits & 0x1 for i in infos)
+    except Exception as e:
+        logger.warning("Не удалось проверить шифрование копии %s: %s", zip_path, e)
+        return False
+
+def _open_backup_archive(zip_path: str, password: str):
+    """
+    Открывает архив на запись. С паролем — шифрование AES-256 (библиотека
+    pyzipper); без пароля или без библиотеки — обычный незашифрованный zip,
+    который наружу (почта, Telegram) не отправляется.
+    """
+    if password:
+        try:
+            import pyzipper
+            zf = pyzipper.AESZipFile(zip_path, "w", compression=pyzipper.ZIP_DEFLATED, encryption=pyzipper.WZ_AES)
+            zf.setpassword(password.encode("utf-8"))
+            return zf
+        except ImportError:
+            logger.error("Пароль к копиям задан, но библиотека pyzipper не установлена — копия будет без шифрования и не будет отправлена наружу")
+    return zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED)
+
 def create_backup_zip():
     """
     Собирает бэкап главной базы (bookings.db), ключевых JSON-настроек,
     ПОДПИСАННЫХ ДОГОВОРОВ (CONTRACTS_DIR) и ФОТО ПАСПОРТОВ (PASSPORT_DIR)
-    в один zip-файл, кладёт в BACKUP_DIR, удаляет старые копии сверх
-    BACKUP_KEEP_COUNT. Возвращает путь к созданному файлу.
+    в один zip-файл, защищённый паролем (если он задан), кладёт в BACKUP_DIR,
+    удаляет старые копии сверх BACKUP_KEEP_COUNT. Возвращает путь к файлу.
     """
-    import zipfile
     os.makedirs(BACKUP_DIR, exist_ok=True)
     timestamp = now_nsk().strftime("%Y-%m-%d_%H-%M")
     zip_path = os.path.join(BACKUP_DIR, f"backup_{timestamp}.zip")
@@ -63,7 +108,7 @@ def create_backup_zip():
         PROMO_FILE, CONTRACT_FILE, PASSPORT_MAP_FILE,
         SETTINGS_FILE, DISCOUNTS_FILE, PLACES_FILE, LANDLORD_FILE,
     ]
-    with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
+    with _open_backup_archive(zip_path, get_backup_password()) as zf:
         for path in files_to_backup:
             if path and os.path.exists(path):
                 zf.write(path, arcname=os.path.basename(path))
@@ -93,6 +138,13 @@ def create_backup_zip():
 async def send_backup_everywhere(zip_path):
     """Отправляет файл резервной копии в Telegram админам И на почту арендодателя (best-effort, не роняет процесс при ошибке)."""
     from aiogram.types import FSInputFile
+    if not is_backup_encrypted(zip_path):
+        logger.error(
+            "Резервная копия %s НЕ отправлена: в ней паспорта и договоры, а пароль не задан "
+            "(BACKUP_PASSWORD в config.py или файл backup_password.txt). Копия осталась на сервере.",
+            os.path.basename(zip_path),
+        )
+        return {"telegram": False, "email": False, "encrypted": False}
     settings = get_site_settings_dict()
     telegram_targets = set(ADMIN_IDS)
     configured_chat_id = settings.get("notify_telegram_chat_id", "").strip()
@@ -134,7 +186,7 @@ async def send_backup_everywhere(zip_path):
             html = (
                 "<div style='font-family:Arial,sans-serif;padding:20px;color:#333'>"
                 f"<p>Резервная копия базы данных, настроек, договоров и фото паспортов — {when_str}.</p>"
-                "<p>Файл во вложении. Хранить в надёжном месте.</p></div>"
+                "<p>Архив защищён паролем. Файл во вложении, хранить в надёжном месте.</p></div>"
             )
             send_email(
                 backup_email, f"Резервная копия — {when_str}", html,
@@ -143,4 +195,4 @@ async def send_backup_everywhere(zip_path):
             sent_email = True
         except Exception as e:
             logger.error(f"Backup email failed: {e}", exc_info=True)
-    return {"telegram": sent_telegram, "email": sent_email}
+    return {"telegram": sent_telegram, "email": sent_email, "encrypted": True}

@@ -195,3 +195,4 @@ OWNER_NOTIFY_FILE = f"{DATA_DIR}/owner_notify_log.json"
 BACKUP_DIR         = f"{DATA_DIR}/backups"
 BACKUP_LOG_FILE     = f"{DATA_DIR}/last_backup.json"
 BACKUP_KEEP_COUNT   = 14   # сколько последних резервных копий хранить локально
+BACKUP_PASSWORD_FILE = f"{DATA_DIR}/backup_password.txt"   # запасной способ задать пароль к копиям (если не в config.py)

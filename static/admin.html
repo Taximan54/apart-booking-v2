@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Панель управления — Городская Пауза</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Montserrat:wght@300;400;500;600&family=PT+Serif:wght@400;700&family=IM+Fell+English&family=Yeseva+One&family=Marck+Script&family=Pacifico&family=Poiret+One&family=Great+Vibes&family=Bad+Script&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/static/admin.css?v=20261005a">
+<link rel="stylesheet" href="/static/admin.css?v=20261006a">
 </head>
 <body>
 
@@ -1328,7 +1328,8 @@
               автоматически бэкапятся каждую ночь в 04:00 и отправляются файлом в Telegram
               администраторам и на почту (указанную в Контактах, либо citypause@mail.ru по
               умолчанию). Последние 14 копий также хранятся на самом сервере.<br><br>
-              Если архив вырастет больше 50 МБ — в Telegram не отправится (лимит бота),
+              Архив защищён паролем (AES-256): пароль задаётся на сервере в config.py (BACKUP_PASSWORD) и нигде в письмах не показывается. Без пароля копия создаётся только на сервере и наружу не отправляется. Открывать архив можно программой 7-Zip.<br><br>
+            Если архив вырастет больше 50 МБ — в Telegram не отправится (лимит бота),
               больше 20 МБ — может не пройти на почту (лимит большинства провайдеров);
               в обоих случаях копия всё равно останется на сервере.
             </div>
@@ -1364,6 +1365,6 @@
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
-<script src="/static/admin.js?v=20261005a"></script>
+<script src="/static/admin.js?v=20261006a"></script>
 </body>
 </html>

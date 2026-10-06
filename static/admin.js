@@ -1219,8 +1219,13 @@ async function backupNow() {
   status.style.color = 'var(--text-muted)';
   try {
     const res = await apiPost('/api/admin/backup-now', {});
-    status.textContent = `Копия создана (${res.filename}) — отправка в Telegram и на почту запущена, проверьте через минуту`;
-    status.style.color = '#4ade80';
+    if (res.encrypted === false) {
+      status.textContent = `Копия создана на сервере (${res.filename}), но НЕ отправлена: не задан пароль для шифрования. Укажите BACKUP_PASSWORD в config.py на сервере.`;
+      status.style.color = '#f87171';
+    } else {
+      status.textContent = `Копия создана и защищена паролем (${res.filename}) — отправка в Telegram и на почту запущена, проверьте через минуту`;
+      status.style.color = '#4ade80';
+    }
   } catch(e) {
     status.textContent = 'Ошибка: ' + e.message;
     status.style.color = '#f87171';
