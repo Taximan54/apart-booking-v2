@@ -3,3 +3,7 @@ uvicorn
 aiogram
 python-multipart
 python-dotenv
+reportlab
+pillow
+pillow-heif
+pyzipper
