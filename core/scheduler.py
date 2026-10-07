@@ -17,7 +17,7 @@ from core.data_store import (
     load_properties,
     set_last_owner_notify_date,
 )
-from core.db import get_db
+from core.bookings_repo import mark_checklist_sent, mark_review_sent
 from core.runtime import now_nsk, bot
 from core.signing import (
     email_owner_checkout_reminder,
@@ -108,11 +108,7 @@ async def send_notifications():
                             b.get("username") or b.get("id",""),
                             b.get("check_out","")
                         )).start()
-                        conn2 = get_db()
-                        conn2.execute("UPDATE bookings SET checklist_sent=1 WHERE id=? OR username=?",
-                                      (b.get("id"), b.get("username")))
-                        conn2.commit()
-                        conn2.close()
+                        mark_checklist_sent(b.get("id"), b.get("username"))
                     # Telegram — best-effort
                     if b.get("user_id") and b["user_id"] != 0:
                         try:
@@ -156,11 +152,7 @@ async def send_notifications():
                             promo_code,
                             discount_pct
                         )).start()
-                        conn2 = get_db()
-                        conn2.execute("UPDATE bookings SET review_sent=1 WHERE id=? OR username=?",
-                                      (b.get("id"), b.get("username")))
-                        conn2.commit()
-                        conn2.close()
+                        mark_review_sent(b.get("id"), b.get("username"))
                     # Telegram — best-effort
                     if b.get("user_id") and b["user_id"] != 0:
                         try:

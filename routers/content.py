@@ -28,7 +28,7 @@ from core.constants import (
     DESC_FILE,
 )
 from core.data_store import get_site_settings_dict, load_places, load_discounts
-from core.db import get_db
+from core.bookings_repo import exists_by_ref, mark_deposit_returned as _mark_deposit_returned
 from core.landlord import clean_domain, get_landlord
 from core.models import (
     Review,
@@ -162,17 +162,9 @@ async def set_site_settings(s: SiteSettings, _: bool = Depends(require_admin)):
 @router.post("/api/admin/bookings/{ref}/deposit-returned")
 async def mark_deposit_returned(ref: str, _: bool = Depends(require_admin)):
     """Отмечает депозит по брони как возвращённый гостю (используется для дашборд-алертов)."""
-    conn = get_db()
-    row = conn.execute("SELECT id FROM bookings WHERE username = ?", (ref,)).fetchone()
-    if not row:
-        conn.close()
+    if not exists_by_ref(ref):
         raise HTTPException(status_code=404, detail="Бронь не найдена")
-    conn.execute(
-        "UPDATE bookings SET deposit_returned=1, deposit_returned_at=? WHERE username=?",
-        (now_nsk().strftime("%Y-%m-%d %H:%M:%S"), ref)
-    )
-    conn.commit()
-    conn.close()
+    _mark_deposit_returned(ref, now_nsk().strftime("%Y-%m-%d %H:%M:%S"))
     return {"ok": True}
 
 @router.post("/api/admin/backup-now")

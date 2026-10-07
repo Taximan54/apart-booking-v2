@@ -25,7 +25,8 @@ from core.contract_docs import (
     generate_contract_pdf,
 )
 from core.data_store import get_default_deposit
-from core.db import get_db, booking_ref_alt, find_booking_row
+from core.bookings_repo import get_by_ref_alt
+from core.db import booking_ref_alt, find_booking_row, get_db
 from core.models import ContractTemplate, CheckinMemo
 from core.passports import load_passport_map
 from core.runtime import now_nsk
@@ -172,12 +173,10 @@ async def get_contract(booking_ref: str, _: bool = Depends(require_admin)):
         with open(path, "r", encoding="utf-8") as f:
             return PlainTextResponse(f.read())
     # Генерируем на лету — ищем по обоим вариантам префикса
-    conn = get_db()
-    row = find_booking_row(conn, booking_ref)
-    conn.close()
-    if not row:
+    booking = get_by_ref_alt(booking_ref)
+    if not booking:
         raise HTTPException(status_code=404, detail="Booking not found")
-    return PlainTextResponse(generate_contract(dict(row)))
+    return PlainTextResponse(generate_contract(booking))
 
 @router.get("/api/admin/contract-pdf/{booking_ref}/{doc_type}")
 async def get_signed_contract_pdf(booking_ref: str, doc_type: str, _: bool = Depends(require_admin)):

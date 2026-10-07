@@ -5,7 +5,7 @@ from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 
 from core.contract_docs import contract_text_to_html, generate_contract, generate_consent
-from core.db import get_db
+from core.bookings_repo import get_by_sign_token, sign_booking
 from core.passports import load_passport_map, save_uploaded_passport_photo, set_passport_slot
 from core.runtime import now_nsk
 from core.signing import email_contract_signed
@@ -36,12 +36,9 @@ async def sign_page(token: str):
 
 @router.get("/api/sign/{token}")
 async def get_sign_info(token: str):
-    conn = get_db()
-    row = conn.execute("SELECT * FROM bookings WHERE sign_token=?", (token,)).fetchone()
-    conn.close()
-    if not row:
+    booking = get_by_sign_token(token)
+    if not booking:
         raise HTTPException(status_code=404, detail="Ссылка недействительна")
-    booking = dict(row)
     if booking.get("signed_at"):
         return {"already_signed": True, "signed_at": booking["signed_at"]}
 
@@ -62,21 +59,15 @@ async def get_sign_info(token: str):
 
 @router.post("/api/sign/{token}/confirm")
 async def confirm_sign(token: str, request: Request):
-    conn = get_db()
-    row = conn.execute("SELECT * FROM bookings WHERE sign_token=?", (token,)).fetchone()
-    if not row:
-        conn.close()
+    booking = get_by_sign_token(token)
+    if not booking:
         raise HTTPException(status_code=404, detail="Ссылка недействительна")
-    booking = dict(row)
     if booking.get("signed_at"):
-        conn.close()
         raise HTTPException(status_code=400, detail="Договор уже подписан")
 
     signed_at = now_nsk().strftime("%Y-%m-%d %H:%M:%S")
     client_ip = request.client.host if request.client else ""
-    conn.execute("UPDATE bookings SET signed_at=?, sign_ip=? WHERE id=?", (signed_at, client_ip, booking["id"]))
-    conn.commit()
-    conn.close()
+    sign_booking(booking["id"], signed_at, client_ip)
 
     booking["signed_at"] = signed_at
     booking["sign_ip"] = client_ip
@@ -111,12 +102,9 @@ async def complete_page(token: str):
 
 @router.get("/api/complete/{token}")
 async def get_complete_info(token: str):
-    conn = get_db()
-    row = conn.execute("SELECT * FROM bookings WHERE sign_token=?", (token,)).fetchone()
-    conn.close()
-    if not row:
+    booking = get_by_sign_token(token)
+    if not booking:
         raise HTTPException(status_code=404, detail="Ссылка недействительна")
-    booking = dict(row)
     if booking.get("signed_at"):
         return {"already_signed": True, "signed_at": booking["signed_at"]}
 
@@ -140,12 +128,9 @@ async def get_complete_info(token: str):
 async def upload_complete_photo(token: str, slot: str = Form(...), file: UploadFile = File(...)):
     if slot not in ("main", "reg1"):
         raise HTTPException(status_code=400, detail="Некорректный слот фото")
-    conn = get_db()
-    row = conn.execute("SELECT * FROM bookings WHERE sign_token=?", (token,)).fetchone()
-    conn.close()
-    if not row:
+    booking = get_by_sign_token(token)
+    if not booking:
         raise HTTPException(status_code=404, detail="Ссылка недействительна")
-    booking = dict(row)
     if booking.get("signed_at"):
         raise HTTPException(status_code=400, detail="Договор уже подписан")
 
@@ -157,14 +142,10 @@ async def upload_complete_photo(token: str, slot: str = Form(...), file: UploadF
 
 @router.post("/api/complete/{token}/submit")
 async def submit_complete(token: str, body: CompleteSubmit, request: Request):
-    conn = get_db()
-    row = conn.execute("SELECT * FROM bookings WHERE sign_token=?", (token,)).fetchone()
-    if not row:
-        conn.close()
+    booking = get_by_sign_token(token)
+    if not booking:
         raise HTTPException(status_code=404, detail="Ссылка недействительна")
-    booking = dict(row)
     if booking.get("signed_at"):
-        conn.close()
         raise HTTPException(status_code=400, detail="Договор уже подписан")
 
     booking_ref = str(booking.get("username") or booking.get("id", ""))
@@ -174,42 +155,36 @@ async def submit_complete(token: str, body: CompleteSubmit, request: Request):
     passport_needed = not bool((booking.get("passport") or "").strip())
 
     if name_needed and not body.guest_name.strip():
-        conn.close()
         raise HTTPException(status_code=400, detail="Укажите ФИО")
     if phone_needed and not _phone_digits_ok(body.guest_phone):
-        conn.close()
         raise HTTPException(status_code=400, detail="Укажите телефон полностью — 10 цифр после +7")
     if email_needed and "@" not in body.guest_email.strip():
-        conn.close()
         raise HTTPException(status_code=400, detail="Укажите корректный email")
     if passport_needed and not _passport_digits_ok(body.passport):
-        conn.close()
         raise HTTPException(status_code=400, detail="Укажите паспортные данные полностью — серия (4 цифры) и номер (6 цифр)")
 
     pm = load_passport_map()
     entry = pm.get(booking_ref, {}) if isinstance(pm.get(booking_ref), dict) else {}
     if not entry.get("main") or not entry.get("reg1"):
-        conn.close()
         raise HTTPException(status_code=400, detail="Прикрепите оба фото паспорта")
 
+    guest_fields = {}
     if name_needed:
-        conn.execute("UPDATE bookings SET guest_name=? WHERE id=?", (body.guest_name.strip(), booking["id"]))
+        guest_fields["guest_name"] = body.guest_name.strip()
         booking["guest_name"] = body.guest_name.strip()
     if phone_needed:
-        conn.execute("UPDATE bookings SET guest_phone=? WHERE id=?", (body.guest_phone.strip(), booking["id"]))
+        guest_fields["guest_phone"] = body.guest_phone.strip()
         booking["guest_phone"] = body.guest_phone.strip()
     if email_needed:
-        conn.execute("UPDATE bookings SET guest_email=? WHERE id=?", (body.guest_email.strip(), booking["id"]))
+        guest_fields["guest_email"] = body.guest_email.strip()
         booking["guest_email"] = body.guest_email.strip()
     if passport_needed:
-        conn.execute("UPDATE bookings SET passport=? WHERE id=?", (body.passport.strip(), booking["id"]))
+        guest_fields["passport"] = body.passport.strip()
         booking["passport"] = body.passport.strip()
 
     signed_at = now_nsk().strftime("%Y-%m-%d %H:%M:%S")
     client_ip = request.client.host if request.client else ""
-    conn.execute("UPDATE bookings SET signed_at=?, sign_ip=? WHERE id=?", (signed_at, client_ip, booking["id"]))
-    conn.commit()
-    conn.close()
+    sign_booking(booking["id"], signed_at, client_ip, guest_fields)
 
     booking["signed_at"] = signed_at
     booking["sign_ip"] = client_ip

@@ -14,7 +14,26 @@ from core.auth import require_admin, verify_token
 from core.constants import PROMO_FILE, CODE_FILE, CONTRACTS_DIR, PASSPORT_DIR, MAIL_ADMIN
 from core.contract_docs import save_contract, generate_contract
 from core.data_store import get_default_deposit
-from core.db import get_db, booking_ref_alt, find_booking_row
+from core.bookings_repo import (
+    cancel_blocks,
+    confirm_with_token,
+    delete_by_ref_alt,
+    find_blocked_ids,
+    get_by_id_or_ref,
+    get_by_ref,
+    get_by_ref_or_id,
+    get_sign_state,
+    insert_block,
+    insert_manual_booking,
+    insert_website_booking,
+    list_bookings,
+    mark_fully_paid,
+    set_sign_token_by_id,
+    set_sign_token_by_ref,
+    set_status_by_id,
+    set_status_by_ref,
+)
+from core.db import booking_ref_alt
 from core.mailer import send_email
 from core.models import (
     BookingCreate,
@@ -56,10 +75,7 @@ async def get_bookings(admin: Optional[str] = None, authorization: Optional[str]
         if not authorization or not authorization.startswith("Bearer ") \
            or not verify_token(authorization[len("Bearer "):]):
             raise HTTPException(status_code=401, detail="Unauthorized")
-    conn = get_db()
-    rows = conn.execute("SELECT * FROM bookings ORDER BY check_in DESC").fetchall()
-    conn.close()
-    bookings = [dict(r) for r in rows]
+    bookings = list_bookings()
 
     if admin:
         pm = load_passport_map()
@@ -114,7 +130,6 @@ async def create_booking(b: BookingCreate):
         if not is_dates_available(b.check_in, b.check_out, property_id=DEFAULT_PROPERTY_ID):
             raise HTTPException(status_code=409, detail="К сожалению, эти даты только что забронировали. Пожалуйста, выберите другие даты.")
 
-        conn = get_db()
         booking_ref = "GP-" + "".join(random.choices(string.ascii_uppercase + string.digits, k=6))
 
         # Промокод проверяем на сервере — не доверяем процентам от клиента
@@ -130,22 +145,12 @@ async def create_booking(b: BookingCreate):
                 promo_code_clean = code_norm
                 discount_percent = promo_codes_db[code_norm]
 
-        conn.execute("""
-            INSERT INTO bookings (
-                property_id, user_id, username, check_in, check_out, guests, status,
-                guest_name, guest_phone, guest_email, guests_count,
-                notes, passport, payment_method, total_price, nights, source,
-                promo_code, discount_percent
-            ) VALUES (?, 0, ?, ?, ?, ?, 'waiting_payment', ?, ?, ?, ?, ?, ?, ?, ?, ?, 'website', ?, ?)
-        """, (
-            DEFAULT_PROPERTY_ID,
-            booking_ref, b.check_in, b.check_out, b.guests_count,
-            b.guest_name, b.guest_phone, b.guest_email, b.guests_count,
+        insert_website_booking(
+            DEFAULT_PROPERTY_ID, booking_ref, b.check_in, b.check_out, b.guests_count,
+            b.guest_name, b.guest_phone, b.guest_email,
             b.notes, b.passport, b.payment_method, b.total_price, b.nights,
-            promo_code_clean, discount_percent
-        ))
-        conn.commit()
-        conn.close()
+            promo_code_clean, discount_percent,
+        )
 
     prepay = round(b.total_price * 0.2)
 
@@ -229,24 +234,13 @@ async def create_manual_booking(b: ManualBookingCreate, _: bool = Depends(requir
         if not is_dates_available(b.check_in, b.check_out, property_id=DEFAULT_PROPERTY_ID):
             raise HTTPException(status_code=409, detail="Эти даты уже заняты другой бронью — проверьте календарь")
 
-        conn = get_db()
         booking_ref = "GP-" + "".join(random.choices(string.ascii_uppercase + string.digits, k=6))
-        conn.execute("""
-            INSERT INTO bookings (
-                property_id, user_id, username, check_in, check_out, guests, status,
-                guest_name, guest_phone, guest_email, guests_count,
-                notes, passport, payment_method, total_price, nights, source,
-                promo_code, discount_percent, deposit, sign_token
-            ) VALUES (?, 0, ?, ?, ?, ?, 'confirmed', ?, ?, ?, ?, ?, ?, 'external', ?, ?, ?, '', 0, ?, ?)
-        """, (
-            DEFAULT_PROPERTY_ID,
-            booking_ref, b.check_in, b.check_out, b.guests_count,
-            b.guest_name, b.guest_phone, b.guest_email, b.guests_count,
+        insert_manual_booking(
+            DEFAULT_PROPERTY_ID, booking_ref, b.check_in, b.check_out, b.guests_count,
+            b.guest_name, b.guest_phone, b.guest_email,
             b.notes, b.passport, b.total_price, nights_count, source,
-            deposit, sign_token
-        ))
-        conn.commit()
-        conn.close()
+            deposit, sign_token,
+        )
 
     booking_dict = {
         "username": booking_ref,
@@ -278,19 +272,13 @@ async def create_manual_booking(b: ManualBookingCreate, _: bool = Depends(requir
 @router.get("/api/admin/bookings/{ref}/sign-link")
 async def get_sign_link(ref: str, _: bool = Depends(require_admin)):
     """Возвращает ссылку на страницу заполнения/подписания для брони — чтобы скопировать и отправить гостю вручную (например, в чат Авито)."""
-    conn = get_db()
-    row = conn.execute("SELECT sign_token, signed_at FROM bookings WHERE username = ?", (ref,)).fetchone()
-    conn.close()
-    if not row:
+    booking = get_sign_state(ref)
+    if not booking:
         raise HTTPException(status_code=404, detail="Бронь не найдена")
-    booking = dict(row)
     if not booking.get("sign_token"):
         # На случай очень старых броней без токена
-        conn = get_db()
         sign_token = secrets.token_urlsafe(24)
-        conn.execute("UPDATE bookings SET sign_token=? WHERE username=?", (sign_token, ref))
-        conn.commit()
-        conn.close()
+        set_sign_token_by_ref(ref, sign_token)
         booking["sign_token"] = sign_token
     return {
         "sign_link": f"{BASE_URL}/complete/{booking['sign_token']}",
@@ -306,12 +294,9 @@ async def resend_contract(ref: str, r: ResendContract, _: bool = Depends(require
     — если ещё не подписан — повторно уходит ссылка на заполнение данных
       и подписание (на новый email, если гость его сменил).
     """
-    conn = get_db()
-    row = conn.execute("SELECT * FROM bookings WHERE username = ?", (ref,)).fetchone()
-    conn.close()
-    if not row:
+    booking = get_by_ref(ref)
+    if not booking:
         raise HTTPException(status_code=404, detail="Бронь не найдена")
-    booking = dict(row)
 
     if booking.get("signed_at"):
         booking["guest_email"] = r.email or booking.get("guest_email", "")
@@ -319,11 +304,8 @@ async def resend_contract(ref: str, r: ResendContract, _: bool = Depends(require
     else:
         if not booking.get("sign_token"):
             # На случай очень старых броней без токена (созданных до этой функции)
-            conn = get_db()
             sign_token = secrets.token_urlsafe(24)
-            conn.execute("UPDATE bookings SET sign_token=? WHERE id=?", (sign_token, booking["id"]))
-            conn.commit()
-            conn.close()
+            set_sign_token_by_id(booking["id"], sign_token)
             booking["sign_token"] = sign_token
         booking["guest_email"] = r.email or booking.get("guest_email", "")
         email_complete_data_request(booking)
@@ -353,18 +335,8 @@ async def create_blocked_dates(b: BlockDatesRequest, _: bool = Depends(require_a
         if not is_dates_available(check_in, check_out, property_id=DEFAULT_PROPERTY_ID):
             raise HTTPException(status_code=409, detail="На эти даты уже есть бронь или блокировка")
 
-        conn = get_db()
         booking_ref = "BLOCK-" + "".join(random.choices(string.ascii_uppercase + string.digits, k=6))
-        conn.execute("""
-            INSERT INTO bookings (
-                property_id, user_id, username, check_in, check_out, guests, status,
-                guest_name, notes, total_price, nights, source
-            ) VALUES (?, 0, ?, ?, ?, 0, 'blocked', 'Заблокировано администратором', ?, 0, ?, 'admin_block')
-        """, (
-            DEFAULT_PROPERTY_ID, booking_ref, check_in, check_out, b.reason, nights
-        ))
-        conn.commit()
-        conn.close()
+        insert_block(DEFAULT_PROPERTY_ID, booking_ref, check_in, check_out, b.reason, nights)
 
     return {"ok": True, "blocked_days": len(dates_sorted)}
 
@@ -373,26 +345,14 @@ async def remove_blocked_dates(u: UnblockDatesRequest, _: bool = Depends(require
     """Отменяет (status='cancelled') записи-блокировки ('blocked'), пересекающиеся с диапазоном."""
     end_exclusive = (datetime.strptime(u.end, "%Y-%m-%d").date() + timedelta(days=1)).strftime("%Y-%m-%d")
 
-    conn = get_db()
-    rows = conn.execute("""
-        SELECT id FROM bookings
-        WHERE property_id = ? AND status = 'blocked'
-        AND check_in < ? AND check_out > ?
-    """, (DEFAULT_PROPERTY_ID, end_exclusive, u.start)).fetchall()
-    ids = [row["id"] for row in rows]
-    if ids:
-        conn.executemany("UPDATE bookings SET status='cancelled' WHERE id=?", [(i,) for i in ids])
-        conn.commit()
-    conn.close()
+    ids = find_blocked_ids(DEFAULT_PROPERTY_ID, u.start, end_exclusive)
+    cancel_blocks(ids)
 
     return {"ok": True, "unblocked": len(ids)}
 
 @router.put("/api/bookings/{booking_id}")
 async def update_booking(booking_id: str, u: BookingUpdate, _: bool = Depends(require_admin)):
-    conn = get_db()
-    conn.execute("UPDATE bookings SET status=? WHERE id=?", (u.status, booking_id))
-    conn.commit()
-    conn.close()
+    set_status_by_id(booking_id, u.status)
     return {"ok": True}
 
 # =====================================================
@@ -402,30 +362,17 @@ async def update_booking(booking_id: str, u: BookingUpdate, _: bool = Depends(re
 @router.post("/api/bookings/{booking_ref}/confirm")
 async def confirm_booking(booking_ref: str, _: bool = Depends(require_admin)):
     """Подтверждение оплаты из веб-админки — главный флоу."""
-    conn = get_db()
-
     # Ищем по username (booking_ref) или id
-    row = conn.execute(
-        "SELECT * FROM bookings WHERE username=? OR CAST(id AS TEXT)=? LIMIT 1",
-        (booking_ref, booking_ref)
-    ).fetchone()
+    booking = get_by_ref_or_id(booking_ref)
 
-    if not row:
-        conn.close()
+    if not booking:
         raise HTTPException(status_code=404, detail="Booking not found")
-
-    booking = dict(row)
 
     # Токен для ссылки на страницу SMS-подписания
     sign_token = secrets.token_urlsafe(24)
 
     # Меняем статус на confirmed
-    conn.execute(
-        "UPDATE bookings SET status='confirmed', confirmed_at=?, sign_token=? WHERE id=?",
-        (datetime.now().isoformat(), sign_token, booking["id"])
-    )
-    conn.commit()
-    conn.close()
+    confirm_with_token(booking["id"], datetime.now().isoformat(), sign_token)
 
     # Получаем код замка
     door_code_data = json.load(open(CODE_FILE)) if os.path.exists(CODE_FILE) else {}
@@ -462,22 +409,11 @@ async def confirm_booking(booking_ref: str, _: bool = Depends(require_admin)):
 @router.post("/api/bookings/{booking_ref}/full-payment")
 async def full_payment(booking_ref: str, _: bool = Depends(require_admin)):
     """Подтверждение полной оплаты — отправляет гостю памятку с кодом замка."""
-    conn = get_db()
-    row = conn.execute(
-        "SELECT * FROM bookings WHERE id=? OR username=?",
-        (booking_ref, booking_ref)
-    ).fetchone()
-    if not row:
-        conn.close()
+    booking = get_by_id_or_ref(booking_ref)
+    if not booking:
         raise HTTPException(status_code=404, detail="\u0411\u0440\u043e\u043d\u044c \u043d\u0435 \u043d\u0430\u0439\u0434\u0435\u043d\u0430")
-    booking = dict(row)
     now_str = now_nsk().strftime("%Y-%m-%d %H:%M")
-    conn.execute(
-        "UPDATE bookings SET status='fully_paid', fully_paid_at=? WHERE id=? OR username=?",
-        (now_str, booking_ref, booking_ref)
-    )
-    conn.commit()
-    conn.close()
+    mark_fully_paid(booking_ref, now_str)
 
     door_code = load_door_code()
     guest_email = booking.get("guest_email", "")
@@ -509,20 +445,10 @@ async def full_payment(booking_ref: str, _: bool = Depends(require_admin)):
 @router.post("/api/bookings/{booking_ref}/cancel")
 async def cancel_booking_api(booking_ref: str, _: bool = Depends(require_admin)):
     """Отмена брони из веб-админки."""
-    conn = get_db()
-    row = conn.execute(
-        "SELECT * FROM bookings WHERE username=? OR CAST(id AS TEXT)=? LIMIT 1",
-        (booking_ref, booking_ref)
-    ).fetchone()
-    if not row:
-        conn.close()
+    booking = get_by_ref_or_id(booking_ref)
+    if not booking:
         raise HTTPException(status_code=404, detail="Booking not found")
-    conn.execute(
-        "UPDATE bookings SET status='cancelled' WHERE id=?",
-        (row["id"],)
-    )
-    conn.commit()
-    conn.close()
+    set_status_by_id(booking["id"], "cancelled")
     return {"ok": True}
 
 def _delete_contract_files_and_photos(ref):
@@ -566,15 +492,9 @@ async def delete_booking_api(booking_ref: str, _: bool = Depends(require_admin))
     основном для очистки тестовых броней. Подтверждение запрашивается на
     клиенте перед вызовом — это необратимое действие.
     """
-    conn = get_db()
-    row = find_booking_row(conn, booking_ref)
-    if not row:
-        conn.close()
+    ref = delete_by_ref_alt(booking_ref)
+    if ref is None:
         raise HTTPException(status_code=404, detail="Booking not found")
-    ref = row["username"] or str(row["id"])
-    conn.execute("DELETE FROM bookings WHERE id=?", (row["id"],))
-    conn.commit()
-    conn.close()
 
     _delete_contract_files_and_photos(ref)
     return {"ok": True}
@@ -591,12 +511,7 @@ async def delete_contract_archive_entry(ref: str, _: bool = Depends(require_admi
     """
     _delete_contract_files_and_photos(ref)
 
-    conn = get_db()
-    row = find_booking_row(conn, ref, "id")
-    if row:
-        conn.execute("DELETE FROM bookings WHERE id=?", (row["id"],))
-        conn.commit()
-    conn.close()
+    delete_by_ref_alt(ref)
     return {"ok": True}
 
 # =====================================================
@@ -606,13 +521,7 @@ async def delete_contract_archive_entry(ref: str, _: bool = Depends(require_admi
 @router.post("/api/payment-notify")
 async def payment_notify(p: PaymentNotify):
     """Гость сообщил об оплате — меняем статус на payment_pending."""
-    conn = get_db()
-    conn.execute(
-        "UPDATE bookings SET status='payment_pending' WHERE username=?",
-        (p.booking_ref,)
-    )
-    conn.commit()
-    conn.close()
+    set_status_by_ref(p.booking_ref, "payment_pending")
 
     prepay = round(p.total_price * 0.2)
 
