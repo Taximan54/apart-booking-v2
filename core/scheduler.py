@@ -19,7 +19,7 @@ from core.data_store import (
 )
 from core.bookings_repo import mark_checklist_sent, mark_review_sent
 from core.runtime import now_nsk, bot
-from core.signing import (
+from core.emails import (
     email_owner_checkout_reminder,
     email_checkout_checklist,
     email_review_request,

@@ -8,7 +8,7 @@ from core.contract_docs import contract_text_to_html, generate_contract, generat
 from core.bookings_repo import get_by_sign_token, sign_booking
 from core.passports import load_passport_map, save_uploaded_passport_photo, set_passport_slot
 from core.runtime import now_nsk
-from core.signing import email_contract_signed
+from core.emails import email_contract_signed
 from core.validators import _phone_digits_ok, _passport_digits_ok
 from core.logger import get_logger
 

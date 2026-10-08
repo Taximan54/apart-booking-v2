@@ -7,7 +7,7 @@ from config import ADMIN_IDS
 from core.constants import CODE_FILE
 from core.bookings_repo import get_by_ref, set_status_by_ref
 from core.runtime import dp
-from core.signing import email_booking_confirmed
+from core.emails import email_booking_confirmed
 from handlers.admin import load_door_code
 from core.logger import get_logger
 

@@ -46,7 +46,7 @@ from core.models import (
 )
 from core.passports import load_passport_map, save_passport_map
 from core.runtime import bot, now_nsk
-from core.signing import (
+from core.emails import (
     email_booking_created,
     email_admin_new_booking,
     email_complete_data_request,

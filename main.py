@@ -71,7 +71,7 @@ async def shutdown():
 # Раньше весь код жил в main.py. Если где-то (например, в handlers/ или services/)
 # встречается `from main import имя`, оно по-прежнему работает: имя ищется в новых модулях.
 import importlib as _importlib
-_COMPAT_MODULES = ['core.runtime', 'core.models', 'core.constants', 'core.auth', 'core.mailer', 'core.contract_docs', 'core.signing', 'core.data_store', 'core.db', 'routers.pages', 'routers.admin_auth', 'routers.pricing', 'routers.content', 'routers.photos', 'core.backup', 'core.passports', 'routers.contracts', 'routers.bookings', 'core.validators', 'routers.signing_api', 'core.telegram_callbacks', 'core.scheduler']
+_COMPAT_MODULES = ['core.runtime', 'core.models', 'core.constants', 'core.auth', 'core.mailer', 'core.contract_docs', 'core.signing', 'core.emails', 'core.data_store', 'core.db', 'routers.pages', 'routers.admin_auth', 'routers.pricing', 'routers.content', 'routers.photos', 'core.backup', 'core.passports', 'routers.contracts', 'routers.bookings', 'core.validators', 'routers.signing_api', 'core.telegram_callbacks', 'core.scheduler']
 def __getattr__(name):
     for _m in _COMPAT_MODULES:
         _mod = _importlib.import_module(_m)
