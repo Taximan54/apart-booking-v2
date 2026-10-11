@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Панель управления — Городская Пауза</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Montserrat:wght@300;400;500;600&family=PT+Serif:wght@400;700&family=IM+Fell+English&family=Yeseva+One&family=Marck+Script&family=Pacifico&family=Poiret+One&family=Great+Vibes&family=Bad+Script&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/static/admin.css?v=20261008a">
+<link rel="stylesheet" href="/static/admin.css?v=20261009a">
 </head>
 <body>
 
@@ -72,6 +72,7 @@
     <div class="sb-section">
       <div class="sb-section-label">Система</div>
       <a class="sb-item" onclick="showPanel('settings',this)"><span class="sb-icon">⊛</span>Настройки</a>
+      <a class="sb-item" id="sbIntegrations" onclick="showPanel('integrations',this)"><span class="sb-icon">⇄</span>Интеграции</a>
       <a class="sb-item" onclick="logout()"><span class="sb-icon">⏻</span>Выйти</a>
     </div>
   </nav>
@@ -1341,7 +1342,34 @@
     </div>
 
   </div>
-</main>
+    <!-- INTEGRATIONS -->
+    <div class="panel" id="panel-integrations">
+      <div class="card" style="max-width:900px;margin-bottom:24px">
+        <div class="card-header"><span class="card-title">Синхронизация календарей с площадками</span></div>
+        <div class="card-body">
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:20px;padding:12px 16px;background:rgba(201,168,76,.04);border:1px solid rgba(201,168,76,.1);line-height:1.7">
+            Даты, занятые на сайте, автоматически закрываются на площадках (Авито, Яндекс Путешествия, Суточно.ру и другие), а брони с площадок блокируют даты на сайте и на остальных площадках. Площадки обновляют календарь примерно раз в час, сайт забирает их календари раз в полчаса.<br><br>
+            <b>Как подключить площадку:</b> добавьте её ниже. У каждой площадки две ссылки:<br>
+            1) <b>«Наша ссылка»</b>: скопируйте её и вставьте в кабинете площадки в раздел синхронизации календаря («добавить календарь», «импорт календаря»);<br>
+            2) <b>«Ссылка на календарь площадки»</b>: найдите её в том же разделе кабинета площадки (поле вроде «Ваш календарь» или «Экспорт календаря») и вставьте сюда. Копируйте именно ссылку из поля, а не адрес из строки браузера.<br>
+            Ссылки у каждой площадки свои и секретные: в них только занятые даты, без имён гостей. Если площадка даёт только один вид ссылки, будет работать одно направление.
+          </div>
+          <div id="calPlatforms"></div>
+          <div style="border-top:1px solid var(--black-border);margin:24px 0 20px"></div>
+          <div class="info-label" style="margin-bottom:10px">Добавить площадку</div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+            <select class="info-input" id="calPreset" onchange="onCalPresetChange()" style="flex:1;min-width:200px"></select>
+            <input type="text" class="info-input" id="calCustomName" maxlength="60" placeholder="Название площадки" style="flex:1;min-width:200px;display:none">
+            <button class="btn btn-primary" onclick="addCalPlatform()">Добавить</button>
+          </div>
+          <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:24px">
+            <button class="btn btn-ghost" id="calSyncAllBtn" onclick="syncAllCalendars()">Синхронизировать все сейчас</button>
+          </div>
+          <div id="calGlobalStatus" style="font-size:11px;color:var(--text-muted);margin-top:10px;line-height:1.7"></div>
+        </div>
+      </div>
+    </div>
+  </main>
 
 <!-- BOOKING DETAIL MODAL -->
 <div class="modal-ov" id="bookingModal">
@@ -1365,13 +1393,14 @@
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
-<script src="/static/admin-js/core.js?v=20261008a"></script>
-<script src="/static/admin-js/prices-promo.js?v=20261008a"></script>
-<script src="/static/admin-js/bookings-dashboard.js?v=20261008a"></script>
-<script src="/static/admin-js/ui-contract.js?v=20261008a"></script>
-<script src="/static/admin-js/archive-photos.js?v=20261008a"></script>
-<script src="/static/admin-js/content.js?v=20261008a"></script>
-<script src="/static/admin-js/site-settings.js?v=20261008a"></script>
-<script src="/static/admin-js/init.js?v=20261008a"></script>
+<script src="/static/admin-js/core.js?v=20261009a"></script>
+<script src="/static/admin-js/prices-promo.js?v=20261009a"></script>
+<script src="/static/admin-js/bookings-dashboard.js?v=20261009a"></script>
+<script src="/static/admin-js/ui-contract.js?v=20261009a"></script>
+<script src="/static/admin-js/archive-photos.js?v=20261009a"></script>
+<script src="/static/admin-js/content.js?v=20261009a"></script>
+<script src="/static/admin-js/site-settings.js?v=20261009a"></script>
+<script src="/static/admin-js/integrations.js?v=20261009a"></script>
+<script src="/static/admin-js/init.js?v=20261009a"></script>
 </body>
 </html>

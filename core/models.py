@@ -56,6 +56,17 @@ class Contacts(BaseModel):
     whatsapp: str = ""
     max: str = ""
 
+class CalendarPlatformCreate(BaseModel):
+    name: str              # название площадки (Авито, Яндекс Путешествия, Суточно.ру или своё)
+    source: str = ""       # короткий код площадки (латиница); если пусто — создаётся автоматически
+
+
+class CalendarPlatformUpdate(BaseModel):
+    name: Optional[str] = None
+    url: Optional[str] = None        # ссылка на календарь площадки (пустая — выключает получение дат)
+    enabled: Optional[bool] = None   # забирать ли календарь площадки автоматически
+
+
 class LandlordSettings(BaseModel):
     brand_name: str = ""   # название бренда в письмах и документах
     domain: str = ""       # домен сайта, например example.ru
@@ -162,7 +173,7 @@ class BookingCreate(BaseModel):
     promo_code: str = ""
 
 class ManualBookingCreate(BaseModel):
-    source: str = "avito"   # avito / yandex / sutochno / phone / other
+    source: str = "avito"   # площадка (avito / yandex / sutochno / свои из «Интеграций») / phone / other
     check_in: str
     check_out: str
     guest_name: str = ""    # необязательно — если площадка не даёт ФИО, гость впишет сам по ссылке

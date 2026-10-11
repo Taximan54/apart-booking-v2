@@ -19,6 +19,7 @@ from core.constants import (
     PASSPORT_MAP_FILE,
     SETTINGS_FILE,
     LANDLORD_FILE,
+    ICAL_FILE,
     DISCOUNTS_FILE,
     PLACES_FILE,
     CONTRACTS_DIR,
@@ -106,7 +107,7 @@ def create_backup_zip():
     files_to_backup = [
         DB_FILE, PRICE_FILE, CONTACTS_FILE, PAYMENT_FILE,
         PROMO_FILE, CONTRACT_FILE, PASSPORT_MAP_FILE,
-        SETTINGS_FILE, DISCOUNTS_FILE, PLACES_FILE, LANDLORD_FILE,
+        SETTINGS_FILE, DISCOUNTS_FILE, PLACES_FILE, LANDLORD_FILE, ICAL_FILE,
     ]
     with _open_backup_archive(zip_path, get_backup_password()) as zf:
         for path in files_to_backup:

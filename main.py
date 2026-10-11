@@ -6,8 +6,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from core.runtime import bot, dp
+from core.ical_sync import ical_sync_loop
 from core.scheduler import send_notifications
-from routers import pages, admin_auth, pricing, content, photos, contracts, bookings, signing_api
+from routers import pages, admin_auth, pricing, content, photos, contracts, bookings, signing_api, ical
 from services.booking_service import init_db
 from core.logger import get_logger
 import core.telegram_callbacks  # noqa: F401  (регистрирует обработчики кнопок Telegram на dp)
@@ -37,6 +38,7 @@ app.include_router(photos.router)
 app.include_router(contracts.router)
 app.include_router(bookings.router)
 app.include_router(signing_api.router)
+app.include_router(ical.router)
 
 # =====================================================
 # STARTUP / SHUTDOWN
@@ -59,6 +61,7 @@ async def startup():
                 await asyncio.sleep(30)
     asyncio.create_task(safe_polling())
     asyncio.create_task(send_notifications())
+    asyncio.create_task(ical_sync_loop())
     logger.info("SCHEDULER STARTED")
 
 @app.on_event("shutdown")
@@ -71,7 +74,7 @@ async def shutdown():
 # Раньше весь код жил в main.py. Если где-то (например, в handlers/ или services/)
 # встречается `from main import имя`, оно по-прежнему работает: имя ищется в новых модулях.
 import importlib as _importlib
-_COMPAT_MODULES = ['core.runtime', 'core.models', 'core.constants', 'core.auth', 'core.mailer', 'core.contract_docs', 'core.signing', 'core.emails', 'core.data_store', 'core.db', 'routers.pages', 'routers.admin_auth', 'routers.pricing', 'routers.content', 'routers.photos', 'core.backup', 'core.passports', 'routers.contracts', 'routers.bookings', 'core.validators', 'routers.signing_api', 'core.telegram_callbacks', 'core.scheduler']
+_COMPAT_MODULES = ['core.runtime', 'core.models', 'core.constants', 'core.auth', 'core.mailer', 'core.contract_docs', 'core.signing', 'core.emails', 'core.ical', 'core.ical_sync', 'core.data_store', 'core.db', 'routers.pages', 'routers.admin_auth', 'routers.pricing', 'routers.content', 'routers.photos', 'core.backup', 'core.passports', 'routers.contracts', 'routers.bookings', 'core.validators', 'routers.signing_api', 'core.telegram_callbacks', 'core.scheduler']
 def __getattr__(name):
     for _m in _COMPAT_MODULES:
         _mod = _importlib.import_module(_m)

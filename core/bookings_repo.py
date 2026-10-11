@@ -234,6 +234,82 @@ def sign_booking(booking_id, signed_at: str, sign_ip: str, guest_fields: Optiona
 
 
 # ---------------------------------------------------------------------------
+# Синхронизация календарей (iCal)
+# ---------------------------------------------------------------------------
+
+def list_exportable(today: str, skip_sources: tuple) -> list:
+    """
+    Занятые даты для календаря, который забирают другие площадки: всё, что не отменено
+    и не пришло с самой площадки (иначе её же брони вернулись бы к ней обратно).
+    """
+    marks = ",".join("?" for _ in skip_sources)
+    conn = get_db()
+    try:
+        rows = conn.execute(
+            f"SELECT id, username, check_in, check_out, status FROM bookings "
+            f"WHERE status != 'cancelled' AND COALESCE(source, '') NOT IN ({marks}) AND check_out >= ? "
+            f"ORDER BY check_in",
+            (*skip_sources, today),
+        ).fetchall()
+        return [dict(r) for r in rows]
+    finally:
+        conn.close()
+
+
+def find_covering(property_id, start: str, end: str, skip_source: str) -> Optional[dict]:
+    """Не отменённая бронь (не из источника skip_source), которая целиком покрывает диапазон."""
+    return _fetch_one(
+        "SELECT id, username FROM bookings WHERE property_id = ? AND status != 'cancelled' "
+        "AND COALESCE(source, '') != ? AND check_in <= ? AND check_out >= ? LIMIT 1",
+        (property_id, skip_source, start, end),
+    )
+
+
+def list_active_blocks(source: str, today: str) -> list:
+    """Действующие блокировки из внешнего календаря (источник source), которые ещё не закончились."""
+    conn = get_db()
+    try:
+        rows = conn.execute(
+            "SELECT id, username, check_in, check_out FROM bookings "
+            "WHERE source = ? AND status = 'blocked' AND check_out >= ?",
+            (source, today),
+        ).fetchall()
+        return [dict(r) for r in rows]
+    finally:
+        conn.close()
+
+
+def insert_external_block(property_id, ref, check_in, check_out, nights, source, label) -> None:
+    """Блокировка дат по внешнему календарю (например, бронь на Авито)."""
+    _write("""
+            INSERT INTO bookings (
+                property_id, user_id, username, check_in, check_out, guests, status,
+                guest_name, notes, total_price, nights, source
+            ) VALUES (?, 0, ?, ?, ?, 0, 'blocked', ?, '', 0, ?, ?)
+        """, (property_id, ref, check_in, check_out, label, nights, source))
+
+
+def set_block_range(booking_id, check_in, check_out, nights) -> None:
+    """Обновляет даты блокировки и делает её действующей."""
+    _write("UPDATE bookings SET check_in=?, check_out=?, nights=?, status='blocked' WHERE id=?",
+           (check_in, check_out, nights, booking_id))
+
+
+def cancel_all_blocks(source: str) -> int:
+    """Отменяет все действующие блокировки из внешнего календаря (например, при удалении площадки)."""
+    return _write("UPDATE bookings SET status='cancelled' WHERE source = ? AND status = 'blocked'", (source,))
+
+
+def cancel_blocks_overlapping(property_id, start: str, end: str, source: str) -> int:
+    """Отменяет блокировки из внешнего календаря, пересекающиеся с диапазоном. Возвращает их число."""
+    return _write(
+        "UPDATE bookings SET status='cancelled' WHERE property_id = ? AND source = ? AND status = 'blocked' "
+        "AND check_in < ? AND check_out > ?",
+        (property_id, source, end, start),
+    )
+
+
+# ---------------------------------------------------------------------------
 # Удаление
 # ---------------------------------------------------------------------------
 

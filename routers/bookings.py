@@ -57,6 +57,7 @@ from core.emails import (
 from core.validators import _phone_digits_ok, _passport_digits_ok
 from handlers.admin import load_door_code
 from services.booking_service import db_lock, is_dates_available, DEFAULT_PROPERTY_ID
+from core.ical_sync import list_platforms, manual_booking_replaces_blocks
 from core.landlord import site_url
 from core.logger import get_logger
 
@@ -225,12 +226,14 @@ async def create_manual_booking(b: ManualBookingCreate, _: bool = Depends(requir
     if nights_count < 1:
         raise HTTPException(status_code=400, detail="Дата выезда должна быть позже даты заезда")
 
-    valid_sources = {"avito", "yandex", "sutochno", "phone", "other"}
+    valid_sources = {"avito", "yandex", "sutochno", "phone", "other"} | {p["source"] for p in list_platforms()}
     source = b.source if b.source in valid_sources else "other"
     deposit = b.deposit or get_default_deposit()
     sign_token = secrets.token_urlsafe(24)
 
     with db_lock:
+        # бронь с площадки заменяет блокировку, пришедшую из календаря этой площадки на те же даты
+        manual_booking_replaces_blocks(b.check_in, b.check_out, source)
         if not is_dates_available(b.check_in, b.check_out, property_id=DEFAULT_PROPERTY_ID):
             raise HTTPException(status_code=409, detail="Эти даты уже заняты другой бронью — проверьте календарь")
 

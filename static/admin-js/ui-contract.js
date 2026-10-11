@@ -19,9 +19,11 @@ function showPanel(id, el) {
   document.querySelectorAll('.sb-item').forEach(i=>i.classList.remove('active'));
   if(el) el.classList.add('active');
   closeAdminSidebar();
-  const titles = {dashboard:'Дашборд',bookings:'Все брони',manualbooking:'Ручная бронь (внешние площадки)',calendar:'Управление календарём',prices:'Цены',promo:'Промокоды',settings:'Настройки',contract:'Договор',contracts:'Архив договоров',checkin:'Памятка гостю',checkout:'Чек-лист выезда',houserules:'Правила проживания',sitesettings:'Настройки сайта',reviews:'Отзывы',places:'Куда сходить',discounts:'Скидки и акции',contacts:'Контакты',photos:'Фото и медиа'};
+  const titles = {integrations:'Интеграции',dashboard:'Дашборд',bookings:'Все брони',manualbooking:'Ручная бронь (внешние площадки)',calendar:'Управление календарём',prices:'Цены',promo:'Промокоды',settings:'Настройки',contract:'Договор',contracts:'Архив договоров',checkin:'Памятка гостю',checkout:'Чек-лист выезда',houserules:'Правила проживания',sitesettings:'Настройки сайта',reviews:'Отзывы',places:'Куда сходить',discounts:'Скидки и акции',contacts:'Контакты',photos:'Фото и медиа'};
   document.getElementById('topbarTitle').textContent = titles[id]||id;
   if(id==='settings') { loadTimezone(); loadNotif(); loadLandlord(); }
+  if(id==='integrations') { loadIntegrations(); }
+  if(id==='manualbooking') { loadManualSources(); }
   if(id==='contract')   { if(typeof loadContractForEditor==='function') loadContractForEditor(); }
   if(id==='contracts')  { if(typeof loadContractsArchive==='function') loadContractsArchive(); }
   if(id==='checkin')     { if(typeof loadCheckinMemo==='function') loadCheckinMemo(); }

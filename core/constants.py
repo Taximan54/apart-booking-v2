@@ -73,6 +73,7 @@ REVIEW_FILE      = f"{DATA_DIR}/review_template.txt"
 REVIEWS_FILE     = f"{DATA_DIR}/reviews.json"
 CONTACTS_FILE    = f"{DATA_DIR}/contacts.json"
 LANDLORD_FILE    = f"{DATA_DIR}/landlord.json"   # название бренда, домен сайта, адрес объекта
+ICAL_FILE        = f"{DATA_DIR}/ical.json"       # синхронизация календарей: токен своей ссылки, ссылка на календарь Авито, итог последней синхронизации
 PAYMENT_FILE     = f"{DATA_DIR}/payment_settings.json"
 PAYMENT_QR_PATH  = f"{DATA_DIR}/payment_qr.jpg"
 DEFAULT_PAYMENT_SETTINGS = {"sbp_link": "", "sbp_phone": ""}
