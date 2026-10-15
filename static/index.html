@@ -857,7 +857,7 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
   </div>
   <div class="footer-r">
     <div id="footerCopy">© 2026 Городская Пауза</div>
-    <div style="margin-top:8px"><a href="admin.html" style="color:var(--text-muted);text-decoration:none;font-size:10px;letter-spacing:.1em;opacity:.4;transition:opacity .3s" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=.4">Панель управления</a></div>
+    <div style="margin-top:8px"><a href="/static/admin.html" style="color:var(--text-muted);text-decoration:none;font-size:10px;letter-spacing:.1em;opacity:.4;transition:opacity .3s" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=.4">Панель управления</a></div>
   </div>
 </footer>
 
@@ -879,6 +879,22 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
 <div class="toast" id="toast"></div>
 
 <script>
+// Страница объекта: адрес вида /o/название (или ?property=название). Основная квартира открывается на «/».
+const PROPERTY_SLUG = (location.pathname.match(/^\/o\/([a-z0-9\-]+)/i) || [])[1]
+  || new URLSearchParams(location.search).get('property') || '';
+if (PROPERTY_SLUG) {
+  const originalFetch = window.fetch.bind(window);
+  window.fetch = function(input, init) {
+    try {
+      let url = typeof input === 'string' ? input : ((input && input.url) || '');
+      if (/\/api\//.test(url) && !/\/api\/properties/.test(url) && !/[?&]property=/.test(url)) {
+        url += (url.includes('?') ? '&' : '?') + 'property=' + encodeURIComponent(PROPERTY_SLUG);
+        if (typeof input === 'string') input = url;
+      }
+    } catch(e) {}
+    return originalFetch(input, init);
+  };
+}
 let PHOTOS = [
   {label:"Спальня — общий вид",src:"/data/photos/photo_01.jpg"},
   {label:"Спальня — кровать крупно",src:"/data/photos/photo_02.jpg"},
@@ -971,7 +987,7 @@ async function initHeroCarousel() {
       <div class="hero-lines"></div>
       <div class="hero-content" style="align-self:flex-end;padding-bottom:110px">
         <div class="hero-cta">
-          <a href="/static/discounts.html" class="btn-gold">Подробнее об акции</a>
+          <a href="/static/discounts.html${PROPERTY_SLUG ? '?property=' + encodeURIComponent(PROPERTY_SLUG) : ''}" class="btn-gold">Подробнее об акции</a>
         </div>
       </div>
     `;

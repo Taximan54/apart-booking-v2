@@ -517,7 +517,7 @@ async function renderCheckoutSchedule() {
 }
 async function loadNotif() {
   try {
-    const s = await apiGet('/api/site-settings');
+    const s = await apiGet('/api/site-settings', {'X-Property-Id': '1'});
     document.getElementById('notifEmail').value = s.notify_email || '';
     document.getElementById('notifTg').value = s.notify_telegram_chat_id || '';
   } catch(e) {}
@@ -527,12 +527,12 @@ async function saveNotif() {
   const email = document.getElementById('notifEmail').value.trim();
   const tgId = document.getElementById('notifTg').value.trim();
   try {
-    const current = await apiGet('/api/site-settings');
+    const current = await apiGet('/api/site-settings', {'X-Property-Id': '1'});
     await apiPost('/api/site-settings', {
       ...current,
       notify_email: email,
       notify_telegram_chat_id: tgId,
-    });
+    }, {'X-Property-Id': '1'});
     showToast('Настройки уведомлений сохранены', 'gold');
   } catch(e) {
     showToast('Ошибка: ' + e.message, 'err');

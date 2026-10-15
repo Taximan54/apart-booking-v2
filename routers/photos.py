@@ -13,6 +13,8 @@ from core.data_store import load_discounts, get_site_settings_dict, load_places,
 from core.models import PhotoOrder, PhotoLabel
 from core.passports import apply_passport_watermark, load_passport_map, save_uploaded_passport_photo
 from core.logger import get_logger
+from core.properties import admin_property_id, list_properties, property_file, request_property_id
+from services.booking_service import DEFAULT_PROPERTY_ID
 
 logger = get_logger(__name__)
 
@@ -23,18 +25,18 @@ router = APIRouter()
 # API — PHOTOS
 # =====================================================
 
-def load_photos_order_data():
+def load_photos_order_data(property_id: int = DEFAULT_PROPERTY_ID):
     """Читает photos_order.json, гарантируя наличие всех ключей."""
     order_data = {"order": [], "labels": {}, "purpose": {}}
-    if os.path.exists(PHOTOS_ORDER_FILE):
-        with open(PHOTOS_ORDER_FILE, "r", encoding="utf-8") as f:
+    if os.path.exists(property_file(PHOTOS_ORDER_FILE, property_id)):
+        with open(property_file(PHOTOS_ORDER_FILE, property_id), "r", encoding="utf-8") as f:
             saved = json.load(f)
         order_data["order"] = saved.get("order", [])
         order_data["labels"] = saved.get("labels", {})
         order_data["purpose"] = saved.get("purpose", {})
     return order_data
 
-def get_photos_list():
+def get_photos_list(property_id: int = DEFAULT_PROPERTY_ID):
     """Возвращает список фото ГАЛЕРЕИ КВАРТИРЫ в правильном порядке.
 
     Фото, загруженные с purpose != "gallery" (обложка сайта, фото карты,
@@ -45,20 +47,33 @@ def get_photos_list():
         f for f in os.listdir(PHOTOS_DIR)
         if f.lower().endswith(('.jpg', '.jpeg', '.png', '.webp'))
     ])
-    order_data = load_photos_order_data()
+    order_data = load_photos_order_data(property_id)
     purpose = order_data["purpose"]
     # Старые фото без метки purpose (загружены до этого изменения) по
     # умолчанию считаются галерейными — почистить можно вручную
     # Фото акций (в т.ч. загруженные раньше с меткой gallery) — не галерея квартиры
     discount_files = set()
-    for d in load_discounts():
+    for d in load_discounts(property_id):
         for key in ("photo", "photo_mobile"):
             if d.get(key):
                 discount_files.add(d[key])
-    gallery_files = [
-        f for f in all_files
-        if purpose.get(f, "gallery") == "gallery" and f not in discount_files
-    ]
+    if property_id == DEFAULT_PROPERTY_ID:
+        # Основной объект: как раньше (фото без метки считаются галерейными), но без фото,
+        # загруженных другими объектами (папка с файлами общая)
+        claimed_elsewhere = set()
+        for other in list_properties():
+            if other["id"] != property_id:
+                claimed_elsewhere |= set(load_photos_order_data(other["id"])["purpose"])
+        gallery_files = [
+            f for f in all_files
+            if purpose.get(f, "gallery") == "gallery" and f not in discount_files and f not in claimed_elsewhere
+        ]
+    else:
+        # Остальные объекты: только фото, явно загруженные в галерею этого объекта
+        gallery_files = [
+            f for f in all_files
+            if purpose.get(f) == "gallery" and f not in discount_files
+        ]
     saved_order = [f for f in order_data["order"] if f in gallery_files]
     order = saved_order + [f for f in gallery_files if f not in saved_order]
     labels = order_data["labels"]
@@ -68,17 +83,17 @@ def get_photos_list():
     ]
 
 @router.get("/api/photos")
-async def list_photos():
+async def list_photos(property_id: int = Depends(request_property_id)):
     """Публичный — список фото для галереи квартиры."""
-    return get_photos_list()
+    return get_photos_list(property_id)
 
 @router.post("/api/photos/upload")
 async def upload_photo(
     file: UploadFile = File(...),
     label: str = Form(""),
     purpose: str = Form("gallery"),
-    _: bool = Depends(require_admin)
-):
+    _: bool = Depends(require_admin),
+    property_id: int = Depends(admin_property_id)):
     """Загрузка нового фото. purpose: gallery / site / place / discount."""
     os.makedirs(PHOTOS_DIR, exist_ok=True)
     ext = os.path.splitext(file.filename or "photo.jpg")[1].lower() or ".jpg"
@@ -91,30 +106,30 @@ async def upload_photo(
     content = await file.read()
     with open(filepath, "wb") as f:
         f.write(content)
-    order_data = load_photos_order_data()
+    order_data = load_photos_order_data(property_id)
     order_data["purpose"][filename] = purpose
     if purpose == "gallery":
         order_data["order"].append(filename)
     if label:
         order_data["labels"][filename] = label
-    with open(PHOTOS_ORDER_FILE, "w", encoding="utf-8") as f:
+    with open(property_file(PHOTOS_ORDER_FILE, property_id), "w", encoding="utf-8") as f:
         json.dump(order_data, f, ensure_ascii=False)
     return {"ok": True, "filename": filename, "url": f"/data/photos/{filename}"}
 
-def find_photo_usages(filename):
+def find_photo_usages(filename, property_id: int = DEFAULT_PROPERTY_ID):
     """Возвращает список мест использования фото (hero/карта/место/акция), если оно где-то занято."""
     usages = []
-    settings = get_site_settings_dict()
+    settings = get_site_settings_dict(property_id)
     if settings.get("hero_photo") == filename:
         usages.append("обложка сайта (hero-фото)")
     if settings.get("hero_photo_mobile") == filename:
         usages.append("обложка сайта для мобильной версии (hero-фото)")
     if settings.get("map_photo") == filename:
         usages.append("фото карты в разделе «Расположение»")
-    for p in load_places():
+    for p in load_places(property_id):
         if p.get("photo") == filename:
             usages.append(f"место «{p.get('name', '')}» на странице «Куда сходить?»")
-    for d in load_discounts():
+    for d in load_discounts(property_id):
         if d.get("photo") == filename:
             usages.append(f"акция «{d.get('name', '')}»")
         if d.get("photo_mobile") == filename:
@@ -122,41 +137,41 @@ def find_photo_usages(filename):
     return usages
 
 @router.delete("/api/photos/{filename}")
-async def delete_photo(filename: str, force: bool = False, _: bool = Depends(require_admin)):
+async def delete_photo(filename: str, force: bool = False, _: bool = Depends(require_admin), property_id: int = Depends(admin_property_id)):
     """Удаление фото. Если фото используется как hero/карта/фото места — требует force=true."""
     filepath = os.path.join(PHOTOS_DIR, filename)
     if not os.path.exists(filepath):
         raise HTTPException(status_code=404, detail="Файл не найден")
-    usages = find_photo_usages(filename)
+    usages = find_photo_usages(filename, property_id)
     if usages and not force:
         raise HTTPException(
             status_code=409,
             detail="Это фото сейчас используется: " + "; ".join(usages) + ". Удалить всё равно?"
         )
     os.remove(filepath)
-    order_data = load_photos_order_data()
+    order_data = load_photos_order_data(property_id)
     order_data["order"] = [f for f in order_data["order"] if f != filename]
     order_data["labels"].pop(filename, None)
     order_data["purpose"].pop(filename, None)
-    with open(PHOTOS_ORDER_FILE, "w", encoding="utf-8") as f:
+    with open(property_file(PHOTOS_ORDER_FILE, property_id), "w", encoding="utf-8") as f:
         json.dump(order_data, f, ensure_ascii=False)
     return {"ok": True}
 
 @router.post("/api/photos/reorder")
-async def reorder_photos(p: PhotoOrder, _: bool = Depends(require_admin)):
+async def reorder_photos(p: PhotoOrder, _: bool = Depends(require_admin), property_id: int = Depends(admin_property_id)):
     """Изменение порядка фото галереи."""
-    order_data = load_photos_order_data()
+    order_data = load_photos_order_data(property_id)
     order_data["order"] = p.order
-    with open(PHOTOS_ORDER_FILE, "w", encoding="utf-8") as f:
+    with open(property_file(PHOTOS_ORDER_FILE, property_id), "w", encoding="utf-8") as f:
         json.dump(order_data, f, ensure_ascii=False)
     return {"ok": True}
 
 @router.post("/api/photos/{filename}/label")
-async def set_photo_label(filename: str, lb: PhotoLabel, _: bool = Depends(require_admin)):
+async def set_photo_label(filename: str, lb: PhotoLabel, _: bool = Depends(require_admin), property_id: int = Depends(admin_property_id)):
     """Установить подпись к фото."""
-    order_data = load_photos_order_data()
+    order_data = load_photos_order_data(property_id)
     order_data["labels"][filename] = lb.label
-    with open(PHOTOS_ORDER_FILE, "w", encoding="utf-8") as f:
+    with open(property_file(PHOTOS_ORDER_FILE, property_id), "w", encoding="utf-8") as f:
         json.dump(order_data, f, ensure_ascii=False)
     return {"ok": True}
 

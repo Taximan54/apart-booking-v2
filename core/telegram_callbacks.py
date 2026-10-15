@@ -5,6 +5,7 @@ from aiogram.types import CallbackQuery
 
 from config import ADMIN_IDS
 from core.constants import CODE_FILE
+from core.properties import property_file
 from core.bookings_repo import get_by_ref, set_status_by_ref
 from core.runtime import dp
 from core.emails import email_booking_confirmed
@@ -28,7 +29,8 @@ async def web_payment_confirm(callback: CallbackQuery):
     booking = get_by_ref(booking_ref)
     if booking:
         booking["status"] = "confirmed"
-        door_code_data = json.load(open(CODE_FILE)) if os.path.exists(CODE_FILE) else {}
+        code_file = property_file(CODE_FILE, booking.get("property_id") or 1)
+        door_code_data = json.load(open(code_file)) if os.path.exists(code_file) else {}
         door_code = door_code_data.get("code") or load_door_code()
         set_status_by_ref(booking_ref, "confirmed")
         import threading

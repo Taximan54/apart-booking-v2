@@ -6,7 +6,7 @@ import random
 import secrets
 import string
 from datetime import datetime, timedelta
-from fastapi import APIRouter, Header, Depends, HTTPException
+from fastapi import APIRouter, Header, Depends, HTTPException, Query
 from typing import Optional
 
 from config import ADMIN_IDS, BASE_URL
@@ -56,8 +56,9 @@ from core.emails import (
 )
 from core.validators import _phone_digits_ok, _passport_digits_ok
 from handlers.admin import load_door_code
-from services.booking_service import db_lock, is_dates_available, DEFAULT_PROPERTY_ID
+from services.booking_service import db_lock, is_dates_available
 from core.ical_sync import list_platforms, manual_booking_replaces_blocks
+from core.properties import admin_property_id, property_file, public_property_id
 from core.landlord import site_url
 from core.logger import get_logger
 
@@ -71,12 +72,16 @@ router = APIRouter()
 # =====================================================
 
 @router.get("/api/bookings")
-async def get_bookings(admin: Optional[str] = None, authorization: Optional[str] = Header(None)):
+async def get_bookings(admin: Optional[str] = None, authorization: Optional[str] = Header(None),
+                       property: Optional[str] = Query(None),
+                       x_property_id: Optional[str] = Header(None, alias="X-Property-Id")):
     if admin:
         if not authorization or not authorization.startswith("Bearer ") \
            or not verify_token(authorization[len("Bearer "):]):
             raise HTTPException(status_code=401, detail="Unauthorized")
-    bookings = list_bookings()
+    # админка выбирает объект заголовком, сайт — адресом страницы объекта
+    property_id = admin_property_id(x_property_id) if admin else public_property_id(property)
+    bookings = list_bookings(property_id)
 
     if admin:
         pm = load_passport_map()
@@ -110,7 +115,7 @@ async def get_bookings(admin: Optional[str] = None, authorization: Optional[str]
     return {"booked_dates": booked, "checkout_dates": checkout_dates}
 
 @router.post("/api/bookings")
-async def create_booking(b: BookingCreate):
+async def create_booking(b: BookingCreate, property_id: int = Depends(public_property_id)):
     # Проверка минимального срока бронирования
     try:
         d_in  = datetime.strptime(b.check_in,  "%Y-%m-%d").date()
@@ -128,7 +133,7 @@ async def create_booking(b: BookingCreate):
     # Защита от двойного бронирования: проверка занятости дат под глобальной
     # блокировкой, чтобы два гостя не забронировали одни и те же даты одновременно
     with db_lock:
-        if not is_dates_available(b.check_in, b.check_out, property_id=DEFAULT_PROPERTY_ID):
+        if not is_dates_available(b.check_in, b.check_out, property_id=property_id):
             raise HTTPException(status_code=409, detail="К сожалению, эти даты только что забронировали. Пожалуйста, выберите другие даты.")
 
         booking_ref = "GP-" + "".join(random.choices(string.ascii_uppercase + string.digits, k=6))
@@ -147,7 +152,7 @@ async def create_booking(b: BookingCreate):
                 discount_percent = promo_codes_db[code_norm]
 
         insert_website_booking(
-            DEFAULT_PROPERTY_ID, booking_ref, b.check_in, b.check_out, b.guests_count,
+            property_id, booking_ref, b.check_in, b.check_out, b.guests_count,
             b.guest_name, b.guest_phone, b.guest_email,
             b.notes, b.passport, b.payment_method, b.total_price, b.nights,
             promo_code_clean, discount_percent,
@@ -206,7 +211,8 @@ async def create_booking(b: BookingCreate):
     return {"booking_id": booking_ref, "status": "waiting_payment"}
 
 @router.post("/api/admin/manual-booking")
-async def create_manual_booking(b: ManualBookingCreate, _: bool = Depends(require_admin)):
+async def create_manual_booking(b: ManualBookingCreate, _: bool = Depends(require_admin),
+                                property_id: int = Depends(admin_property_id)):
     """
     Ручное создание брони для внешних площадок (Авито, Яндекс.Путешествия,
     Суточно.ру и т.д.), которые оформлены не через сайт. Бронь сразу
@@ -228,18 +234,18 @@ async def create_manual_booking(b: ManualBookingCreate, _: bool = Depends(requir
 
     valid_sources = {"avito", "yandex", "sutochno", "phone", "other"} | {p["source"] for p in list_platforms()}
     source = b.source if b.source in valid_sources else "other"
-    deposit = b.deposit or get_default_deposit()
+    deposit = b.deposit or get_default_deposit(property_id)
     sign_token = secrets.token_urlsafe(24)
 
     with db_lock:
         # бронь с площадки заменяет блокировку, пришедшую из календаря этой площадки на те же даты
-        manual_booking_replaces_blocks(b.check_in, b.check_out, source)
-        if not is_dates_available(b.check_in, b.check_out, property_id=DEFAULT_PROPERTY_ID):
+        manual_booking_replaces_blocks(b.check_in, b.check_out, source, property_id)
+        if not is_dates_available(b.check_in, b.check_out, property_id=property_id):
             raise HTTPException(status_code=409, detail="Эти даты уже заняты другой бронью — проверьте календарь")
 
         booking_ref = "GP-" + "".join(random.choices(string.ascii_uppercase + string.digits, k=6))
         insert_manual_booking(
-            DEFAULT_PROPERTY_ID, booking_ref, b.check_in, b.check_out, b.guests_count,
+            property_id, booking_ref, b.check_in, b.check_out, b.guests_count,
             b.guest_name, b.guest_phone, b.guest_email,
             b.notes, b.passport, b.total_price, nights_count, source,
             deposit, sign_token,
@@ -326,7 +332,8 @@ async def resend_contract(ref: str, r: ResendContract, _: bool = Depends(require
 # ту же защиту db_lock + is_dates_available, что и обычные брони.
 
 @router.post("/api/blocked-dates")
-async def create_blocked_dates(b: BlockDatesRequest, _: bool = Depends(require_admin)):
+async def create_blocked_dates(b: BlockDatesRequest, _: bool = Depends(require_admin),
+                               property_id: int = Depends(admin_property_id)):
     if not b.dates:
         raise HTTPException(status_code=400, detail="Не выбраны даты")
     dates_sorted = sorted(b.dates)
@@ -335,20 +342,21 @@ async def create_blocked_dates(b: BlockDatesRequest, _: bool = Depends(require_a
     nights = (datetime.strptime(check_out, "%Y-%m-%d").date() - datetime.strptime(check_in, "%Y-%m-%d").date()).days
 
     with db_lock:
-        if not is_dates_available(check_in, check_out, property_id=DEFAULT_PROPERTY_ID):
+        if not is_dates_available(check_in, check_out, property_id=property_id):
             raise HTTPException(status_code=409, detail="На эти даты уже есть бронь или блокировка")
 
         booking_ref = "BLOCK-" + "".join(random.choices(string.ascii_uppercase + string.digits, k=6))
-        insert_block(DEFAULT_PROPERTY_ID, booking_ref, check_in, check_out, b.reason, nights)
+        insert_block(property_id, booking_ref, check_in, check_out, b.reason, nights)
 
     return {"ok": True, "blocked_days": len(dates_sorted)}
 
 @router.post("/api/unblock-dates")
-async def remove_blocked_dates(u: UnblockDatesRequest, _: bool = Depends(require_admin)):
+async def remove_blocked_dates(u: UnblockDatesRequest, _: bool = Depends(require_admin),
+                               property_id: int = Depends(admin_property_id)):
     """Отменяет (status='cancelled') записи-блокировки ('blocked'), пересекающиеся с диапазоном."""
     end_exclusive = (datetime.strptime(u.end, "%Y-%m-%d").date() + timedelta(days=1)).strftime("%Y-%m-%d")
 
-    ids = find_blocked_ids(DEFAULT_PROPERTY_ID, u.start, end_exclusive)
+    ids = find_blocked_ids(property_id, u.start, end_exclusive)
     cancel_blocks(ids)
 
     return {"ok": True, "unblocked": len(ids)}
@@ -378,7 +386,8 @@ async def confirm_booking(booking_ref: str, _: bool = Depends(require_admin)):
     confirm_with_token(booking["id"], datetime.now().isoformat(), sign_token)
 
     # Получаем код замка
-    door_code_data = json.load(open(CODE_FILE)) if os.path.exists(CODE_FILE) else {}
+    code_file = property_file(CODE_FILE, booking.get("property_id") or 1)
+    door_code_data = json.load(open(code_file)) if os.path.exists(code_file) else {}
     door_code = door_code_data.get("code") or load_door_code()
 
     # Обновляем данные брони
@@ -426,7 +435,7 @@ async def full_payment(booking_ref: str, _: bool = Depends(require_admin)):
     import threading
     if guest_email:
         threading.Thread(target=email_checkin_memo, args=(
-            guest_name, guest_email, booking_ref, check_in, door_code
+            guest_name, guest_email, booking_ref, check_in, door_code, booking.get("property_id") or 1
         )).start()
 
     for admin_id in ADMIN_IDS:

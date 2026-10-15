@@ -26,6 +26,7 @@ def get_db():
     conn.commit()
     # Добавляем колонки если их нет
     for col, col_type in {
+        "property_id":    "INTEGER DEFAULT 1",
         "guest_name":     "TEXT DEFAULT ''",
         "guest_phone":    "TEXT DEFAULT ''",
         "guest_email":    "TEXT DEFAULT ''",

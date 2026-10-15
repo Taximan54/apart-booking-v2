@@ -361,11 +361,11 @@ def test_manual_booking_handler_calls_replacement_with_source(three, monkeypatch
     import routers.bookings as rb
     from core.models import ManualBookingCreate
     calls = []
-    monkeypatch.setattr(rb, "manual_booking_replaces_blocks", lambda a, b, s: calls.append((a, b, s)) or 0)
+    monkeypatch.setattr(rb, "manual_booking_replaces_blocks", lambda a, b, s, pid: calls.append((a, b, s)) or 0)
     monkeypatch.setattr(rb, "is_dates_available", lambda *a, **k: False)         # дальше нам важна только подготовка
     for source in ("yandex", "avito", "phone", "unknown-source"):
         with pytest.raises(HTTPException) as e:
-            asyncio.run(rb.create_manual_booking(ManualBookingCreate(source=source, check_in="2026-11-01", check_out="2026-11-04", guests_count=2, total_price=5000), True))
+            asyncio.run(rb.create_manual_booking(ManualBookingCreate(source=source, check_in="2026-11-01", check_out="2026-11-04", guests_count=2, total_price=5000), True, 1))
         assert e.value.status_code == 409
     assert calls == [("2026-11-01", "2026-11-04", s) for s in ("yandex", "avito", "phone", "other")]
     sync.add_platform("Моя площадка", "myplat")
@@ -377,7 +377,7 @@ async def _try_manual(rb, source):
     from fastapi import HTTPException
     from core.models import ManualBookingCreate
     try:
-        await rb.create_manual_booking(ManualBookingCreate(source=source, check_in="2026-11-01", check_out="2026-11-04", guests_count=2, total_price=5000), True)
+        await rb.create_manual_booking(ManualBookingCreate(source=source, check_in="2026-11-01", check_out="2026-11-04", guests_count=2, total_price=5000), True, 1)
     except HTTPException:
         pass
 

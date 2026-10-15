@@ -4,6 +4,28 @@
 // CONFIG — same API base as index.html
 // ============================================================
 let API_BASE = localStorage.getItem('gorodskaya-pauza_api_base') || 'https://citypause.ru';
+
+// Объект (квартира), с которым работает админка. Номер 1 — основной объект.
+let ADMIN_PROPERTY_ID = (function() {
+  try { return localStorage.getItem('adminPropertyId') || '1'; } catch(e) { return '1'; }
+})();
+
+// Ко всем запросам админки к серверу добавляется номер выбранного объекта (заголовок X-Property-Id).
+// Для основного объекта заголовок не нужен; запросу можно задать свой X-Property-Id (общие настройки).
+(function() {
+  const originalFetch = window.fetch.bind(window);
+  window.fetch = function(input, init) {
+    try {
+      const url = typeof input === 'string' ? input : ((input && input.url) || '');
+      if (ADMIN_PROPERTY_ID !== '1' && url.startsWith(API_BASE + '/api/')) {
+        const headers = new Headers((init && init.headers) || {});
+        if (!headers.has('X-Property-Id')) headers.set('X-Property-Id', ADMIN_PROPERTY_ID);
+        init = Object.assign({}, init || {}, { headers });
+      }
+    } catch(e) {}
+    return originalFetch(input, init);
+  };
+})();
 let ADMIN_TOKEN = localStorage.getItem('gorodskaya-pauza_token') || null;
 
 // ============================================================
@@ -110,6 +132,7 @@ async function initAdmin() {
 
   // Load data
   await loadAll();
+  if (typeof loadPropertySwitch === 'function') loadPropertySwitch();
 
   // Init admin calendar
   const now = new Date();
@@ -184,9 +207,9 @@ function forceRelogin() {
   document.getElementById('loginScreen').style.display = 'flex';
 }
 
-async function apiGet(path) {
+async function apiGet(path, extraHeaders) {
   const r = await fetch(`${API_BASE}${path}`, {
-    headers: ADMIN_TOKEN ? {'Authorization': 'Bearer ' + ADMIN_TOKEN} : {},
+    headers: {...(ADMIN_TOKEN ? {'Authorization': 'Bearer ' + ADMIN_TOKEN} : {}), ...(extraHeaders || {})},
     signal: AbortSignal.timeout(4000)
   });
   if (r.status === 401) { forceRelogin(); throw new Error('401'); }
@@ -194,12 +217,13 @@ async function apiGet(path) {
   return r.json();
 }
 
-async function apiPost(path, data) {
+async function apiPost(path, data, extraHeaders) {
   const r = await fetch(`${API_BASE}${path}`, {
     method:'POST',
     headers:{
       'Content-Type':'application/json',
-      ...(ADMIN_TOKEN ? {'Authorization': 'Bearer ' + ADMIN_TOKEN} : {})
+      ...(ADMIN_TOKEN ? {'Authorization': 'Bearer ' + ADMIN_TOKEN} : {}),
+      ...(extraHeaders || {})
     },
     body:JSON.stringify(data),
     signal: AbortSignal.timeout(4000)
@@ -212,6 +236,26 @@ async function apiPost(path, data) {
       if (errBody && errBody.detail) message = errBody.detail;
     } catch(e) {}
     throw new Error(message);
+  }
+  return r.json();
+}
+
+// Запросы PUT и DELETE с понятным текстом ошибки от сервера (например, «Ссылка должна начинаться с http://»)
+async function apiRequest(method, path, data) {
+  const r = await fetch(`${API_BASE}${path}`, {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(ADMIN_TOKEN ? {'Authorization': 'Bearer ' + ADMIN_TOKEN} : {})
+    },
+    body: data === undefined ? undefined : JSON.stringify(data),
+    signal: AbortSignal.timeout(15000)
+  });
+  if (r.status === 401) { forceRelogin(); throw new Error('401'); }
+  if (!r.ok) {
+    let detail = '';
+    try { detail = (await r.json()).detail; } catch(e) {}
+    throw new Error(detail || r.status);
   }
   return r.json();
 }

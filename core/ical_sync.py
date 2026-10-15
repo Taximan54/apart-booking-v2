@@ -302,11 +302,12 @@ async def ical_sync_loop():
         await asyncio.sleep(SYNC_EVERY_SECONDS)
 
 
-def manual_booking_replaces_blocks(check_in: str, check_out: str, source: str) -> int:
+def manual_booking_replaces_blocks(check_in: str, check_out: str, source: str,
+                                   property_id: int = DEFAULT_PROPERTY_ID) -> int:
     """
     Ручная бронь с площадки заменяет блокировки из календаря этой площадки на те же даты
     (иначе сайт посчитал бы даты занятыми и не дал создать бронь).
     """
     if not source or source in ("phone", "other"):
         return 0
-    return repo.cancel_blocks_overlapping(DEFAULT_PROPERTY_ID, check_in, check_out, imported_source(source))
+    return repo.cancel_blocks_overlapping(property_id, check_in, check_out, imported_source(source))

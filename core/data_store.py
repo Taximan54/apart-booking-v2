@@ -13,25 +13,29 @@ from core.constants import (
     OWNER_NOTIFY_FILE,
 )
 from core.logger import get_logger
+from core.properties import property_file
+from services.booking_service import DEFAULT_PROPERTY_ID
 
 logger = get_logger(__name__)
 
 
-def get_default_deposit():
+def get_default_deposit(property_id: int = DEFAULT_PROPERTY_ID):
     """Депозит по умолчанию — из раздела «Тарифы» в админке (PRICE_FILE), с фолбэком на DEFAULT_PRICES."""
-    if os.path.exists(PRICE_FILE):
+    price_file = property_file(PRICE_FILE, property_id)
+    if os.path.exists(price_file):
         try:
-            with open(PRICE_FILE, "r") as f:
+            with open(price_file, "r") as f:
                 saved = json.load(f)
             return int(saved.get("deposit", DEFAULT_PRICES["deposit"]))
         except Exception as e:
             logger.warning("Не удалось прочитать депозит из файла цен: %s", e)
     return DEFAULT_PRICES["deposit"]
 
-def get_site_settings_dict():
+def get_site_settings_dict(property_id: int = DEFAULT_PROPERTY_ID):
     """Внутренний helper — читает настройки сайта с мержем дефолтов (без require_admin)."""
-    if os.path.exists(SETTINGS_FILE):
-        with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
+    settings_file = property_file(SETTINGS_FILE, property_id)
+    if os.path.exists(settings_file):
+        with open(settings_file, "r", encoding="utf-8") as f:
             saved = json.load(f)
         return {**DEFAULT_SETTINGS, **saved}
     return DEFAULT_SETTINGS
@@ -40,9 +44,10 @@ def get_site_settings_dict():
 # API — PLACES (Куда сходить)
 # =====================================================
 
-def load_places():
-    if os.path.exists(PLACES_FILE):
-        with open(PLACES_FILE, "r", encoding="utf-8") as f:
+def load_places(property_id: int = DEFAULT_PROPERTY_ID):
+    places_file = property_file(PLACES_FILE, property_id)
+    if os.path.exists(places_file):
+        with open(places_file, "r", encoding="utf-8") as f:
             data = json.load(f)
             return data if isinstance(data, list) else []
     return []
@@ -51,9 +56,10 @@ def load_places():
 # API — DISCOUNTS (Скидки и акции)
 # =====================================================
 
-def load_discounts():
-    if os.path.exists(DISCOUNTS_FILE):
-        with open(DISCOUNTS_FILE, "r", encoding="utf-8") as f:
+def load_discounts(property_id: int = DEFAULT_PROPERTY_ID):
+    discounts_file = property_file(DISCOUNTS_FILE, property_id)
+    if os.path.exists(discounts_file):
+        with open(discounts_file, "r", encoding="utf-8") as f:
             data = json.load(f)
             return data if isinstance(data, list) else []
     return []

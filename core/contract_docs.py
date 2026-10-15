@@ -26,6 +26,8 @@ from xml.sax.saxutils import escape as xml_escape
 from core.constants import DATA_DIR, CONTRACT_FILE, CONTRACT_STATIC, CONTRACTS_DIR, DEFAULT_LANDLORD
 from core.data_store import get_default_deposit
 from core.runtime import now_nsk
+from core.properties import get_property
+from services.booking_service import DEFAULT_PROPERTY_ID
 from core.landlord import landlord_address, landlord_brand, landlord_domain, get_landlord_email
 from core.logger import get_logger
 
@@ -132,6 +134,16 @@ def fill_contract(template, data):
             template = template.replace(placeholder, f"{_AUTO_BOLD_OPEN}{value}{_AUTO_BOLD_CLOSE}")
     return template
 
+def _property_address(booking):
+    """Адрес квартиры для договора: адрес объекта брони (если он задан и это не основной объект), иначе адрес арендодателя."""
+    property_id = booking.get("property_id") or DEFAULT_PROPERTY_ID
+    if property_id != DEFAULT_PROPERTY_ID:
+        prop = get_property(property_id)
+        if prop and prop["address"]:
+            return prop["address"]
+    return landlord_address()
+
+
 def _contract_placeholders(booking):
     """Собирает словарь плейсхолдеров для подстановки в шаблон договора/согласия по данным брони."""
     today        = _date_ru_words(now_nsk())
@@ -144,14 +156,14 @@ def _contract_placeholders(booking):
     # восстанавливаем исходную (до скидки) сумму, чтобы тариф совпадал с тем, что гость видел при выборе дат
     pre_discount_total = round(total / (1 - discount_pct / 100)) if discount_pct else total
     per_night    = round(pre_discount_total / nights) if nights else pre_discount_total
-    deposit      = booking.get("deposit") or get_default_deposit()
+    deposit      = booking.get("deposit") or get_default_deposit(booking.get("property_id") or DEFAULT_PROPERTY_ID)
 
     return {
         "ДАТА_ДОГОВОРА":  today,
         "АРЕНДОДАТЕЛЬ":   landlord_brand(),
         "ФИО":            booking.get("guest_name", ""),
         "ПАСПОРТ":        booking.get("passport", "____________"),
-        "АДРЕС":          landlord_address(),
+        "АДРЕС":          _property_address(booking),
         "НОЧЕЙ":          str(nights),
         "ДАТА_ЗАЕЗДА":    checkin_fmt,
         "ДАТА_ВЫЕЗДА":    checkout_fmt,

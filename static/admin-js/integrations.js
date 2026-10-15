@@ -3,26 +3,6 @@
 
 let calState = { platforms: [], presets: [], max_platforms: 30 };
 
-// Запросы PUT и DELETE с понятным текстом ошибки от сервера (например, «Ссылка должна начинаться с http://»)
-async function calRequest(method, path, data) {
-  const r = await fetch(`${API_BASE}${path}`, {
-    method,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(ADMIN_TOKEN ? {'Authorization': 'Bearer ' + ADMIN_TOKEN} : {})
-    },
-    body: data === undefined ? undefined : JSON.stringify(data),
-    signal: AbortSignal.timeout(15000)
-  });
-  if (r.status === 401) { forceRelogin(); throw new Error('401'); }
-  if (!r.ok) {
-    let detail = '';
-    try { detail = (await r.json()).detail; } catch(e) {}
-    throw new Error(detail || r.status);
-  }
-  return r.json();
-}
-
 function calEsc(s) {
   return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
@@ -123,7 +103,7 @@ async function addCalPlatform() {
 
 async function saveCalPlatform(source) {
   try {
-    calState = await calRequest('PUT', '/api/admin/integrations/calendars/' + encodeURIComponent(source), {
+    calState = await apiRequest('PUT', '/api/admin/integrations/calendars/' + encodeURIComponent(source), {
       url: document.getElementById('calUrl_' + source).value.trim(),
       enabled: document.getElementById('calEnabled_' + source).checked
     });
@@ -137,7 +117,7 @@ async function saveCalPlatform(source) {
 async function syncCalPlatform(source) {
   try {
     // сначала сохраняем ссылку из поля, чтобы синхронизировать именно с ней
-    await calRequest('PUT', '/api/admin/integrations/calendars/' + encodeURIComponent(source), {
+    await apiRequest('PUT', '/api/admin/integrations/calendars/' + encodeURIComponent(source), {
       url: document.getElementById('calUrl_' + source).value.trim(),
       enabled: document.getElementById('calEnabled_' + source).checked
     });
@@ -179,7 +159,7 @@ async function deleteCalPlatform(source) {
   const p = calState.platforms.find(x => x.source === source);
   if (!confirm(`Удалить площадку «${p ? p.name : source}»? Блокировки дат, пришедшие из её календаря, будут сняты, а ссылка на наш календарь перестанет работать.`)) return;
   try {
-    const d = await calRequest('DELETE', '/api/admin/integrations/calendars/' + encodeURIComponent(source));
+    const d = await apiRequest('DELETE', '/api/admin/integrations/calendars/' + encodeURIComponent(source));
     calState = d;
     renderCalendars();
     showToast(`Площадка удалена (снято блокировок: ${d.removed_blocks || 0})`, 'gold');

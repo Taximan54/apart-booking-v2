@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Панель управления — Городская Пауза</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Montserrat:wght@300;400;500;600&family=PT+Serif:wght@400;700&family=IM+Fell+English&family=Yeseva+One&family=Marck+Script&family=Pacifico&family=Poiret+One&family=Great+Vibes&family=Bad+Script&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/static/admin.css?v=20261009a">
+<link rel="stylesheet" href="/static/admin.css?v=20261010a">
 </head>
 <body>
 
@@ -31,6 +31,10 @@
   <div class="sb-logo">
     <div class="sb-logo-text" style="font-size:17px;letter-spacing:.15em">Городская Пауза</div>
     <div class="sb-logo-sub">Панель управления</div>
+  </div>
+  <div id="sbPropertyBox" style="display:none;padding:12px 16px 14px;border-bottom:1px solid var(--black-border)">
+    <div style="font-size:9px;letter-spacing:.25em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px">Объект</div>
+    <select class="info-input" id="propertySwitch" onchange="switchProperty(this.value)" style="width:100%"></select>
   </div>
   <nav class="sb-nav">
     <div class="sb-section">
@@ -72,6 +76,7 @@
     <div class="sb-section">
       <div class="sb-section-label">Система</div>
       <a class="sb-item" onclick="showPanel('settings',this)"><span class="sb-icon">⊛</span>Настройки</a>
+      <a class="sb-item" id="sbProperties" onclick="showPanel('properties',this)"><span class="sb-icon">⌂</span>Объекты</a>
       <a class="sb-item" id="sbIntegrations" onclick="showPanel('integrations',this)"><span class="sb-icon">⇄</span>Интеграции</a>
       <a class="sb-item" onclick="logout()"><span class="sb-icon">⏻</span>Выйти</a>
     </div>
@@ -1342,6 +1347,28 @@
     </div>
 
   </div>
+    <!-- PROPERTIES -->
+    <div class="panel" id="panel-properties">
+      <div class="card" style="max-width:900px;margin-bottom:24px">
+        <div class="card-header"><span class="card-title">Объекты (квартиры)</span></div>
+        <div class="card-body">
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:20px;padding:12px 16px;background:rgba(201,168,76,.04);border:1px solid rgba(201,168,76,.1);line-height:1.7">
+            Каждый объект имеет свои цены, фото, описание, акции, места, правила, код замка, брони и блокировки дат. Название бренда, домен, контакты и оплата общие для всех объектов.<br>
+            Выбрать объект, с которым вы работаете, можно в левом меню над разделами (список появляется, когда объектов больше одного). Основной объект удалить или отключить нельзя.
+          </div>
+          <div id="propList"></div>
+          <div style="border-top:1px solid var(--black-border);margin:24px 0 20px"></div>
+          <div class="info-label" style="margin-bottom:10px">Добавить объект</div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <input type="text" class="info-input" id="propNewName" maxlength="80" placeholder="Название (например, Студия на Мира)" style="flex:2;min-width:220px">
+            <input type="text" class="info-input" id="propNewAddress" maxlength="200" placeholder="Адрес (для договора)" style="flex:2;min-width:220px">
+            <input type="text" class="info-input" id="propNewSlug" maxlength="40" placeholder="Адрес страницы (латиница), необязательно" style="flex:2;min-width:220px">
+            <button class="btn btn-primary" onclick="addProperty()">Добавить</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- INTEGRATIONS -->
     <div class="panel" id="panel-integrations">
       <div class="card" style="max-width:900px;margin-bottom:24px">
@@ -1393,14 +1420,15 @@
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
-<script src="/static/admin-js/core.js?v=20261009a"></script>
-<script src="/static/admin-js/prices-promo.js?v=20261009a"></script>
-<script src="/static/admin-js/bookings-dashboard.js?v=20261009a"></script>
-<script src="/static/admin-js/ui-contract.js?v=20261009a"></script>
-<script src="/static/admin-js/archive-photos.js?v=20261009a"></script>
-<script src="/static/admin-js/content.js?v=20261009a"></script>
-<script src="/static/admin-js/site-settings.js?v=20261009a"></script>
-<script src="/static/admin-js/integrations.js?v=20261009a"></script>
-<script src="/static/admin-js/init.js?v=20261009a"></script>
+<script src="/static/admin-js/core.js?v=20261010a"></script>
+<script src="/static/admin-js/prices-promo.js?v=20261010a"></script>
+<script src="/static/admin-js/bookings-dashboard.js?v=20261010a"></script>
+<script src="/static/admin-js/ui-contract.js?v=20261010a"></script>
+<script src="/static/admin-js/archive-photos.js?v=20261010a"></script>
+<script src="/static/admin-js/content.js?v=20261010a"></script>
+<script src="/static/admin-js/site-settings.js?v=20261010a"></script>
+<script src="/static/admin-js/properties.js?v=20261010a"></script>
+<script src="/static/admin-js/integrations.js?v=20261010a"></script>
+<script src="/static/admin-js/init.js?v=20261010a"></script>
 </body>
 </html>

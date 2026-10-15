@@ -56,6 +56,19 @@ class Contacts(BaseModel):
     whatsapp: str = ""
     max: str = ""
 
+class PropertyCreate(BaseModel):
+    name: str
+    address: str = ""
+    slug: str = ""         # адрес страницы объекта (латиница); если пусто — создаётся автоматически
+
+
+class PropertyUpdate(BaseModel):
+    name: Optional[str] = None
+    address: Optional[str] = None
+    active: Optional[bool] = None
+    slug: Optional[str] = None
+
+
 class CalendarPlatformCreate(BaseModel):
     name: str              # название площадки (Авито, Яндекс Путешествия, Суточно.ру или своё)
     source: str = ""       # короткий код площадки (латиница); если пусто — создаётся автоматически

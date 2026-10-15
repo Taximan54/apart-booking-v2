@@ -30,6 +30,7 @@ from core.db import booking_ref_alt, find_booking_row, get_db
 from core.models import ContractTemplate, CheckinMemo
 from core.passports import load_passport_map
 from core.runtime import now_nsk
+from core.properties import admin_property_id, property_file
 
 router = APIRouter()
 
@@ -55,28 +56,28 @@ async def set_contract_template(c: ContractTemplate, _: bool = Depends(require_a
     return {"ok": True}
 
 @router.get("/api/checkin-memo")
-async def get_checkin_memo():
-    if os.path.exists(CHECKIN_FILE):
-        with open(CHECKIN_FILE, "r", encoding="utf-8") as f:
+async def get_checkin_memo(property_id: int = Depends(admin_property_id)):
+    if os.path.exists(property_file(CHECKIN_FILE, property_id)):
+        with open(property_file(CHECKIN_FILE, property_id), "r", encoding="utf-8") as f:
             return PlainTextResponse(f.read())
     return PlainTextResponse(DEFAULT_CHECKIN_MEMO)
 
 @router.post("/api/checkin-memo")
-async def set_checkin_memo(c: CheckinMemo, _: bool = Depends(require_admin)):
-    with open(CHECKIN_FILE, "w", encoding="utf-8") as f:
+async def set_checkin_memo(c: CheckinMemo, _: bool = Depends(require_admin), property_id: int = Depends(admin_property_id)):
+    with open(property_file(CHECKIN_FILE, property_id), "w", encoding="utf-8") as f:
         f.write(c.text)
     return {"ok": True}
 
 @router.get("/api/checkout-checklist")
-async def get_checkout_checklist():
-    if os.path.exists(CHECKOUT_FILE):
-        with open(CHECKOUT_FILE, "r", encoding="utf-8") as f:
+async def get_checkout_checklist(property_id: int = Depends(admin_property_id)):
+    if os.path.exists(property_file(CHECKOUT_FILE, property_id)):
+        with open(property_file(CHECKOUT_FILE, property_id), "r", encoding="utf-8") as f:
             return PlainTextResponse(f.read())
     return PlainTextResponse(DEFAULT_CHECKOUT_CHECKLIST)
 
 @router.post("/api/checkout-checklist")
-async def set_checkout_checklist(c: CheckinMemo, _: bool = Depends(require_admin)):
-    with open(CHECKOUT_FILE, "w", encoding="utf-8") as f:
+async def set_checkout_checklist(c: CheckinMemo, _: bool = Depends(require_admin), property_id: int = Depends(admin_property_id)):
+    with open(property_file(CHECKOUT_FILE, property_id), "w", encoding="utf-8") as f:
         f.write(c.text)
     return {"ok": True}
 
@@ -200,7 +201,7 @@ class ContractPreviewRequest(BaseModel):
     text: str
 
 @router.post("/api/admin/contract-preview")
-async def contract_preview(body: ContractPreviewRequest, _: bool = Depends(require_admin)):
+async def contract_preview(body: ContractPreviewRequest, _: bool = Depends(require_admin), property_id: int = Depends(admin_property_id)):
     """
     Генерирует PDF-предпросмотр ТЕКУЩЕГО текста в редакторе шаблона (даже
     ещё не сохранённого) с фиктивными тестовыми данными вместо реальной
@@ -217,7 +218,7 @@ async def contract_preview(body: ContractPreviewRequest, _: bool = Depends(requi
         "guests_count":   2,
         "total_price":    33725,
         "discount_percent": 0,
-        "deposit":        get_default_deposit(),
+        "deposit":        get_default_deposit(property_id),
         "username":       "PREVIEW",
     }
     filled_text = fill_contract(body.text, _contract_placeholders(dummy_booking))

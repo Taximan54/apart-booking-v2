@@ -24,6 +24,8 @@ from core.signing import (
     generate_signed_consent_pdf,
     get_landlord_phone,
 )
+from core.properties import property_file
+from services.booking_service import DEFAULT_PROPERTY_ID
 
 logger = get_logger(__name__)
 
@@ -176,10 +178,11 @@ def email_complete_data_request(booking):
     """
     send_email(guest_email, f"Бронирование подтверждено — {booking_ref}", html)
 
-def load_checkin_memo(door_code=""):
+def load_checkin_memo(door_code="", property_id=DEFAULT_PROPERTY_ID):
     """Загружает памятку гостю, подставляет код замка и телефон хозяина из раздела «Контакты»."""
-    if os.path.exists(CHECKIN_FILE):
-        with open(CHECKIN_FILE, "r", encoding="utf-8") as f:
+    checkin_file = property_file(CHECKIN_FILE, property_id)
+    if os.path.exists(checkin_file):
+        with open(checkin_file, "r", encoding="utf-8") as f:
             text = f.read()
     else:
         text = DEFAULT_CHECKIN_MEMO
@@ -187,10 +190,11 @@ def load_checkin_memo(door_code=""):
             .replace("{{КОД_ЗАМКА}}", str(door_code))
             .replace("{{ТЕЛЕФОН_ХОЗЯИНА}}", get_landlord_phone()))
 
-def load_checkout_checklist():
+def load_checkout_checklist(property_id=DEFAULT_PROPERTY_ID):
     """Загружает чек-лист выезда."""
-    if os.path.exists(CHECKOUT_FILE):
-        with open(CHECKOUT_FILE, "r", encoding="utf-8") as f:
+    checkout_file = property_file(CHECKOUT_FILE, property_id)
+    if os.path.exists(checkout_file):
+        with open(checkout_file, "r", encoding="utf-8") as f:
             return f.read()
     return DEFAULT_CHECKOUT_CHECKLIST
 
@@ -203,9 +207,9 @@ def load_review_template(promo_code="", discount_percent=10):
         text = DEFAULT_REVIEW_TEMPLATE
     return text.replace("{{ПРОМОКОД}}", promo_code).replace("{{ПРОЦЕНТ_СКИДКИ}}", str(discount_percent))
 
-def email_checkin_memo(guest_name, guest_email, booking_ref, check_in, door_code):
+def email_checkin_memo(guest_name, guest_email, booking_ref, check_in, door_code, property_id=DEFAULT_PROPERTY_ID):
     """Письмо гостю — полная оплата получена, памятка с кодом замка."""
-    memo_text = load_checkin_memo(door_code)
+    memo_text = load_checkin_memo(door_code, property_id)
     html = (
         "<div style='font-family:Arial,sans-serif;max-width:600px;margin:0 auto;"
         "background:#0A0A0A;color:#F0E6C8;padding:40px'>"
@@ -232,9 +236,9 @@ def email_checkin_memo(guest_name, guest_email, booking_ref, check_in, door_code
                "\u041f\u0430\u043c\u044f\u0442\u043a\u0430 \u0433\u043e\u0441\u0442\u044e \u2014 " + booking_ref,
                html)
 
-def email_checkout_checklist(guest_name, guest_email, booking_ref, check_out):
+def email_checkout_checklist(guest_name, guest_email, booking_ref, check_out, property_id=DEFAULT_PROPERTY_ID):
     """Письмо гостю — чек-лист перед выездом."""
-    checklist_text = load_checkout_checklist()
+    checklist_text = load_checkout_checklist(property_id)
     html = (
         "<div style='font-family:Arial,sans-serif;max-width:600px;margin:0 auto;"
         "background:#0A0A0A;color:#F0E6C8;padding:40px'>"

@@ -41,12 +41,25 @@ def _write(sql: str, params: tuple) -> int:
 # Чтение
 # ---------------------------------------------------------------------------
 
-def list_bookings() -> list:
-    """Все брони, новые заезды сверху."""
+def list_bookings(property_id=None) -> list:
+    """Брони, новые заезды сверху. С property_id — только брони этого объекта (старые записи без объекта считаются объектом 1)."""
     conn = get_db()
     try:
-        rows = conn.execute("SELECT * FROM bookings ORDER BY check_in DESC").fetchall()
+        if property_id is None:
+            rows = conn.execute("SELECT * FROM bookings ORDER BY check_in DESC").fetchall()
+        else:
+            rows = conn.execute("SELECT * FROM bookings WHERE COALESCE(property_id, 1) = ? ORDER BY check_in DESC",
+                                (property_id,)).fetchall()
         return [dict(r) for r in rows]
+    finally:
+        conn.close()
+
+
+def count_bookings(property_id) -> int:
+    """Сколько броней (любых, включая отменённые и блокировки) у объекта."""
+    conn = get_db()
+    try:
+        return conn.execute("SELECT COUNT(*) FROM bookings WHERE COALESCE(property_id, 1) = ?", (property_id,)).fetchone()[0]
     finally:
         conn.close()
 

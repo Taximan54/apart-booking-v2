@@ -328,7 +328,7 @@ function toggleCode() {
 // TIMEZONE
 async function loadTimezone() {
   try {
-    const s = await apiGet('/api/site-settings');
+    const s = await apiGet('/api/site-settings', {'X-Property-Id': '1'});
     document.getElementById('timezoneOffset').value = String(s.timezone_offset ?? 7);
     document.getElementById('notifyChecklistTime').value = s.notify_checklist_time || '10:00';
     document.getElementById('notifyReviewTime').value = s.notify_review_time || '14:00';
@@ -342,14 +342,14 @@ async function saveTimezone() {
   const reviewTime = document.getElementById('notifyReviewTime').value || '14:00';
   const ownerTime = document.getElementById('notifyOwnerTime').value || '09:00';
   try {
-    const current = await apiGet('/api/site-settings');
+    const current = await apiGet('/api/site-settings', {'X-Property-Id': '1'});
     await apiPost('/api/site-settings', {
       ...current,
       timezone_offset: offset,
       notify_checklist_time: checklistTime,
       notify_review_time: reviewTime,
       notify_owner_time: ownerTime,
-    });
+    }, {'X-Property-Id': '1'});
     showToast('Часовой пояс и расписание сохранены', 'gold');
   } catch(e) {
     showToast('Ошибка сохранения', 'err');

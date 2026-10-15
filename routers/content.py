@@ -45,6 +45,8 @@ from core.models import (
 from core.runtime import now_nsk
 from handlers.admin import load_door_code
 from core.logger import get_logger
+from core.properties import admin_property_id, property_file, request_property_id
+from services.booking_service import DEFAULT_PROPERTY_ID
 
 logger = get_logger(__name__)
 
@@ -56,46 +58,46 @@ router = APIRouter()
 # =====================================================
 
 @router.get("/api/reviews")
-async def get_reviews():
+async def get_reviews(property_id: int = Depends(request_property_id)):
     """Публичный эндпоинт — возвращает только видимые отзывы."""
-    if os.path.exists(REVIEWS_FILE):
-        with open(REVIEWS_FILE, "r", encoding="utf-8") as f:
+    if os.path.exists(property_file(REVIEWS_FILE, property_id)):
+        with open(property_file(REVIEWS_FILE, property_id), "r", encoding="utf-8") as f:
             data = json.load(f)
             reviews = data if isinstance(data, list) else [data]
         return [r for r in reviews if r.get("visible", True)]
     return []
 
 @router.get("/api/reviews/all")
-async def get_all_reviews(_: bool = Depends(require_admin)):
+async def get_all_reviews(_: bool = Depends(require_admin), property_id: int = Depends(admin_property_id)):
     """Админский эндпоинт — возвращает все отзывы включая скрытые."""
-    if os.path.exists(REVIEWS_FILE):
-        with open(REVIEWS_FILE, "r", encoding="utf-8") as f:
+    if os.path.exists(property_file(REVIEWS_FILE, property_id)):
+        with open(property_file(REVIEWS_FILE, property_id), "r", encoding="utf-8") as f:
             data = json.load(f)
             return data if isinstance(data, list) else [data]
     return []
 
 @router.post("/api/reviews")
-async def add_review(r: Review, _: bool = Depends(require_admin)):
+async def add_review(r: Review, _: bool = Depends(require_admin), property_id: int = Depends(admin_property_id)):
     """Добавить отзыв."""
     reviews = []
-    if os.path.exists(REVIEWS_FILE):
-        with open(REVIEWS_FILE, "r", encoding="utf-8") as f:
+    if os.path.exists(property_file(REVIEWS_FILE, property_id)):
+        with open(property_file(REVIEWS_FILE, property_id), "r", encoding="utf-8") as f:
             data = json.load(f)
             reviews = data if isinstance(data, list) else [data]
     new_id = secrets.token_hex(6)
     review_dict = r.dict()
     review_dict["id"] = new_id
     reviews.append(review_dict)
-    with open(REVIEWS_FILE, "w", encoding="utf-8") as f:
+    with open(property_file(REVIEWS_FILE, property_id), "w", encoding="utf-8") as f:
         json.dump(reviews, f, ensure_ascii=False, indent=2)
     return {"ok": True, "id": new_id}
 
 @router.put("/api/reviews/{review_id}")
-async def update_review(review_id: str, r: Review, _: bool = Depends(require_admin)):
+async def update_review(review_id: str, r: Review, _: bool = Depends(require_admin), property_id: int = Depends(admin_property_id)):
     """Обновить или скрыть/показать отзыв."""
-    if not os.path.exists(REVIEWS_FILE):
+    if not os.path.exists(property_file(REVIEWS_FILE, property_id)):
         raise HTTPException(status_code=404, detail="Нет отзывов")
-    with open(REVIEWS_FILE, "r", encoding="utf-8") as f:
+    with open(property_file(REVIEWS_FILE, property_id), "r", encoding="utf-8") as f:
         data = json.load(f)
         reviews = data if isinstance(data, list) else [data]
     for i, rv in enumerate(reviews):
@@ -104,20 +106,20 @@ async def update_review(review_id: str, r: Review, _: bool = Depends(require_adm
             break
     else:
         raise HTTPException(status_code=404, detail="Отзыв не найден")
-    with open(REVIEWS_FILE, "w", encoding="utf-8") as f:
+    with open(property_file(REVIEWS_FILE, property_id), "w", encoding="utf-8") as f:
         json.dump(reviews, f, ensure_ascii=False, indent=2)
     return {"ok": True}
 
 @router.delete("/api/reviews/{review_id}")
-async def delete_review(review_id: str, _: bool = Depends(require_admin)):
+async def delete_review(review_id: str, _: bool = Depends(require_admin), property_id: int = Depends(admin_property_id)):
     """Удалить отзыв."""
-    if not os.path.exists(REVIEWS_FILE):
+    if not os.path.exists(property_file(REVIEWS_FILE, property_id)):
         raise HTTPException(status_code=404, detail="Нет отзывов")
-    with open(REVIEWS_FILE, "r", encoding="utf-8") as f:
+    with open(property_file(REVIEWS_FILE, property_id), "r", encoding="utf-8") as f:
         data = json.load(f)
         reviews = data if isinstance(data, list) else [data]
     reviews = [r for r in reviews if r.get("id") != review_id]
-    with open(REVIEWS_FILE, "w", encoding="utf-8") as f:
+    with open(property_file(REVIEWS_FILE, property_id), "w", encoding="utf-8") as f:
         json.dump(reviews, f, ensure_ascii=False, indent=2)
     return {"ok": True}
 
@@ -137,25 +139,25 @@ DEFAULT_HOUSE_RULES = """ПРАВИЛА ПРОЖИВАНИЯ
 8. При выезде квартира сдаётся в чистом виде."""
 
 @router.get("/api/house-rules")
-async def get_house_rules():
-    if os.path.exists(HOUSE_RULES_FILE):
-        with open(HOUSE_RULES_FILE, "r", encoding="utf-8") as f:
+async def get_house_rules(property_id: int = Depends(request_property_id)):
+    if os.path.exists(property_file(HOUSE_RULES_FILE, property_id)):
+        with open(property_file(HOUSE_RULES_FILE, property_id), "r", encoding="utf-8") as f:
             return f.read()
     return DEFAULT_HOUSE_RULES
 
 @router.post("/api/house-rules")
-async def set_house_rules(r: HouseRulesText, _: bool = Depends(require_admin)):
-    with open(HOUSE_RULES_FILE, "w", encoding="utf-8") as f:
+async def set_house_rules(r: HouseRulesText, _: bool = Depends(require_admin), property_id: int = Depends(admin_property_id)):
+    with open(property_file(HOUSE_RULES_FILE, property_id), "w", encoding="utf-8") as f:
         f.write(r.text)
     return {"ok": True}
 
 @router.get("/api/site-settings")
-async def get_site_settings():
-    return get_site_settings_dict()
+async def get_site_settings(property_id: int = Depends(request_property_id)):
+    return get_site_settings_dict(property_id)
 
 @router.post("/api/site-settings")
-async def set_site_settings(s: SiteSettings, _: bool = Depends(require_admin)):
-    with open(SETTINGS_FILE, "w", encoding="utf-8") as f:
+async def set_site_settings(s: SiteSettings, _: bool = Depends(require_admin), property_id: int = Depends(admin_property_id)):
+    with open(property_file(SETTINGS_FILE, property_id), "w", encoding="utf-8") as f:
         json.dump(s.dict(), f, ensure_ascii=False)
     return {"ok": True}
 
@@ -186,86 +188,86 @@ async def backup_now(_: bool = Depends(require_admin)):
         logger.error("Ручная копия %s создана без пароля и не отправлена", os.path.basename(zip_path))
     return {"ok": True, "started": encrypted, "encrypted": encrypted, "filename": os.path.basename(zip_path)}
 
-def save_places(places):
-    with open(PLACES_FILE, "w", encoding="utf-8") as f:
+def save_places(places, property_id: int = DEFAULT_PROPERTY_ID):
+    with open(property_file(PLACES_FILE, property_id), "w", encoding="utf-8") as f:
         json.dump(places, f, ensure_ascii=False, indent=2)
 
 @router.get("/api/places")
-async def get_places():
+async def get_places(property_id: int = Depends(request_property_id)):
     """Публичный — только видимые места."""
-    return [p for p in load_places() if p.get("visible", True)]
+    return [p for p in load_places(property_id) if p.get("visible", True)]
 
 @router.get("/api/places/all")
-async def get_all_places(_: bool = Depends(require_admin)):
-    return load_places()
+async def get_all_places(_: bool = Depends(require_admin), property_id: int = Depends(admin_property_id)):
+    return load_places(property_id)
 
 @router.post("/api/places")
-async def add_place(p: Place, _: bool = Depends(require_admin)):
-    places = load_places()
+async def add_place(p: Place, _: bool = Depends(require_admin), property_id: int = Depends(admin_property_id)):
+    places = load_places(property_id)
     if len(places) >= 10:
         raise HTTPException(status_code=400, detail="Максимум 10 мест")
     d = p.dict()
     d["id"] = secrets.token_hex(6)
     places.append(d)
-    save_places(places)
+    save_places(places, property_id)
     return {"ok": True, "id": d["id"]}
 
 @router.put("/api/places/{place_id}")
-async def update_place(place_id: str, p: Place, _: bool = Depends(require_admin)):
-    places = load_places()
+async def update_place(place_id: str, p: Place, _: bool = Depends(require_admin), property_id: int = Depends(admin_property_id)):
+    places = load_places(property_id)
     for i, pl in enumerate(places):
         if pl.get("id") == place_id:
             places[i] = {**p.dict(), "id": place_id}
-            save_places(places)
+            save_places(places, property_id)
             return {"ok": True}
     raise HTTPException(status_code=404, detail="Место не найдено")
 
 @router.delete("/api/places/{place_id}")
-async def delete_place(place_id: str, _: bool = Depends(require_admin)):
-    places = load_places()
+async def delete_place(place_id: str, _: bool = Depends(require_admin), property_id: int = Depends(admin_property_id)):
+    places = load_places(property_id)
     places = [p for p in places if p.get("id") != place_id]
-    save_places(places)
+    save_places(places, property_id)
     return {"ok": True}
 
-def save_discounts(discounts):
-    with open(DISCOUNTS_FILE, "w", encoding="utf-8") as f:
+def save_discounts(discounts, property_id: int = DEFAULT_PROPERTY_ID):
+    with open(property_file(DISCOUNTS_FILE, property_id), "w", encoding="utf-8") as f:
         json.dump(discounts, f, ensure_ascii=False, indent=2)
 
 @router.get("/api/discounts")
-async def get_discounts():
+async def get_discounts(property_id: int = Depends(request_property_id)):
     """Публичный — только видимые акции/скидки."""
-    return [d for d in load_discounts() if d.get("visible", True)]
+    return [d for d in load_discounts(property_id) if d.get("visible", True)]
 
 @router.get("/api/discounts/all")
-async def get_all_discounts(_: bool = Depends(require_admin)):
-    return load_discounts()
+async def get_all_discounts(_: bool = Depends(require_admin), property_id: int = Depends(admin_property_id)):
+    return load_discounts(property_id)
 
 @router.post("/api/discounts")
-async def add_discount(d: Discount, _: bool = Depends(require_admin)):
-    discounts = load_discounts()
+async def add_discount(d: Discount, _: bool = Depends(require_admin), property_id: int = Depends(admin_property_id)):
+    discounts = load_discounts(property_id)
     if len(discounts) >= 10:
         raise HTTPException(status_code=400, detail="Максимум 10 акций")
     row = d.dict()
     row["id"] = secrets.token_hex(6)
     discounts.append(row)
-    save_discounts(discounts)
+    save_discounts(discounts, property_id)
     return {"ok": True, "id": row["id"]}
 
 @router.put("/api/discounts/{discount_id}")
-async def update_discount(discount_id: str, d: Discount, _: bool = Depends(require_admin)):
-    discounts = load_discounts()
+async def update_discount(discount_id: str, d: Discount, _: bool = Depends(require_admin), property_id: int = Depends(admin_property_id)):
+    discounts = load_discounts(property_id)
     for i, row in enumerate(discounts):
         if row.get("id") == discount_id:
             discounts[i] = {**d.dict(), "id": discount_id}
-            save_discounts(discounts)
+            save_discounts(discounts, property_id)
             return {"ok": True}
     raise HTTPException(status_code=404, detail="Акция не найдена")
 
 @router.delete("/api/discounts/{discount_id}")
-async def delete_discount(discount_id: str, _: bool = Depends(require_admin)):
-    discounts = load_discounts()
+async def delete_discount(discount_id: str, _: bool = Depends(require_admin), property_id: int = Depends(admin_property_id)):
+    discounts = load_discounts(property_id)
     discounts = [d for d in discounts if d.get("id") != discount_id]
-    save_discounts(discounts)
+    save_discounts(discounts, property_id)
     return {"ok": True}
 
 @router.get("/api/contacts")
@@ -361,15 +363,15 @@ async def get_payment_qr():
 # =====================================================
 
 @router.get("/api/door-code")
-async def get_door_code(_: bool = Depends(require_admin)):
-    if os.path.exists(CODE_FILE):
-        with open(CODE_FILE, "r") as f:
+async def get_door_code(_: bool = Depends(require_admin), property_id: int = Depends(admin_property_id)):
+    if os.path.exists(property_file(CODE_FILE, property_id)):
+        with open(property_file(CODE_FILE, property_id), "r") as f:
             return json.load(f)
     return {"code": load_door_code()}
 
 @router.post("/api/door-code")
-async def set_door_code(d: DoorCode, _: bool = Depends(require_admin)):
-    with open(CODE_FILE, "w") as f:
+async def set_door_code(d: DoorCode, _: bool = Depends(require_admin), property_id: int = Depends(admin_property_id)):
+    with open(property_file(CODE_FILE, property_id), "w") as f:
         json.dump({"code": d.code}, f)
     return {"ok": True}
 
@@ -378,14 +380,14 @@ async def set_door_code(d: DoorCode, _: bool = Depends(require_admin)):
 # =====================================================
 
 @router.get("/api/description")
-async def get_description():
-    if os.path.exists(DESC_FILE):
-        with open(DESC_FILE, "r") as f:
+async def get_description(property_id: int = Depends(request_property_id)):
+    if os.path.exists(property_file(DESC_FILE, property_id)):
+        with open(property_file(DESC_FILE, property_id), "r") as f:
             return PlainTextResponse(f.read())
     return PlainTextResponse("")
 
 @router.post("/api/description")
-async def set_description(d: Description, _: bool = Depends(require_admin)):
-    with open(DESC_FILE, "w") as f:
+async def set_description(d: Description, _: bool = Depends(require_admin), property_id: int = Depends(admin_property_id)):
+    with open(property_file(DESC_FILE, property_id), "w") as f:
         f.write(d.text)
     return {"ok": True}

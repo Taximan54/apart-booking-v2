@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends
 from core.auth import require_admin
 from core.constants import PRICE_FILE, DEFAULT_PRICES, PROMO_FILE
 from core.models import Prices, PromoCodes, PromoValidate
+from core.properties import admin_property_id, property_file, request_property_id
 
 router = APIRouter()
 
@@ -15,16 +16,16 @@ router = APIRouter()
 # =====================================================
 
 @router.get("/api/prices")
-async def get_prices():
-    if os.path.exists(PRICE_FILE):
-        with open(PRICE_FILE, "r") as f:
+async def get_prices(property_id: int = Depends(request_property_id)):
+    if os.path.exists(property_file(PRICE_FILE, property_id)):
+        with open(property_file(PRICE_FILE, property_id), "r") as f:
             saved = json.load(f)
         return {**DEFAULT_PRICES, **saved}
     return DEFAULT_PRICES
 
 @router.post("/api/prices")
-async def set_prices(p: Prices, _: bool = Depends(require_admin)):
-    with open(PRICE_FILE, "w") as f:
+async def set_prices(p: Prices, _: bool = Depends(require_admin), property_id: int = Depends(admin_property_id)):
+    with open(property_file(PRICE_FILE, property_id), "w") as f:
         json.dump(p.dict(), f, ensure_ascii=False)
     return {"ok": True}
 

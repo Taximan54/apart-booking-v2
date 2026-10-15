@@ -26,6 +26,7 @@ from core.emails import (
 )
 from services.booking_service import get_bookings_checkout_today, get_bookings_checkout_yesterday
 from core.logger import get_logger
+from core.properties import list_properties
 
 logger = get_logger(__name__)
 
@@ -33,6 +34,15 @@ logger = get_logger(__name__)
 # =====================================================
 # SCHEDULER
 # =====================================================
+
+def _for_all_properties(fetch):
+    """Брони из всех действующих объектов: fetch(property_id) вызывается для каждого объекта."""
+    result = []
+    for prop in list_properties():
+        if prop["active"]:
+            result.extend(fetch(prop["id"]))
+    return result
+
 
 async def send_notifications():
     while True:
@@ -58,7 +68,7 @@ async def send_notifications():
             # спланировать уборку/горничную. Отправляется один раз в день.
             today_str = now.strftime("%Y-%m-%d")
             if hour == owner_hour and minute < 30 and get_last_owner_notify_date() != today_str:
-                checkouts_today = get_bookings_checkout_today()
+                checkouts_today = _for_all_properties(get_bookings_checkout_today)
                 if checkouts_today:
                     properties_map = {p["id"]: p["name"] for p in load_properties()}
                     lines = [f"\U0001f9f9 \u0421\u0435\u0433\u043e\u0434\u043d\u044f \u0432\u044b\u0435\u0437\u0436\u0430\u044e\u0442 ({len(checkouts_today)}):"]
@@ -97,7 +107,7 @@ async def send_notifications():
 
             # Чек-лист гостям кто выезжает сегодня (время настраивается в админке)
             if hour == checklist_hour and minute < 30:
-                bookings = get_bookings_checkout_today()
+                bookings = _for_all_properties(get_bookings_checkout_today)
                 for b in bookings:
                     # Email — главный канал
                     if b.get("guest_email") and not b.get("checklist_sent"):
@@ -106,7 +116,8 @@ async def send_notifications():
                             b.get("guest_name",""),
                             b["guest_email"],
                             b.get("username") or b.get("id",""),
-                            b.get("check_out","")
+                            b.get("check_out",""),
+                            b.get("property_id") or 1
                         )).start()
                         mark_checklist_sent(b.get("id"), b.get("username"))
                     # Telegram — best-effort
@@ -126,7 +137,7 @@ async def send_notifications():
 
             # Отзыв + промокод гостям кто выехал вчера (время настраивается в админке)
             if hour == review_hour and minute < 30:
-                bookings = get_bookings_checkout_yesterday()
+                bookings = _for_all_properties(get_bookings_checkout_yesterday)
                 for b in bookings:
                     if b.get("guest_email") and not b.get("review_sent"):
                         # Генерируем персональный промокод для возврата гостя
