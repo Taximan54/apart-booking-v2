@@ -22,6 +22,7 @@ function showPanel(id, el) {
   const titles = {properties:'Объекты',integrations:'Интеграции',dashboard:'Дашборд',bookings:'Все брони',manualbooking:'Ручная бронь (внешние площадки)',calendar:'Управление календарём',prices:'Цены',promo:'Промокоды',settings:'Настройки',contract:'Договор',contracts:'Архив договоров',checkin:'Памятка гостю',checkout:'Чек-лист выезда',houserules:'Правила проживания',sitesettings:'Настройки сайта',reviews:'Отзывы',places:'Куда сходить',discounts:'Скидки и акции',contacts:'Контакты',photos:'Фото и медиа'};
   document.getElementById('topbarTitle').textContent = titles[id]||id;
   if(id==='settings') { loadTimezone(); loadNotif(); loadLandlord(); }
+  if(id==='promo') { loadReviewPromo(); }
   if(id==='properties') { loadProperties(); }
   if(id==='integrations') { loadIntegrations(); }
   if(id==='manualbooking') { loadManualSources(); }

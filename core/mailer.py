@@ -17,7 +17,7 @@ logger = get_logger(__name__)
 MAIL_FROM     = os.getenv("MAIL_FROM", "citypause@mail.ru")
 MAIL_PASSWORD = os.getenv("MAIL_PASSWORD", "")
 
-def send_email(to, subject, html_body, attachments=None):
+def send_email(to, subject, html_body, attachments=None, text_body=None):
     """
     attachments: список словарей. Поддерживаются два варианта:
       - {"filename": "dogovor_123.txt", "content": "...текст..."} — текстовое вложение (UTF-8)
@@ -36,6 +36,9 @@ def send_email(to, subject, html_body, attachments=None):
         msg["MIME-Version"] = "1.0"
 
         body_part = MIMEMultipart("alternative")
+        if text_body:
+            # обычный текст идёт первым, html вторым (так принято для писем в двух видах)
+            body_part.attach(MIMEText(text_body, "plain", "utf-8"))
         body_part.attach(MIMEText(html_body, "html", "utf-8"))
         msg.attach(body_part)
 

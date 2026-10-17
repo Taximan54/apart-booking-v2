@@ -11,8 +11,6 @@ from core.constants import (
     DEFAULT_CHECKIN_MEMO,
     CHECKOUT_FILE,
     DEFAULT_CHECKOUT_CHECKLIST,
-    REVIEW_FILE,
-    DEFAULT_REVIEW_TEMPLATE,
     MAIL_ADMIN,
 )
 from core.contract_docs import generate_contract, save_contract, generate_contract_pdf
@@ -26,6 +24,7 @@ from core.signing import (
 )
 from core.properties import property_file
 from services.booking_service import DEFAULT_PROPERTY_ID
+from core.review_promo import build_review_email
 
 logger = get_logger(__name__)
 
@@ -198,15 +197,6 @@ def load_checkout_checklist(property_id=DEFAULT_PROPERTY_ID):
             return f.read()
     return DEFAULT_CHECKOUT_CHECKLIST
 
-def load_review_template(promo_code="", discount_percent=10):
-    """Загружает шаблон письма с просьбой об отзыве."""
-    if os.path.exists(REVIEW_FILE):
-        with open(REVIEW_FILE, "r", encoding="utf-8") as f:
-            text = f.read()
-    else:
-        text = DEFAULT_REVIEW_TEMPLATE
-    return text.replace("{{ПРОМОКОД}}", promo_code).replace("{{ПРОЦЕНТ_СКИДКИ}}", str(discount_percent))
-
 def email_checkin_memo(guest_name, guest_email, booking_ref, check_in, door_code, property_id=DEFAULT_PROPERTY_ID):
     """Письмо гостю — полная оплата получена, памятка с кодом замка."""
     memo_text = load_checkin_memo(door_code, property_id)
@@ -266,37 +256,9 @@ def email_checkout_checklist(guest_name, guest_email, booking_ref, check_out, pr
                html)
 
 def email_review_request(guest_name, guest_email, booking_ref, promo_code, discount_percent):
-    """Письмо гостю — просьба об отзыве + промокод на следующий заезд."""
-    review_text = load_review_template(promo_code, discount_percent)
-    html = (
-        "<div style='font-family:Arial,sans-serif;max-width:600px;margin:0 auto;"
-        "background:#0A0A0A;color:#F0E6C8;padding:40px'>"
-        "<div style='text-align:center;margin-bottom:32px'>"
-        "<div style='font-size:28px;letter-spacing:4px;color:#C9A84C'>"
-        "\u0413\u041e\u0420\u041e\u0414\u0421\u041a\u0410\u042f \u041f\u0410\u0423\u0417\u0410</div>"
-        "</div>"
-        "<div style='background:#141414;border:1px solid #1E1E1E;padding:32px;margin-bottom:24px'>"
-        "<div style='font-size:13px;color:#C9A84C;margin-bottom:16px'>"
-        "\u0421\u041f\u0410\u0421\u0418\u0411\u041e \u0417\u0410 \u0412\u0418\u0417\u0418\u0422!</div>"
-        "<pre style='font-size:13px;color:#F0E6C8;line-height:1.8;white-space:pre-wrap;"
-        "font-family:Arial,sans-serif'>" + review_text + "</pre>"
-        "<div style='margin-top:24px;padding:16px;background:rgba(201,168,76,.06);"
-        "border:1px solid rgba(201,168,76,.3);text-align:center'>"
-        "<div style='font-size:10px;color:#5A4A30;margin-bottom:8px'>\u0412\u0410\u0428 \u041f\u0420\u041e\u041c\u041e\u041a\u041e\u0414</div>"
-        "<div style='font-size:24px;color:#C9A84C;letter-spacing:4px'>" + promo_code + "</div>"
-        "<div style='font-size:11px;color:#A89060;margin-top:8px'>"
-        "\u0421\u043a\u0438\u0434\u043a\u0430 " + str(discount_percent) + "% \u043d\u0430 \u0441\u043b\u0435\u0434\u0443\u044e\u0449\u0435\u0435 \u0431\u0440\u043e\u043d\u0438\u0440\u043e\u0432\u0430\u043d\u0438\u0435</div>"
-        "</div>"
-        "</div>"
-        "<div style='text-align:center;margin-top:24px'>"
-        "<a href='" + site_url() + "' style='color:#C9A84C;font-size:13px;"
-        "letter-spacing:2px'>" + landlord_domain().upper() + "</a>"
-        "</div>"
-        "</div>"
-    )
-    send_email(guest_email,
-               "\u0421\u043f\u0430\u0441\u0438\u0431\u043e \u0437\u0430 \u0432\u0438\u0437\u0438\u0442 \u2014 \u043f\u043e\u0434\u0430\u0440\u043e\u043a \u0434\u043b\u044f \u0432\u0430\u0441",
-               html)
+    """Письмо гостю после выезда: просьба об отзыве и (если скидка больше 0) промокод. Обычное личное письмо."""
+    subject, html, text = build_review_email(guest_name, promo_code, discount_percent)
+    send_email(guest_email, subject, html, text_body=text)
 
 def email_owner_checkout_reminder(to_email, checkouts_today, properties_map):
     """Письмо владельцу — сводка выездов сегодня, для планирования уборки."""

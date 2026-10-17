@@ -56,6 +56,16 @@ class Contacts(BaseModel):
     whatsapp: str = ""
     max: str = ""
 
+class ReviewPromoUpdate(BaseModel):
+    percent: int           # размер скидки в промокоде после выезда (0 — письмо без промокода)
+    subject: str = ""      # тема письма (можно использовать {{ИМЯ}})
+    text: str              # текст письма
+
+
+class ReviewPromoTest(BaseModel):
+    email: str = ""        # куда отправить пробное письмо (пусто — на почту из «Контактов»)
+
+
 class PropertyCreate(BaseModel):
     name: str
     address: str = ""

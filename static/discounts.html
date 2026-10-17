@@ -34,8 +34,8 @@ footer a{color:var(--gold);text-decoration:none}
 <body>
 
 <header>
-  <a href="index.html" class="logo">Городская Пауза</a>
-  <a href="index.html" class="back">← На главную</a>
+  <a href="/" class="logo js-home">Городская Пауза</a>
+  <a href="/" class="back js-home">← На главную</a>
 </header>
 
 <div class="container">
@@ -46,14 +46,19 @@ footer a{color:var(--gold);text-decoration:none}
   </div>
 </div>
 
-<footer>© 2026 Городская Пауза · <a href="index.html">На главную</a></footer>
+<footer>© 2026 Городская Пауза · <a href="/" class="js-home">На главную</a></footer>
 
 <script>
 const API_BASE = 'https://citypause.ru';
+// Акции конкретного объекта: адрес страницы приходит в ?property=название (ссылка с /o/название)
+const PROPERTY_SLUG = new URLSearchParams(location.search).get('property') || '';
+if (PROPERTY_SLUG) {
+  document.querySelectorAll('.js-home').forEach(a => { a.href = '/o/' + encodeURIComponent(PROPERTY_SLUG); });
+}
 async function loadDiscounts() {
   const grid = document.getElementById('discountsGrid');
   try {
-    const r = await fetch(`${API_BASE}/api/discounts`);
+    const r = await fetch(`${API_BASE}/api/discounts` + (PROPERTY_SLUG ? '?property=' + encodeURIComponent(PROPERTY_SLUG) : ''));
     const items = await r.json();
     if (!items || items.length === 0) {
       grid.innerHTML = '<div class="empty">Сейчас действующих акций нет — загляните позже.</div>';

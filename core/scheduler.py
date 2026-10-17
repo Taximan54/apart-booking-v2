@@ -10,7 +10,6 @@ from core.backup import (
     send_backup_everywhere,
     set_last_backup_date,
 )
-from core.constants import PROMO_FILE
 from core.data_store import (
     get_site_settings_dict,
     get_last_owner_notify_date,
@@ -27,6 +26,7 @@ from core.emails import (
 from services.booking_service import get_bookings_checkout_today, get_bookings_checkout_yesterday
 from core.logger import get_logger
 from core.properties import list_properties
+from core.review_promo import get_review_settings, issue_promo_code
 
 logger = get_logger(__name__)
 
@@ -140,21 +140,16 @@ async def send_notifications():
                 bookings = _for_all_properties(get_bookings_checkout_yesterday)
                 for b in bookings:
                     if b.get("guest_email") and not b.get("review_sent"):
-                        # Генерируем персональный промокод для возврата гостя
+                        # Персональный промокод для возврата гостя: размер скидки задаётся в админке (0 — без промокода)
                         guest_ref = (b.get("username") or b.get("id") or "")
-                        promo_code = "RETURN" + str(guest_ref)[-4:].upper()
-                        discount_pct = 10
-                        # Сохраняем промокод в файл промокодов
-                        try:
-                            codes = {}
-                            if os.path.exists(PROMO_FILE):
-                                with open(PROMO_FILE, "r", encoding="utf-8") as pf:
-                                    codes = json.load(pf)
-                            codes[promo_code] = discount_pct
-                            with open(PROMO_FILE, "w", encoding="utf-8") as pf:
-                                json.dump(codes, pf, ensure_ascii=False)
-                        except Exception as e:
-                            logger.warning("Не удалось сохранить промокод за отзыв: %s", e)
+                        discount_pct = get_review_settings()["percent"]
+                        promo_code = ""
+                        if discount_pct > 0:
+                            try:
+                                promo_code = issue_promo_code(guest_ref, discount_pct)
+                            except Exception as e:
+                                logger.warning("Не удалось сохранить промокод за отзыв: %s", e)
+                                discount_pct = 0
                         import threading
                         threading.Thread(target=email_review_request, args=(
                             b.get("guest_name",""),

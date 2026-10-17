@@ -411,3 +411,56 @@ async function unblockDates() {
   showToast('Даты разблокированы', 'gold');
 }
 
+// Письмо гостю после выезда: скидка, тема, текст
+let reviewDefaults = { text: '', subject: '' };
+
+async function loadReviewPromo() {
+  try {
+    const d = await apiGet('/api/admin/review-promo', { 'X-Property-Id': '1' });
+    reviewDefaults = { text: d.default_text || '', subject: d.default_subject || '' };
+    document.getElementById('reviewPercent').value = d.percent;
+    document.getElementById('reviewSubject').value = d.subject || '';
+    document.getElementById('reviewText').value = d.text || '';
+  } catch(e) {}
+}
+
+async function saveReviewPromo() {
+  const percent = parseInt(document.getElementById('reviewPercent').value, 10);
+  if (isNaN(percent) || percent < 0 || percent > 90) { showToast('Скидка должна быть от 0 до 90%', 'err'); return false; }
+  try {
+    await apiPost('/api/admin/review-promo', {
+      percent,
+      subject: document.getElementById('reviewSubject').value.trim(),
+      text: document.getElementById('reviewText').value
+    });
+    document.getElementById('reviewStatus').textContent = percent > 0
+      ? `Сохранено. Следующим гостям после выезда уйдёт промокод со скидкой ${percent}%.`
+      : 'Сохранено. Промокод в письме отключён (скидка 0%).';
+    showToast('Письмо после выезда сохранено', 'gold');
+    return true;
+  } catch(e) {
+    showToast('Ошибка: ' + e.message, 'err');
+    return false;
+  }
+}
+
+function resetReviewPromo() {
+  if (!confirm('Вернуть текст и тему письма по умолчанию? Изменения не сохранятся, пока вы не нажмёте «Сохранить».')) return;
+  document.getElementById('reviewText').value = reviewDefaults.text;
+  document.getElementById('reviewSubject').value = reviewDefaults.subject;
+}
+
+async function sendReviewTest() {
+  const btn = document.getElementById('reviewTestBtn');
+  btn.disabled = true;
+  try {
+    if (!(await saveReviewPromo())) return;   // пробное письмо всегда уходит с тем, что видно на экране
+    const d = await apiPost('/api/admin/review-promo/test', { email: document.getElementById('reviewTestEmail').value.trim() });
+    document.getElementById('reviewStatus').textContent = `Пробное письмо отправлено на ${d.to}. Проверьте почту (и папки «Рассылки» и «Спам»).`;
+    showToast('Пробное письмо отправлено', 'gold');
+  } catch(e) {
+    showToast('Ошибка: ' + e.message, 'err');
+  } finally {
+    btn.disabled = false;
+  }
+}

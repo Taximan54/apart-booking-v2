@@ -1,12 +1,24 @@
 """API: цены и промокоды."""
+import asyncio
 import json
 import os
-from fastapi import APIRouter, Depends
+
+from fastapi import APIRouter, Depends, HTTPException
 
 from core.auth import require_admin
-from core.constants import PRICE_FILE, DEFAULT_PRICES, PROMO_FILE
-from core.models import Prices, PromoCodes, PromoValidate
+from core.constants import (
+    DEFAULT_PRICES,
+    DEFAULT_REVIEW_SUBJECT,
+    DEFAULT_REVIEW_TEMPLATE,
+    PRICE_FILE,
+    PROMO_FILE,
+    REVIEW_FILE,
+)
+from core.landlord import get_landlord_email
+from core.mailer import send_email
+from core.models import Prices, PromoCodes, PromoValidate, ReviewPromoTest, ReviewPromoUpdate
 from core.properties import admin_property_id, property_file, request_property_id
+from core.review_promo import build_review_email, get_review_settings, load_review_template_text, save_review_settings
 
 router = APIRouter()
 
@@ -62,3 +74,39 @@ async def validate_promo_code(v: PromoValidate):
     if code_norm in codes:
         return {"valid": True, "code": code_norm, "percent": codes[code_norm]}
     return {"valid": False, "percent": 0}
+
+
+# =====================================================
+# API — ПИСЬМО ПОСЛЕ ВЫЕЗДА (отзыв + промокод)
+# =====================================================
+
+@router.get("/api/admin/review-promo")
+async def get_review_promo(_: bool = Depends(require_admin)):
+    """Размер скидки, тема и текст письма после выезда."""
+    return {**get_review_settings(), "text": load_review_template_text(), "default_text": DEFAULT_REVIEW_TEMPLATE,
+            "default_subject": DEFAULT_REVIEW_SUBJECT}
+
+
+@router.post("/api/admin/review-promo")
+async def set_review_promo(data: ReviewPromoUpdate, _: bool = Depends(require_admin)):
+    if not data.text.strip():
+        raise HTTPException(status_code=400, detail="Текст письма не может быть пустым")
+    try:
+        settings = save_review_settings(data.percent, data.subject)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    with open(REVIEW_FILE, "w", encoding="utf-8") as f:
+        f.write(data.text)
+    return {**settings, "text": data.text}
+
+
+@router.post("/api/admin/review-promo/test")
+async def send_review_promo_test(data: ReviewPromoTest, _: bool = Depends(require_admin)):
+    """Пробное письмо (с тестовым именем и кодом) на указанную почту или на почту из «Контактов»."""
+    to = (data.email or "").strip() or get_landlord_email()
+    if "@" not in to or " " in to or len(to) > 200:
+        raise HTTPException(status_code=400, detail="Укажите корректный адрес почты")
+    settings = get_review_settings()
+    subject, html, text = build_review_email("Иван", "RETURNTEST" if settings["percent"] > 0 else "", settings["percent"])
+    await asyncio.to_thread(send_email, to, subject, html, None, text)
+    return {"ok": True, "to": to}
