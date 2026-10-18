@@ -901,6 +901,12 @@ if (PROPERTY_SLUG) {
     return originalFetch(input, init);
   };
 }
+// Ссылки на «Правила проживания» ведут на правила этого же объекта (и в его теме оформления)
+if (PROPERTY_SLUG) {
+  document.querySelectorAll('a[href="/static/house_rules.html"]').forEach(a => {
+    a.href = '/static/house_rules.html?property=' + encodeURIComponent(PROPERTY_SLUG);
+  });
+}
 let PHOTOS = [
   {label:"Спальня — общий вид",src:"/data/photos/photo_01.jpg"},
   {label:"Спальня — кровать крупно",src:"/data/photos/photo_02.jpg"},

@@ -19,6 +19,7 @@ h1{font-family:'Cormorant Garamond',serif;font-size:42px;font-weight:300;color:v
 footer{padding:40px 60px;border-top:1px solid var(--black-border);text-align:center;font-size:11px;color:var(--text-muted);letter-spacing:.1em;margin-top:60px}
 @media(max-width:768px){header{padding:20px 24px}.container{padding:40px 24px}h1{font-size:28px}footer{padding:24px}}
 </style>
+<script src="/static/page-theme.js?v=20261018"></script>
 </head>
 <body>
 
@@ -35,7 +36,12 @@ footer{padding:40px 60px;border-top:1px solid var(--black-border);text-align:cen
 <footer>citypause.ru &nbsp;·&nbsp; citypause@mail.ru</footer>
 
 <script>
-fetch('/api/house-rules')
+// Правила конкретного объекта: адрес страницы приходит в ?property=название (ссылка со страницы /o/название)
+const PROPERTY_SLUG = new URLSearchParams(location.search).get('property') || '';
+if (PROPERTY_SLUG) {
+  document.querySelectorAll('a[href="/"]').forEach(a => { a.href = '/o/' + encodeURIComponent(PROPERTY_SLUG); });
+}
+fetch('/api/house-rules' + (PROPERTY_SLUG ? '?property=' + encodeURIComponent(PROPERTY_SLUG) : ''))
   .then(r => r.text())
   .then(text => {
     // Заменяем \n (как текст) и реальные переносы строк на <br>
