@@ -11,7 +11,10 @@ function propEsc(s) {
 async function loadPropertySwitch() {
   try {
     propState = await apiGet('/api/admin/properties', { 'X-Property-Id': '1' });
-  } catch(e) { return; }
+  } catch(e) {
+    if (String(e.message) !== '401') showToast('Не удалось загрузить список объектов: ' + e.message, 'err');
+    return;
+  }
   renderPropertySwitch();
 }
 

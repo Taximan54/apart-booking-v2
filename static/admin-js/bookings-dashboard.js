@@ -465,7 +465,8 @@ let propertiesCache = null;
 async function getPropertiesMap() {
   if(propertiesCache) return propertiesCache;
   try {
-    const props = await apiGet('/api/admin/properties');
+    const data = await apiGet('/api/admin/properties', { 'X-Property-Id': '1' });
+    const props = Array.isArray(data) ? data : ((data && data.properties) || []);
     propertiesCache = {};
     props.forEach(p => propertiesCache[p.id] = p.name);
   } catch(e) {

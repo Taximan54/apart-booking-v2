@@ -130,9 +130,16 @@ async function initAdmin() {
   // Check API
   checkApi();
 
-  // Load data
-  await loadAll();
+  // Список объектов (переключатель в меню) грузим первым и отдельно от остальных данных:
+  // если что-то из данных не загрузится, переключатель всё равно появится
   if (typeof loadPropertySwitch === 'function') loadPropertySwitch();
+
+  // Load data
+  try {
+    await loadAll();
+  } catch(e) {
+    showToast('Не удалось загрузить данные объекта: ' + ((e && e.message) || e), 'err');
+  }
 
   // Init admin calendar
   const now = new Date();
