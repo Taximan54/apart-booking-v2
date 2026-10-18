@@ -26,6 +26,54 @@ ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "")
 SESSION_SECRET = os.getenv("SESSION_SECRET") or secrets.token_hex(32)
 SESSION_TTL    = 60 * 60 * 24 * 7  # токен живёт 7 дней
 
+# Защита от подбора пароля: после LOGIN_MAX_FAILS неверных паролей подряд
+# вход с этого адреса блокируется на LOGIN_LOCK_SECONDS. Счётчики хранятся в памяти
+# процесса (после перезапуска сервиса сбрасываются).
+LOGIN_MAX_FAILS = 5
+LOGIN_LOCK_SECONDS = 15 * 60
+_login_fails = {}  # адрес -> время неверных попыток (за последние 15 минут)
+
+
+def client_ip(request) -> Optional[str]:
+    """Адрес, с которого пришёл запрос (None — запрос без адреса, например прямой вызов в тестах: лимит не применяется)."""
+    if request is None:
+        return None
+    return (request.client.host if request.client else "") or "unknown"
+
+
+def login_retry_after(ip, now=None) -> int:
+    """Сколько секунд ещё действует блокировка входа для адреса (0 — не заблокирован)."""
+    if not ip:
+        return 0
+    now = time.time() if now is None else now
+    fails = [t for t in _login_fails.get(ip, []) if now - t < LOGIN_LOCK_SECONDS]
+    if fails:
+        _login_fails[ip] = fails
+    else:
+        _login_fails.pop(ip, None)
+    if len(fails) >= LOGIN_MAX_FAILS:
+        return max(1, int(fails[-1] + LOGIN_LOCK_SECONDS - now) + 1)
+    return 0
+
+
+def register_login_failure(ip, now=None) -> int:
+    """Записывает неверный пароль, возвращает число неверных попыток подряд."""
+    if not ip:
+        return 0
+    now = time.time() if now is None else now
+    fails = [t for t in _login_fails.get(ip, []) if now - t < LOGIN_LOCK_SECONDS]
+    fails.append(now)
+    _login_fails[ip] = fails
+    if len(_login_fails) > 5000:  # чистка давно устаревших адресов
+        for key in [k for k, v in _login_fails.items() if all(now - t >= LOGIN_LOCK_SECONDS for t in v)]:
+            del _login_fails[key]
+    return len(fails)
+
+
+def register_login_success(ip) -> None:
+    if ip:
+        _login_fails.pop(ip, None)
+
 def hash_password(password: str, salt: bytes = None) -> str:
     if salt is None:
         salt = secrets.token_bytes(16)
