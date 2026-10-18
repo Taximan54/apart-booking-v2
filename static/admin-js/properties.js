@@ -49,7 +49,7 @@ function propCacheRead() {
 
 function propCacheWrite(items) {
   try {
-    localStorage.setItem(PROP_CACHE_KEY, JSON.stringify(items.map(p => ({ id: p.id, name: p.name, active: p.active }))));
+    localStorage.setItem(PROP_CACHE_KEY, JSON.stringify(items.map(p => ({ id: p.id, name: p.name, active: p.active, slug: p.slug || '', is_default: !!p.is_default }))));
   } catch(e) {}
 }
 
@@ -66,7 +66,12 @@ function renderPropertyBadge(items) {
     sel.className = 'info-input';
     sel.style.cssText = 'min-width:140px;padding:4px 8px;font-size:12px';
     sel.onchange = () => switchProperty(sel.value);
-    box.append(label, sel);
+    const siteLink = document.createElement('a');
+    siteLink.id = 'propertyFloatLink';
+    siteLink.target = '_blank';
+    siteLink.textContent = 'Сайт ↗';
+    siteLink.style.cssText = 'color:var(--gold);text-decoration:none;white-space:nowrap';
+    box.append(label, sel, siteLink);
     document.body.appendChild(box);
   }
   const old = document.getElementById('propertyBadge');
@@ -82,8 +87,15 @@ function renderPropertyBadge(items) {
     sel.appendChild(o);
   });
   sel.value = ADMIN_PROPERTY_ID;
-  // название выбранного объекта во вкладке браузера
+  // название выбранного объекта во вкладке браузера и ссылка на его страницу сайта
   const cur = items.find(p => String(p.id) === ADMIN_PROPERTY_ID);
+  const siteLink = document.getElementById('propertyFloatLink');
+  if (siteLink) {
+    const isMain = cur && (cur.is_default || String(cur.id) === '1');
+    const url = cur ? (isMain ? '/' : (cur.slug ? '/o/' + encodeURIComponent(cur.slug) : '')) : '';
+    siteLink.style.display = url ? '' : 'none';
+    if (url) siteLink.href = url;
+  }
   if (!window.__adminBaseTitle) window.__adminBaseTitle = document.title;
   document.title = (show && cur) ? cur.name + ' · ' + window.__adminBaseTitle : window.__adminBaseTitle;
 }
@@ -99,7 +111,9 @@ async function loadProperties() {
     propState = await apiGet('/api/admin/properties', { 'X-Property-Id': '1' });
     renderProperties();
     renderPropertySwitch();
-  } catch(e) {}
+  } catch(e) {
+    if (String(e.message) !== '401') showToast('Не удалось загрузить список объектов: ' + e.message, 'err');
+  }
 }
 
 function propPageUrl(p) {
@@ -113,7 +127,12 @@ function renderProperties() {
     <div style="padding:16px;border:1px solid var(--black-border);background:var(--black-card);margin-bottom:14px">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px">
         <div style="font-size:12px;color:var(--text-muted)">Объект № ${p.id}${p.is_default ? ' · основной' : ''} · броней и блокировок: ${p.bookings}</div>
-        <a href="${propPageUrl(p)}" target="_blank" style="font-size:11px;color:var(--gold)">Открыть страницу сайта ↗</a>
+        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+          ${String(p.id) === ADMIN_PROPERTY_ID
+            ? '<span style="font-size:11px;color:var(--gold)">● Выбран сейчас</span>'
+            : `<button class="btn btn-outline btn-sm" onclick="switchProperty(${p.id})">Работать с этим объектом</button>`}
+          <a href="${propPageUrl(p)}" target="_blank" style="font-size:11px;color:var(--gold)">Открыть страницу сайта ↗</a>
+        </div>
       </div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">
         <div class="info-field" style="flex:2;min-width:200px"><div class="info-label">Название</div>
@@ -190,3 +209,9 @@ async function deleteProperty(id) {
 
 // Сразу при открытии админки показываем переключатель по запомненному списку (потом он обновится с сервера)
 try { renderPropertyBadge(propCacheRead()); } catch(e) {}
+
+// Раздел «Объекты»: список загружается при каждом открытии раздела (а не только после кнопки «Добавить»)
+(function() {
+  const menuItem = document.getElementById('sbProperties');
+  if (menuItem) menuItem.addEventListener('click', () => { loadProperties(); });
+})();
