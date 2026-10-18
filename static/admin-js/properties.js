@@ -19,10 +19,12 @@ async function loadPropertySwitch() {
 }
 
 function renderPropertySwitch() {
+  const items = propState.properties;
+  propCacheWrite(items);
+  renderPropertyBadge(items);   // плавающий переключатель: не зависит от бокового меню
   const box = document.getElementById('sbPropertyBox');
   const sel = document.getElementById('propertySwitch');
   if (!box || !sel) return;
-  const items = propState.properties;
   // выбранного объекта больше нет (например, удалён): возвращаемся к основному
   if (!items.some(p => String(p.id) === ADMIN_PROPERTY_ID)) {
     try { localStorage.setItem('adminPropertyId', '1'); } catch(e) {}
@@ -31,25 +33,59 @@ function renderPropertySwitch() {
   box.style.display = items.length > 1 ? '' : 'none';
   sel.innerHTML = items.map(p => `<option value="${p.id}">${propEsc(p.name)}${p.active ? '' : ' (отключён)'}</option>`).join('');
   sel.value = ADMIN_PROPERTY_ID;
-  renderPropertyBadge(items);
 }
 
-// Заметная метка «Вы редактируете: …» в углу экрана и название объекта во вкладке браузера,
-// чтобы было видно, с каким объектом сейчас работает админка (особенно если настройки скопированы и экраны похожи)
+// Плавающий переключатель объектов в углу экрана: виден всегда, пока объектов больше одного,
+// и не зависит от бокового меню. Список объектов запоминается в браузере, поэтому переключатель
+// появляется сразу при открытии админки, даже если сервер ответит не сразу.
+const PROP_CACHE_KEY = 'adminPropertyList';
+
+function propCacheRead() {
+  try {
+    const list = JSON.parse(localStorage.getItem(PROP_CACHE_KEY) || '[]');
+    return Array.isArray(list) ? list : [];
+  } catch(e) { return []; }
+}
+
+function propCacheWrite(items) {
+  try {
+    localStorage.setItem(PROP_CACHE_KEY, JSON.stringify(items.map(p => ({ id: p.id, name: p.name, active: p.active }))));
+  } catch(e) {}
+}
+
 function renderPropertyBadge(items) {
-  const cur = items.find(p => String(p.id) === ADMIN_PROPERTY_ID);
-  let badge = document.getElementById('propertyBadge');
-  if (!badge) {
-    badge = document.createElement('div');
-    badge.id = 'propertyBadge';
-    badge.style.cssText = 'position:fixed;right:12px;bottom:12px;z-index:9000;padding:6px 12px;font-size:11px;letter-spacing:.05em;border:1px solid var(--gold);background:var(--black-card);color:var(--gold);pointer-events:none';
-    document.body.appendChild(badge);
+  let box = document.getElementById('propertyFloat');
+  if (!box) {
+    box = document.createElement('div');
+    box.id = 'propertyFloat';
+    box.style.cssText = 'position:fixed;left:12px;bottom:12px;z-index:9500;align-items:center;gap:8px;padding:6px 10px;background:var(--black-card);border:1px solid var(--gold);font-size:11px;letter-spacing:.05em;color:var(--gold)';
+    const label = document.createElement('span');
+    label.textContent = 'Объект:';
+    const sel = document.createElement('select');
+    sel.id = 'propertyFloatSelect';
+    sel.className = 'info-input';
+    sel.style.cssText = 'min-width:140px;padding:4px 8px;font-size:12px';
+    sel.onchange = () => switchProperty(sel.value);
+    box.append(label, sel);
+    document.body.appendChild(box);
   }
-  const show = items.length > 1 && !!cur;
-  badge.style.display = show ? '' : 'none';
-  badge.textContent = cur ? 'Вы редактируете: ' + cur.name + ' (№ ' + cur.id + ')' : '';
+  const old = document.getElementById('propertyBadge');
+  if (old) old.remove();
+  const sel = document.getElementById('propertyFloatSelect');
+  const show = items.length > 1;
+  box.style.setProperty('display', show ? 'flex' : 'none', 'important');
+  sel.innerHTML = '';
+  items.forEach(p => {
+    const o = document.createElement('option');
+    o.value = p.id;
+    o.textContent = p.name + (p.active === false ? ' (отключён)' : '');
+    sel.appendChild(o);
+  });
+  sel.value = ADMIN_PROPERTY_ID;
+  // название выбранного объекта во вкладке браузера
+  const cur = items.find(p => String(p.id) === ADMIN_PROPERTY_ID);
   if (!window.__adminBaseTitle) window.__adminBaseTitle = document.title;
-  document.title = show ? cur.name + ' · ' + window.__adminBaseTitle : window.__adminBaseTitle;
+  document.title = (show && cur) ? cur.name + ' · ' + window.__adminBaseTitle : window.__adminBaseTitle;
 }
 
 function switchProperty(id) {
@@ -151,3 +187,6 @@ async function deleteProperty(id) {
     showToast('Ошибка: ' + e.message, 'err');
   }
 }
+
+// Сразу при открытии админки показываем переключатель по запомненному списку (потом он обновится с сервера)
+try { renderPropertyBadge(propCacheRead()); } catch(e) {}
