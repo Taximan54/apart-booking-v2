@@ -1,5 +1,5 @@
-// Тема оформления отдельных страниц сайта (правила проживания, акции):
-// те же фон и цвета, которые выбраны для сайта в админке («Настройки сайта → Бренд»).
+// Оформление отдельных страниц сайта (правила проживания, акции):
+// те же фон, цвета и название сайта, которые выбраны в админке («Настройки сайта → Бренд»).
 // Цвета тем должны совпадать со списками BACKGROUND_THEMES и COLOR_THEMES в index.html.
 (function() {
   var BACKGROUND_THEMES = {
@@ -27,6 +27,22 @@
     onyx:       {gold:'#6E6A63', light:'#A39C90', dark:'#000000', muted:'#3D3A35', gradient:'linear-gradient(180deg,#A39C90 0%,#6E6A63 28%,#000000 50%,#6E6A63 72%,#A39C90 100%)'},
   };
 
+  // Название сайта для выбранного объекта («Настройки сайта → Бренд»): в шапке, подвале и заголовке вкладки
+  var DEFAULT_NAME = 'Городская Пауза';
+  var baseTitle = document.title;
+  var currentName = '';
+  function paintName() {
+    if (!currentName) return;
+    document.querySelectorAll('.logo, .js-site-name').forEach(function(el) { el.textContent = currentName; });
+    document.title = baseTitle.replace(DEFAULT_NAME, currentName);
+  }
+  function setName(name) {
+    if (!name) return;
+    currentName = String(name);
+    if (document.readyState !== 'loading') paintName();
+  }
+  document.addEventListener('DOMContentLoaded', paintName);
+
   // Объект: адрес страницы приходит в ?property=название (основной объект — без параметра)
   var slug = new URLSearchParams(location.search).get('property') || '';
   var CACHE_KEY = 'cpPageTheme:' + slug;
@@ -53,14 +69,15 @@
   // Сначала — запомненная тема (чтобы страница не мигала чёрным), потом — свежая с сервера
   try {
     var cached = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
-    if (cached) apply(cached.bg, cached.color);
+    if (cached) { apply(cached.bg, cached.color); setName(cached.name); }
   } catch (e) {}
 
   fetch('/api/site-settings' + (slug ? '?property=' + encodeURIComponent(slug) : ''))
     .then(function(r) { return r.json(); })
     .then(function(s) {
       apply(s.background_theme, s.color_theme);
-      try { localStorage.setItem(CACHE_KEY, JSON.stringify({ bg: s.background_theme, color: s.color_theme })); } catch (e) {}
+      setName(s.site_name);
+      try { localStorage.setItem(CACHE_KEY, JSON.stringify({ bg: s.background_theme, color: s.color_theme, name: s.site_name || '' })); } catch (e) {}
     })
     .catch(function() {});
 })();
