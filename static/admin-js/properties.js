@@ -3,6 +3,16 @@
 
 let propState = { properties: [], default_id: 1 };
 
+// Проверка ответа сервера со списком объектов. Если пришло что-то неожиданное,
+// в сообщении об ошибке показываем начало ответа, чтобы сразу было видно, в чём дело.
+function propNormalize(data) {
+  if (Array.isArray(data)) return { properties: data, default_id: 1 };
+  if (data && Array.isArray(data.properties)) return data;
+  let preview = '';
+  try { preview = JSON.stringify(data); } catch(e) { preview = String(data); }
+  throw new Error('неожиданный ответ сервера: ' + String(preview).slice(0, 150));
+}
+
 function propEsc(s) {
   return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
@@ -10,7 +20,7 @@ function propEsc(s) {
 // Переключатель объектов в левом меню: виден, когда объектов больше одного
 async function loadPropertySwitch() {
   try {
-    propState = await apiGet('/api/admin/properties', { 'X-Property-Id': '1' });
+    propState = propNormalize(await apiGet('/api/admin/properties', { 'X-Property-Id': '1' }));
   } catch(e) {
     if (String(e.message) !== '401') showToast('Не удалось загрузить список объектов: ' + e.message, 'err');
     return;
@@ -108,7 +118,7 @@ function switchProperty(id) {
 // Раздел «Объекты»
 async function loadProperties() {
   try {
-    propState = await apiGet('/api/admin/properties', { 'X-Property-Id': '1' });
+    propState = propNormalize(await apiGet('/api/admin/properties', { 'X-Property-Id': '1' }));
     renderProperties();
     renderPropertySwitch();
   } catch(e) {
@@ -161,7 +171,7 @@ async function addProperty() {
       slug: document.getElementById('propNewSlug').value.trim(),
       copy_settings: !!(document.getElementById('propNewCopy') || {}).checked
     }, { 'X-Property-Id': '1' });
-    propState = d;
+    propState = propNormalize(d);
     ['propNewName', 'propNewAddress', 'propNewSlug'].forEach(id => { document.getElementById(id).value = ''; });
     const copyBox = document.getElementById('propNewCopy');
     if (copyBox) copyBox.checked = false;
@@ -185,7 +195,7 @@ async function saveProperty(id) {
   const activeEl = document.getElementById('propActive_' + id);
   if (activeEl) body.active = activeEl.checked;
   try {
-    propState = await apiRequest('PUT', '/api/admin/properties/' + id, body);
+    propState = propNormalize(await apiRequest('PUT', '/api/admin/properties/' + id, body));
     renderProperties();
     renderPropertySwitch();
     showToast('Сохранено', 'gold');
@@ -198,7 +208,7 @@ async function deleteProperty(id) {
   const p = propState.properties.find(x => x.id === id);
   if (!confirm(`Удалить объект «${p ? p.name : id}» вместе с его настройками (цены, описание, акции, места, правила)? Объект с бронями удалить нельзя, его можно только отключить.`)) return;
   try {
-    propState = await apiRequest('DELETE', '/api/admin/properties/' + id);
+    propState = propNormalize(await apiRequest('DELETE', '/api/admin/properties/' + id));
     renderProperties();
     renderPropertySwitch();
     showToast('Объект удалён', 'gold');
