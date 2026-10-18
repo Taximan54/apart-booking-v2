@@ -28,6 +28,25 @@ function renderPropertySwitch() {
   box.style.display = items.length > 1 ? '' : 'none';
   sel.innerHTML = items.map(p => `<option value="${p.id}">${propEsc(p.name)}${p.active ? '' : ' (отключён)'}</option>`).join('');
   sel.value = ADMIN_PROPERTY_ID;
+  renderPropertyBadge(items);
+}
+
+// Заметная метка «Вы редактируете: …» в углу экрана и название объекта во вкладке браузера,
+// чтобы было видно, с каким объектом сейчас работает админка (особенно если настройки скопированы и экраны похожи)
+function renderPropertyBadge(items) {
+  const cur = items.find(p => String(p.id) === ADMIN_PROPERTY_ID);
+  let badge = document.getElementById('propertyBadge');
+  if (!badge) {
+    badge = document.createElement('div');
+    badge.id = 'propertyBadge';
+    badge.style.cssText = 'position:fixed;right:12px;bottom:12px;z-index:9000;padding:6px 12px;font-size:11px;letter-spacing:.05em;border:1px solid var(--gold);background:var(--black-card);color:var(--gold);pointer-events:none';
+    document.body.appendChild(badge);
+  }
+  const show = items.length > 1 && !!cur;
+  badge.style.display = show ? '' : 'none';
+  badge.textContent = cur ? 'Вы редактируете: ' + cur.name + ' (№ ' + cur.id + ')' : '';
+  if (!window.__adminBaseTitle) window.__adminBaseTitle = document.title;
+  document.title = show ? cur.name + ' · ' + window.__adminBaseTitle : window.__adminBaseTitle;
 }
 
 function switchProperty(id) {
