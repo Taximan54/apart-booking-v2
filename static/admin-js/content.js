@@ -9,6 +9,7 @@ async function loadContacts() {
     document.getElementById('contactsTelegram').value = c.telegram || '';
     document.getElementById('contactsWhatsapp').value = c.whatsapp || '';
     document.getElementById('contactsMax').value      = c.max      || '';
+    document.getElementById('contactsInstagram').value = c.instagram || '';
   } catch(e) {}
   loadPaymentSettings();
 }
@@ -20,6 +21,9 @@ async function saveContacts() {
     telegram: document.getElementById('contactsTelegram').value.trim().replace(/^@/, ''),
     whatsapp: document.getElementById('contactsWhatsapp').value.trim(),
     max:      document.getElementById('contactsMax').value.trim(),
+    // Instagram: можно вставить и ссылку, и @username — сохраняем только username
+    instagram: document.getElementById('contactsInstagram').value.trim()
+      .replace(/^https?:\/\/(www\.)?instagram\.com\//i, '').replace(/^@/, '').replace(/[\/?#].*$/, ''),
   };
   try {
     await apiPost('/api/contacts', payload);

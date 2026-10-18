@@ -55,6 +55,7 @@ class Contacts(BaseModel):
     telegram: str = ""
     whatsapp: str = ""
     max: str = ""
+    instagram: str = ""
 
 class ReviewPromoUpdate(BaseModel):
     percent: int           # размер скидки в промокоде после выезда (0 — письмо без промокода)

@@ -834,6 +834,12 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
         <div style="font-size:10px;color:var(--gold);letter-spacing:.2em;text-transform:uppercase;margin-bottom:8px">WhatsApp</div>
         <div id="contactWhatsappText" style="font-size:14px;color:var(--text-secondary)">—</div>
       </a>
+      <a id="contactInstagram" href="#" target="_blank" rel="noopener" style="display:none;flex-direction:column;align-items:center;padding:32px 24px;background:transparent;border:1px solid var(--black-border);text-decoration:none;transition:border-color .3s" onmouseover="this.style.borderColor='var(--gold)'" onmouseout="this.style.borderColor='var(--black-border)'">
+        <div style="font-size:28px;margin-bottom:12px">📷</div>
+        <div style="font-size:10px;color:var(--gold);letter-spacing:.2em;text-transform:uppercase;margin-bottom:8px">Instagram</div>
+        <div id="contactInstagramText" style="font-size:14px;color:var(--text-secondary)">—</div>
+        <div id="contactInstagramNote" style="font-size:9px;color:var(--text-muted);margin-top:12px;line-height:1.5;text-align:center;max-width:200px">Принадлежит компании Meta, признанной в РФ экстремистской организацией и запрещённой</div>
+      </a>
       <div id="contactMax" style="display:none;flex-direction:column;align-items:center;padding:32px 24px;background:transparent;border:1px solid var(--black-border)">
         <div style="font-size:28px;margin-bottom:12px">📨</div>
         <div style="font-size:10px;color:var(--gold);letter-spacing:.2em;text-transform:uppercase;margin-bottom:8px">MAX</div>
@@ -1387,6 +1393,7 @@ async function loadContacts() {
     const telegram = c.telegram || '';
     const whatsapp = c.whatsapp || '';
     const maxMsg   = c.max      || '';
+    const instagram = (c.instagram || '').replace(/[^A-Za-z0-9._]/g, '');
 
     // Футер
     const fEmail = document.getElementById('footerEmail');
@@ -1401,6 +1408,7 @@ async function loadContacts() {
     showContactBox('contactEmail',    'contactEmailText',    email,    v => 'mailto:' + v);
     showContactBox('contactTelegram', 'contactTelegramText', telegram, v => 'https://t.me/' + v.replace(/^@/,''));
     showContactBox('contactWhatsapp', 'contactWhatsappText', whatsapp, v => 'https://wa.me/' + v.replace(/\D/g,''));
+    showContactBox('contactInstagram', 'contactInstagramText', instagram ? '@' + instagram : '', v => 'https://www.instagram.com/' + v.replace(/^@/,''));
     // MAX — ссылка-формат мессенджера пока не стандартизирована, показываем как информацию без клика
     const maxEl = document.getElementById('contactMax');
     if(maxEl) {
