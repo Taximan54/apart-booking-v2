@@ -176,11 +176,47 @@ def test_discounts_page_passes_property():
 
 
 # ---------------------------------------------------------------------------
-# Рассылка после выезда (один проход планировщика)
+# Решения админа и рассылка после выезда (один проход планировщика)
 # ---------------------------------------------------------------------------
 
-def _run_review_pass(monkeypatch, bookings):
-    """Один проход цикла рассылок в 14:05: возвращает (отправленные письма, помеченные брони)."""
+def test_review_decisions_storage(env, monkeypatch, tmp_path):
+    rp, _ = env
+    monkeypatch.setattr(rp, "REVIEW_DECISIONS_FILE", str(tmp_path / "review_decisions.json"))
+    assert rp.load_review_decisions() == {}
+    rp.set_review_decision("GP-ABC123", "promo")
+    rp.set_review_decision("GP-BAD999", "skip")
+    rp.set_review_decision("GP-ABC123", "nopromo")                                        # решение можно заменить
+    assert rp.load_review_decisions() == {"GP-ABC123": "nopromo", "GP-BAD999": "skip"}
+    with pytest.raises(ValueError):
+        rp.set_review_decision("GP-ABC123", "что-то другое")
+    open(rp.REVIEW_DECISIONS_FILE, "w", encoding="utf-8").write("{не json")
+    assert rp.load_review_decisions() == {}                                               # битый файл — как будто решений нет
+
+
+def test_review_decision_api(env, monkeypatch, tmp_path):
+    import inspect
+    from core.auth import require_admin
+    from routers import pricing as r
+    rp, _ = env
+    monkeypatch.setattr(rp, "REVIEW_DECISIONS_FILE", str(tmp_path / "review_decisions.json"))
+    for func in (r.get_review_decisions, r.set_booking_review_decision):
+        default = inspect.signature(func).parameters["_"].default
+        assert getattr(default, "dependency", None) is require_admin, f"{func.__name__} без проверки админа"
+    monkeypatch.setattr(r, "exists_by_ref", lambda ref: ref == "GP-ABC123")
+    assert run(r.get_review_decisions(True)) == {}
+    assert run(r.set_booking_review_decision("GP-ABC123", r.ReviewDecision(decision="promo"), True)) == {"ok": True}
+    assert run(r.get_review_decisions(True)) == {"GP-ABC123": "promo"}
+    with pytest.raises(HTTPException) as e:
+        run(r.set_booking_review_decision("GP-ABC123", r.ReviewDecision(decision="всем"), True))
+    assert e.value.status_code == 400
+    with pytest.raises(HTTPException) as e:
+        run(r.set_booking_review_decision("GP-NONE00", r.ReviewDecision(decision="promo"), True))
+    assert e.value.status_code == 404
+
+
+def _run_review_pass(monkeypatch, rp, tmp_path, bookings, decisions):
+    """Один проход цикла рассылок в 14:05 (12.10.2026): возвращает (отправленные письма, помеченные брони).
+    bookings — брони из базы, decisions — {номер брони: решение админа}."""
     import threading
     from datetime import datetime
 
@@ -191,12 +227,17 @@ def _run_review_pass(monkeypatch, bookings):
 
     async def stop_sleep(_):
         raise StopLoop()
+    monkeypatch.setattr(rp, "REVIEW_DECISIONS_FILE", str(tmp_path / "review_decisions.json"))
+    for ref, decision in decisions.items():
+        rp.set_review_decision(ref, decision)
+    by_ref = {b["username"]: b for b in bookings}
     sent, marked = [], []
     monkeypatch.setattr(sched, "now_nsk", lambda: datetime(2026, 10, 12, 14, 5))
     monkeypatch.setattr(sched, "get_site_settings_dict", lambda *a, **k: {})
     monkeypatch.setattr(sched, "list_properties", lambda: [{"id": 1, "name": "Квартира", "active": True}])
     monkeypatch.setattr(sched, "get_bookings_checkout_today", lambda pid: [])
-    monkeypatch.setattr(sched, "get_bookings_checkout_yesterday", lambda pid: list(bookings))
+    monkeypatch.setattr(sched, "get_bookings_checkout_yesterday", lambda pid: [])
+    monkeypatch.setattr(sched, "get_by_ref_or_id", lambda ref: by_ref.get(str(ref)))
     monkeypatch.setattr(sched, "get_last_owner_notify_date", lambda: "2026-10-12")
     monkeypatch.setattr(sched, "get_last_backup_date", lambda: "2026-10-12")
     monkeypatch.setattr(sched, "email_review_request", lambda *a: sent.append(a))
@@ -208,22 +249,51 @@ def _run_review_pass(monkeypatch, bookings):
     return sent, marked
 
 
-def test_scheduler_uses_chosen_discount(env, monkeypatch):
+def _booking(num, ref, name, email="x@example.com", **extra):
+    data = {"id": num, "username": ref, "guest_name": name, "guest_email": email, "status": "confirmed", "check_out": "2026-10-11", "review_sent": 0}
+    data.update(extra)
+    return data
+
+
+def test_scheduler_sends_only_chosen_bookings(env, monkeypatch, tmp_path):
     rp, files = env
     rp.save_review_settings(25, "")
-    booking = {"id": 7, "username": "GP-ABC123", "guest_name": "Анна", "guest_email": "anna@example.com"}
-    done = {"id": 8, "username": "GP-DONE888", "guest_name": "Пётр", "guest_email": "p@example.com", "review_sent": 1}
-    no_email = {"id": 9, "username": "GP-NOMAIL9", "guest_name": "Без почты", "guest_email": ""}
-    sent, marked = _run_review_pass(monkeypatch, [booking, done, no_email])
+    approved = _booking(7, "GP-ABC123", "Анна", "anna@example.com")
+    undecided = _booking(8, "GP-NODEC88", "Без решения")
+    skipped = _booking(9, "GP-SKIP999", "Не отправлять")
+    done = _booking(10, "GP-DONE100", "Уже получил", review_sent=1)
+    no_email = _booking(11, "GP-NOMAIL11", "Без почты", email="")
+    not_yet = _booking(12, "GP-LATER12", "Ещё живёт", check_out="2026-10-13")
+    cancelled = _booking(13, "GP-CANC013", "Отмена", status="cancelled")
+    decisions = {"GP-ABC123": "promo", "GP-SKIP999": "skip", "GP-DONE100": "promo", "GP-NOMAIL11": "promo",
+                 "GP-LATER12": "promo", "GP-CANC013": "promo", "GP-NONE000": "promo"}   # последняя — брони уже нет
+    sent, marked = _run_review_pass(monkeypatch, rp, tmp_path,
+                                    [approved, undecided, skipped, done, no_email, not_yet, cancelled], decisions)
     assert sent == [("Анна", "anna@example.com", "GP-ABC123", "RETURNC123", 25)]
     assert marked == [(7, "GP-ABC123")]
     assert json.load(open(files["PROMO_FILE"], encoding="utf-8")) == {"RETURNC123": 25}     # промокод создан с выбранной скидкой
 
 
-def test_scheduler_zero_discount_sends_letter_without_code(env, monkeypatch):
+def test_scheduler_without_promo_choice_sends_letter_without_code(env, monkeypatch, tmp_path):
+    rp, files = env
+    rp.save_review_settings(25, "")                                                       # скидка в настройках есть, но админ выбрал «без промокода»
+    booking = _booking(7, "GP-ABC123", "Анна", "anna@example.com")
+    sent, marked = _run_review_pass(monkeypatch, rp, tmp_path, [booking], {"GP-ABC123": "nopromo"})
+    assert sent == [("Анна", "anna@example.com", "GP-ABC123", "", 0)] and marked == [(7, "GP-ABC123")]
+    assert not os.path.exists(files["PROMO_FILE"]), "при выборе «без промокода» промокод не создаётся"
+
+
+def test_scheduler_zero_discount_sends_letter_without_code(env, monkeypatch, tmp_path):
     rp, files = env
     rp.save_review_settings(0, "")
-    booking = {"id": 7, "username": "GP-ABC123", "guest_name": "Анна", "guest_email": "anna@example.com"}
-    sent, marked = _run_review_pass(monkeypatch, [booking])
+    booking = _booking(7, "GP-ABC123", "Анна", "anna@example.com")
+    sent, marked = _run_review_pass(monkeypatch, rp, tmp_path, [booking], {"GP-ABC123": "promo"})
     assert sent == [("Анна", "anna@example.com", "GP-ABC123", "", 0)] and marked == [(7, "GP-ABC123")]
     assert not os.path.exists(files["PROMO_FILE"]), "при скидке 0% промокод не создаётся"
+
+
+def test_scheduler_without_any_decision_sends_nothing(env, monkeypatch, tmp_path):
+    rp, _ = env
+    booking = _booking(7, "GP-ABC123", "Анна", "anna@example.com")
+    sent, marked = _run_review_pass(monkeypatch, rp, tmp_path, [booking], {})
+    assert sent == [] and marked == []
