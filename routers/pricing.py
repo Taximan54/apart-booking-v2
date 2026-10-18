@@ -4,6 +4,7 @@ import json
 import os
 
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 
 from core.auth import require_admin
 from core.constants import (
@@ -14,11 +15,20 @@ from core.constants import (
     PROMO_FILE,
     REVIEW_FILE,
 )
+from core.bookings_repo import exists_by_ref
 from core.landlord import get_landlord_email
 from core.mailer import send_email
 from core.models import Prices, PromoCodes, PromoValidate, ReviewPromoTest, ReviewPromoUpdate
 from core.properties import admin_property_id, property_file, request_property_id
-from core.review_promo import build_review_email, get_review_settings, load_review_template_text, save_review_settings
+from core.review_promo import (
+    REVIEW_DECISIONS,
+    build_review_email,
+    get_review_settings,
+    load_review_decisions,
+    load_review_template_text,
+    save_review_settings,
+    set_review_decision,
+)
 
 router = APIRouter()
 
@@ -110,3 +120,24 @@ async def send_review_promo_test(data: ReviewPromoTest, _: bool = Depends(requir
     subject, html, text = build_review_email("Иван", "RETURNTEST" if settings["percent"] > 0 else "", settings["percent"])
     await asyncio.to_thread(send_email, to, subject, html, None, text)
     return {"ok": True, "to": to}
+
+
+class ReviewDecision(BaseModel):
+    decision: str
+
+
+@router.get("/api/admin/review-decisions")
+async def get_review_decisions(_: bool = Depends(require_admin)):
+    """Решения админа по письму после выезда: {номер брони: promo | nopromo | skip}."""
+    return load_review_decisions()
+
+
+@router.post("/api/admin/bookings/{ref}/review-decision")
+async def set_booking_review_decision(ref: str, data: ReviewDecision, _: bool = Depends(require_admin)):
+    """Админ решает, отправлять ли гостю письмо после выезда (с промокодом / без / не отправлять)."""
+    if data.decision not in REVIEW_DECISIONS:
+        raise HTTPException(status_code=400, detail="Неверное решение")
+    if not exists_by_ref(ref):
+        raise HTTPException(status_code=404, detail="Бронь не найдена")
+    set_review_decision(ref, data.decision)
+    return {"ok": True}

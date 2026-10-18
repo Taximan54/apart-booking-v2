@@ -9,8 +9,16 @@ async function loadBookings() {
     allBookings = [...DEMO_BOOKINGS];
   }
   renderBookingsTable(allBookings);
+  try {
+    reviewDecisions = (await apiGet('/api/admin/review-decisions')) || {};
+  } catch(e) {
+    reviewDecisions = {};
+  }
   renderAlerts();
 }
+
+// Решения по письму после выезда: {номер брони: 'promo' | 'nopromo' | 'skip'}
+let reviewDecisions = {};
 
 // АЛЕРТЫ ДАШБОРДА — то, что требует ручного внимания
 function renderAlerts() {
@@ -64,6 +72,16 @@ function renderAlerts() {
         });
       }
     }
+
+    // 4. Письмо после выезда: решение ещё не принято (если ждёт возврат залога — решение спросим там же)
+    const depositPending = !b.deposit_returned && (b.deposit || 0) > 0;
+    if (!isBlockedEntry && !depositPending && needsReviewDecision(b) && b.check_out && b.check_out < todayStr
+        && (now - new Date(b.check_out)) / msDay <= 14) {
+      alerts.push({
+        type: 'review', booking: b, severity: 'medium',
+        text: `Решите, отправлять ли гостю письмо после выезда — бронь ${b.username || b.id} (${b.guest_name || 'без имени'})`,
+      });
+    }
   });
 
   if (alerts.length === 0) {
@@ -82,19 +100,114 @@ function renderAlerts() {
       <span style="font-size:12px;color:var(--text-secondary)">${a.text}</span>
       ${a.type === 'deposit'
         ? `<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();markDepositReturned('${a.booking.username || a.booking.id}')">Депозит возвращён</button>`
+        : a.type === 'review'
+        ? `<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();chooseReviewDecision('${a.booking.username || a.booking.id}')">Письмо гостю…</button>`
         : `<span style="font-size:11px;color:var(--text-muted);white-space:nowrap">›</span>`}
     </div>
   `).join('');
 }
 
-async function markDepositReturned(ref) {
+const REVIEW_DECISION_TOASTS = {
+  promo: 'Гостю уйдёт письмо с промокодом',
+  nopromo: 'Гостю уйдёт письмо без промокода',
+  skip: 'Письмо этому гостю отправляться не будет',
+};
+
+// Нужно ли ещё решение по письму после выезда для этой брони
+function needsReviewDecision(b) {
+  const ref = b.username || b.id;
+  return ['confirmed', 'fully_paid'].includes(b.status) && !!b.guest_email && !b.review_sent && !reviewDecisions[ref];
+}
+
+// Окошко выбора. Возвращает 'promo' | 'nopromo' | 'skip' или null (отмена)
+function askReviewDecision(ref, opts) {
+  opts = opts || {};
+  return new Promise(async (resolve) => {
+    let percent = null;
+    try {
+      const rs = await apiGet('/api/admin/review-promo');
+      percent = Number(rs.percent) || 0;
+    } catch(e) { percent = null; }
+
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);z-index:10000;display:flex;align-items:center;justify-content:center;padding:16px';
+    const box = document.createElement('div');
+    box.style.cssText = 'background:var(--black-card);border:1px solid var(--black-border);max-width:420px;width:100%;padding:22px;display:flex;flex-direction:column;gap:10px';
+    const close = (value) => { overlay.remove(); resolve(value); };
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) close(null); });
+
+    const title = document.createElement('div');
+    title.style.cssText = 'font-size:15px;color:var(--text-primary)';
+    title.textContent = 'Письмо гостю после выезда';
+    const refLine = document.createElement('div');
+    refLine.style.cssText = 'font-size:11px;color:var(--text-muted)';
+    refLine.textContent = 'Бронь ' + ref;
+    const question = document.createElement('div');
+    question.style.cssText = 'font-size:13px;color:var(--text-secondary);line-height:1.5';
+    question.textContent = (opts.withDeposit ? 'Депозит будет отмечен как возвращённый. ' : '') +
+      'Отправить гостю письмо с просьбой об отзыве?';
+    const note = document.createElement('div');
+    note.style.cssText = 'font-size:11px;color:var(--text-muted);line-height:1.5';
+    note.textContent = 'Письмо уйдёт автоматически в назначенное в настройках время, после дня выезда. Без вашего выбора письмо не отправляется.';
+    box.append(title, refLine, question, note);
+
+    const addBtn = (label, cls, value) => {
+      const btn = document.createElement('button');
+      btn.className = cls;
+      btn.textContent = label;
+      btn.onclick = () => close(value);
+      box.appendChild(btn);
+    };
+    if (percent === 0) {
+      addBtn('Отправить письмо', 'btn btn-primary', 'nopromo');
+    } else {
+      addBtn(percent ? `С промокодом −${percent}%` : 'С промокодом', 'btn btn-primary', 'promo');
+      addBtn('Без промокода (только просьба об отзыве)', 'btn btn-outline', 'nopromo');
+    }
+    addBtn('Не отправлять ничего', 'btn btn-ghost', 'skip');
+    addBtn(opts.withDeposit ? 'Отмена (депозит не отмечать)' : 'Решу позже', 'btn btn-ghost', null);
+
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+  });
+}
+
+async function chooseReviewDecision(ref) {
+  const decision = await askReviewDecision(ref, {});
+  if (!decision) return;
   try {
-    await apiPost(`/api/admin/bookings/${ref}/deposit-returned`, {});
-    showToast('Депозит отмечен как возвращённый', 'gold');
+    await apiPost(`/api/admin/bookings/${ref}/review-decision`, {decision});
+    showToast(REVIEW_DECISION_TOASTS[decision], 'gold');
     await loadBookings();
   } catch(e) {
     showToast('Ошибка: ' + e.message, 'err');
   }
+}
+
+async function markDepositReturned(ref) {
+  const b = (allBookings || []).find(x => String(x.username || x.id) === String(ref));
+  let decision = null;
+  if (b && needsReviewDecision(b)) {
+    decision = await askReviewDecision(ref, {withDeposit: true});
+    if (!decision) return; // «Отмена» — ничего не меняем
+  }
+  try {
+    await apiPost(`/api/admin/bookings/${ref}/deposit-returned`, {});
+  } catch(e) {
+    showToast('Ошибка: ' + e.message, 'err');
+    return;
+  }
+  if (decision) {
+    try {
+      await apiPost(`/api/admin/bookings/${ref}/review-decision`, {decision});
+      showToast('Депозит отмечен. ' + REVIEW_DECISION_TOASTS[decision], 'gold');
+    } catch(e) {
+      showToast('Депозит отмечен, но выбор по письму не сохранился: ' + e.message, 'err');
+    }
+  } else {
+    showToast('Депозит отмечен как возвращённый', 'gold');
+  }
+  await loadBookings();
 }
 
 // PRICES

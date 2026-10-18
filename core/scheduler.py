@@ -16,7 +16,7 @@ from core.data_store import (
     load_properties,
     set_last_owner_notify_date,
 )
-from core.bookings_repo import mark_checklist_sent, mark_review_sent
+from core.bookings_repo import get_by_ref_or_id, mark_checklist_sent, mark_review_sent
 from core.runtime import now_nsk, bot
 from core.emails import (
     email_owner_checkout_reminder,
@@ -26,7 +26,7 @@ from core.emails import (
 from services.booking_service import get_bookings_checkout_today, get_bookings_checkout_yesterday
 from core.logger import get_logger
 from core.properties import list_properties
-from core.review_promo import get_review_settings, issue_promo_code
+from core.review_promo import get_review_settings, issue_promo_code, load_review_decisions
 
 logger = get_logger(__name__)
 
@@ -135,31 +135,51 @@ async def send_notifications():
                         except Exception as e:
                             logger.warning("Telegram: не отправлен чек-лист выезда: %s", e)
 
-            # Отзыв + промокод гостям кто выехал вчера (время настраивается в админке)
+            # Письмо после выезда (отзыв + промокод) — ТОЛЬКО по решению админа:
+            # «с промокодом», «без промокода» или «не отправлять». Нет решения — письмо не уходит.
+            # Время отправки настраивается в админке; письмо уходит после дня выезда.
             if hour == review_hour and minute < 30:
-                bookings = _for_all_properties(get_bookings_checkout_yesterday)
-                for b in bookings:
-                    if b.get("guest_email") and not b.get("review_sent"):
-                        # Персональный промокод для возврата гостя: размер скидки задаётся в админке (0 — без промокода)
-                        guest_ref = (b.get("username") or b.get("id") or "")
+                decisions = load_review_decisions()
+                for ref, decision in decisions.items():
+                    if decision not in ("promo", "nopromo"):
+                        continue
+                    try:
+                        b = get_by_ref_or_id(ref)
+                    except Exception as e:
+                        logger.warning("Письмо после выезда: не удалось найти бронь %s: %s", ref, e)
+                        continue
+                    if not b or b.get("review_sent") or not b.get("guest_email"):
+                        continue
+                    if b.get("status") not in ("confirmed", "fully_paid"):
+                        continue
+                    if not b.get("check_out") or b["check_out"] >= today_str:
+                        continue  # ещё не выехал — письмо уйдёт после выезда
+                    guest_ref = b.get("username") or b.get("id") or ref
+                    promo_code = ""
+                    discount_pct = 0
+                    if decision == "promo":
+                        # размер скидки задаётся в админке (0 — без промокода)
                         discount_pct = get_review_settings()["percent"]
-                        promo_code = ""
                         if discount_pct > 0:
                             try:
                                 promo_code = issue_promo_code(guest_ref, discount_pct)
                             except Exception as e:
                                 logger.warning("Не удалось сохранить промокод за отзыв: %s", e)
                                 discount_pct = 0
-                        import threading
-                        threading.Thread(target=email_review_request, args=(
-                            b.get("guest_name",""),
-                            b["guest_email"],
-                            b.get("username") or b.get("id",""),
-                            promo_code,
-                            discount_pct
-                        )).start()
-                        mark_review_sent(b.get("id"), b.get("username"))
-                    # Telegram — best-effort
+                    import threading
+                    threading.Thread(target=email_review_request, args=(
+                        b.get("guest_name", ""),
+                        b["guest_email"],
+                        guest_ref,
+                        promo_code,
+                        discount_pct
+                    )).start()
+                    mark_review_sent(b.get("id"), b.get("username"))
+
+                # Telegram — best-effort (бот сейчас на паузе); тем, кому админ выбрал «не отправлять», не пишем
+                for b in _for_all_properties(get_bookings_checkout_yesterday):
+                    if decisions.get(str(b.get("username") or b.get("id") or "")) == "skip":
+                        continue
                     if b.get("user_id") and b["user_id"] != 0:
                         try:
                             await asyncio.wait_for(bot.send_message(

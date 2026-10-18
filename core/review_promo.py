@@ -59,6 +59,39 @@ def save_review_settings(percent: int, subject: str) -> dict:
 
 
 # ---------------------------------------------------------------------------
+# Решение админа по письму после выезда (по каждой брони)
+# ---------------------------------------------------------------------------
+# promo — отправить с промокодом, nopromo — только просьба об отзыве, skip — ничего не отправлять.
+# Нет решения — письмо не уходит.
+
+REVIEW_DECISIONS_FILE = os.path.join(os.path.dirname(REVIEW_PROMO_FILE), "review_decisions.json")
+REVIEW_DECISIONS = ("promo", "nopromo", "skip")
+
+
+def load_review_decisions() -> dict:
+    if not os.path.exists(REVIEW_DECISIONS_FILE):
+        return {}
+    try:
+        with open(REVIEW_DECISIONS_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+    except Exception as e:
+        logger.warning("Не удалось прочитать решения по письму после выезда: %s", e)
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def set_review_decision(ref, decision: str) -> None:
+    if decision not in REVIEW_DECISIONS:
+        raise ValueError("Неверное решение: ожидается promo, nopromo или skip")
+    data = load_review_decisions()
+    data[str(ref)] = decision
+    tmp = REVIEW_DECISIONS_FILE + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False)
+    os.replace(tmp, REVIEW_DECISIONS_FILE)
+
+
+# ---------------------------------------------------------------------------
 # Промокод
 # ---------------------------------------------------------------------------
 
