@@ -15,7 +15,18 @@ from fastapi import Header, HTTPException, Query
 
 from core import bookings_repo as repo
 from core.auth import verify_token
-from core.constants import DATA_DIR, PROPERTIES_FILE
+from core.constants import (
+    CHECKIN_FILE,
+    CHECKOUT_FILE,
+    DATA_DIR,
+    DESC_FILE,
+    DISCOUNTS_FILE,
+    HOUSE_RULES_FILE,
+    PLACES_FILE,
+    PRICE_FILE,
+    PROPERTIES_FILE,
+    SETTINGS_FILE,
+)
 from core.logger import get_logger
 from services.booking_service import DEFAULT_PROPERTY_ID
 
@@ -147,6 +158,54 @@ def delete_property(property_id: int) -> None:
         raise PropertyError("У объекта есть брони или блокировки дат. Отключите объект вместо удаления")
     _save([p for p in items if p["id"] != property_id])
     shutil.rmtree(os.path.join(PROPERTIES_DIR, str(property_id)), ignore_errors=True)
+
+
+# ---------------------------------------------------------------------------
+# Копирование настроек из другого объекта
+# ---------------------------------------------------------------------------
+# Копируются: цены, описание, правила проживания, памятка, чек-лист, настройки сайта, места, акции.
+# НЕ копируются: фото (и ссылки на них), отзывы, код замка, брони и блокировки, адрес в договоре.
+
+COPYABLE_FILES = (PRICE_FILE, DESC_FILE, HOUSE_RULES_FILE, CHECKIN_FILE, CHECKOUT_FILE,
+                  SETTINGS_FILE, PLACES_FILE, DISCOUNTS_FILE)
+# Поля с фото и картой квартиры: в копии очищаются, чтобы у нового объекта не показывались чужие фото
+_OWN_FIELDS = {"photo", "photo_mobile", "hero_photo", "hero_photo_mobile", "map_photo", "map_url"}
+
+
+def _without_own_fields(obj):
+    if isinstance(obj, dict):
+        return {k: ("" if k in _OWN_FIELDS and isinstance(v, str) else _without_own_fields(v)) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_without_own_fields(v) for v in obj]
+    return obj
+
+
+def copy_property_settings(source_id: int, target_id: int) -> list:
+    """
+    Копирует настройки объекта source_id в объект target_id. Исходный объект не меняется.
+    Ошибка с одним файлом не мешает остальным. Возвращает имена скопированных файлов.
+    """
+    copied = []
+    if source_id == target_id:
+        return copied
+    for legacy in COPYABLE_FILES:
+        try:
+            src = property_file(legacy, source_id)
+            if not os.path.exists(src):
+                continue
+            dst = property_file(legacy, target_id)
+            if legacy.endswith(".json"):
+                with open(src, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                with open(dst, "w", encoding="utf-8") as f:
+                    json.dump(_without_own_fields(data), f, ensure_ascii=False)
+            else:
+                shutil.copyfile(src, dst)
+            copied.append(os.path.basename(legacy))
+        except Exception as e:
+            logger.warning("Не удалось скопировать %s из объекта %s в объект %s: %s",
+                           os.path.basename(legacy), source_id, target_id, e)
+    return copied
 
 
 # ---------------------------------------------------------------------------

@@ -6,6 +6,7 @@ from core.auth import require_admin
 from core.models import PropertyCreate, PropertyUpdate
 from core.properties import (
     PropertyError,
+    copy_property_settings,
     create_property,
     delete_property,
     list_properties,
@@ -48,7 +49,8 @@ async def add_property(data: PropertyCreate, _: bool = Depends(require_admin)):
         prop = create_property(data.name, data.address, data.slug)
     except PropertyError as e:
         _bad_request(e)
-    return {**_state(), "created_id": prop["id"]}
+    copied = copy_property_settings(DEFAULT_PROPERTY_ID, prop["id"]) if data.copy_settings else []
+    return {**_state(), "created_id": prop["id"], "copied": len(copied)}
 
 
 @router.put("/api/admin/properties/{property_id}")

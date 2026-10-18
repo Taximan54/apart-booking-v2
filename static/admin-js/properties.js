@@ -81,13 +81,18 @@ async function addProperty() {
     const d = await apiPost('/api/admin/properties', {
       name,
       address: document.getElementById('propNewAddress').value.trim(),
-      slug: document.getElementById('propNewSlug').value.trim()
+      slug: document.getElementById('propNewSlug').value.trim(),
+      copy_settings: !!(document.getElementById('propNewCopy') || {}).checked
     }, { 'X-Property-Id': '1' });
     propState = d;
     ['propNewName', 'propNewAddress', 'propNewSlug'].forEach(id => { document.getElementById(id).value = ''; });
+    const copyBox = document.getElementById('propNewCopy');
+    if (copyBox) copyBox.checked = false;
     renderProperties();
     renderPropertySwitch();
-    showToast('Объект создан. Выберите его в левом меню, чтобы заполнить цены, фото и описание.', 'gold');
+    showToast(d.copied
+      ? 'Объект создан, настройки скопированы. Выберите его в левом меню: проверьте описание, места и «Расположение», добавьте фото.'
+      : 'Объект создан. Выберите его в левом меню, чтобы заполнить цены, фото и описание.', 'gold');
   } catch(e) {
     showToast('Ошибка: ' + e.message, 'err');
   }

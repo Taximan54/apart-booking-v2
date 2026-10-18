@@ -71,6 +71,7 @@ class PropertyCreate(BaseModel):
     name: str
     address: str = ""
     slug: str = ""         # адрес страницы объекта (латиница); если пусто — создаётся автоматически
+    copy_settings: bool = False   # скопировать настройки (цены, описание, правила и т.д.) из основного объекта
 
 
 class PropertyUpdate(BaseModel):
