@@ -12,6 +12,8 @@
 <meta property="og:image" content="https://citypause.ru/static/og-image.jpg">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="description" content="Апартаменты премиум-класса в Новосибирске. Посуточная аренда — уютно, стильно, с полным сервисом.">
+<style>html.cp-wait body{opacity:0}body{transition:opacity .25s ease}</style>
+<script>document.documentElement.classList.add('cp-wait');setTimeout(function(){document.documentElement.classList.remove('cp-wait')},2000);</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Montserrat:wght@300;400;500;600&family=PT+Serif:wght@400;700&family=IM+Fell+English&family=Yeseva+One&family=Marck+Script&family=Pacifico&family=Poiret+One&family=Great+Vibes&family=Bad+Script&display=swap" rel="stylesheet">
@@ -1053,75 +1055,10 @@ async function initHeroCarousel() {
   }, slideSeconds * 1000);
 }
 
-async function init() {
-  // 1. Сразу рендерим галерею и календарь — не ждём API
-  loadGallery();
-  renderCal();
-  loadContractTemplate(); // загружаем шаблон договора
-  initHeroCarousel(); // hero ↔ баннеры акций (не блокирует остальную загрузку)
-
-  // 2. Грузим данные с API в фоне с таймаутом 5 сек
-  const timeout = ms => new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms));
-
-  // Цены
-  try {
-    const p = await Promise.race([API.prices(), timeout(5000)]);
-    CONFIG.weekday  = p.weekday  || p.weekday_price  || 3500;
-    CONFIG.weekend  = p.weekend  || p.weekend_price  || 4500;
-    CONFIG.cleaning = p.cleaning || p.cleaning_price || 1500;
-    CONFIG.includedGuests   = p.included_guests   ?? 1;
-    CONFIG.extraGuestPrice  = p.extra_guest_price ?? 0;
-    CONFIG.stayDiscounts    = Array.isArray(p.stay_discounts) ? p.stay_discounts : [];
-    CONFIG.holidayPeriods   = Array.isArray(p.holiday_periods) ? p.holiday_periods.filter(h => h.start && h.end && h.price) : [];
-    document.getElementById('priceWeekday').textContent  = CONFIG.weekday.toLocaleString('ru');
-    document.getElementById('priceWeekend').textContent  = CONFIG.weekend.toLocaleString('ru');
-    document.getElementById('priceCleaning').textContent = CONFIG.cleaning.toLocaleString('ru');
-  } catch(e) {
-    console.warn('Prices API unavailable, using defaults');
-    document.getElementById('priceWeekday').textContent  = CONFIG.weekday.toLocaleString('ru');
-    document.getElementById('priceWeekend').textContent  = CONFIG.weekend.toLocaleString('ru');
-    document.getElementById('priceCleaning').textContent = CONFIG.cleaning.toLocaleString('ru');
-  }
-  updateGuestHint();
-
-  // Занятые даты
-  try {
-    const bk = await Promise.race([API.bookings(), timeout(5000)]);
-    const arr = Array.isArray(bk) ? bk : (bk.booked_dates || []);
-    CONFIG.bookedDates    = arr.map(b => b.date || b).filter(Boolean);
-    CONFIG.checkoutDates  = bk.checkout_dates || [];
-    // Дата выезда не блокируется — выезд в 12:00, заезд в 15:00
-    CONFIG.bookedDates = CONFIG.bookedDates.filter(
-      d => !CONFIG.checkoutDates.includes(d)
-    );
-    renderCal(); // перерисовываем с реальными данными
-  } catch(e) {
-    console.warn('Bookings API unavailable');
-  }
-
-  // Описание
-  try {
-    const desc = await Promise.race([API.description(), timeout(5000)]);
-    if(desc && desc.length > 5) document.getElementById('aboutText').textContent = desc;
-  } catch(e) {}
-
-  // Отзывы
-  loadReviews();
-
-  // Контакты
-  loadContacts();
-  loadPaymentSettings();
-
-  // Правила проживания
-  try {
-    const rules = await fetch(`${API.BASE}/api/house-rules`).then(r=>r.text());
-    if(rules && rules.length > 5) {
-      const el = document.getElementById('houseRulesContent');
-      if(el) el.textContent = rules;
-    }
-  } catch(e) {}
-
-  // Настройки сайта (название, тексты, шрифт, обложка, карта)
+// Настройки сайта (название, тексты, шрифты, цвета, обложка, карта) применяются сразу при открытии страницы.
+// Пока они не применены, страница скрыта (класс cp-wait на <html>), чтобы не мигали значения по умолчанию.
+async function applySiteSettings() {
+  const fontWaits = [];
   try {
     const settings = await fetch(`${API.BASE}/api/site-settings`).then(r=>r.json());
 
@@ -1143,6 +1080,10 @@ async function init() {
     document.documentElement.style.setProperty('--nav-scale', settings.nav_scale || 1);
 
     const heroFont = FONT_MAP[settings.hero_font] || FONT_MAP.cormorant;
+    // шрифты, выбранные в админке, подгружаем заранее, чтобы заголовок не «перескакивал» со стандартного шрифта
+    if (document.fonts && document.fonts.load) {
+      [font, heroFont].forEach(f => fontWaits.push(document.fonts.load(`${f.weight} 1em ${f.family}`).catch(() => {})));
+    }
     document.documentElement.style.setProperty('--hero-font', heroFont.family);
     document.documentElement.style.setProperty('--hero-weight', settings.hero_bold ? 700 : heroFont.weight);
     document.documentElement.style.setProperty('--hero-title-scale', settings.hero_title_scale || 1);
@@ -1309,6 +1250,82 @@ async function init() {
       if(mapLink && settings.map_url) mapLink.href = settings.map_url;
     }
   } catch(e) {}
+  // дожидаемся шрифтов из настроек (но не дольше 1,5 сек) и только потом показываем страницу
+  try { await Promise.race([Promise.all(fontWaits), new Promise(r => setTimeout(r, 1500))]); } catch(e) {}
+  document.documentElement.classList.remove('cp-wait');
+}
+
+async function init() {
+  const siteSettingsDone = applySiteSettings();   // настройки сайта — первыми и параллельно с остальным
+  // 1. Сразу рендерим галерею и календарь — не ждём API
+  loadGallery();
+  renderCal();
+  loadContractTemplate(); // загружаем шаблон договора
+  initHeroCarousel(); // hero ↔ баннеры акций (не блокирует остальную загрузку)
+
+  // 2. Грузим данные с API в фоне с таймаутом 5 сек
+  const timeout = ms => new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms));
+
+  // Цены
+  try {
+    const p = await Promise.race([API.prices(), timeout(5000)]);
+    CONFIG.weekday  = p.weekday  || p.weekday_price  || 3500;
+    CONFIG.weekend  = p.weekend  || p.weekend_price  || 4500;
+    CONFIG.cleaning = p.cleaning || p.cleaning_price || 1500;
+    CONFIG.includedGuests   = p.included_guests   ?? 1;
+    CONFIG.extraGuestPrice  = p.extra_guest_price ?? 0;
+    CONFIG.stayDiscounts    = Array.isArray(p.stay_discounts) ? p.stay_discounts : [];
+    CONFIG.holidayPeriods   = Array.isArray(p.holiday_periods) ? p.holiday_periods.filter(h => h.start && h.end && h.price) : [];
+    document.getElementById('priceWeekday').textContent  = CONFIG.weekday.toLocaleString('ru');
+    document.getElementById('priceWeekend').textContent  = CONFIG.weekend.toLocaleString('ru');
+    document.getElementById('priceCleaning').textContent = CONFIG.cleaning.toLocaleString('ru');
+  } catch(e) {
+    console.warn('Prices API unavailable, using defaults');
+    document.getElementById('priceWeekday').textContent  = CONFIG.weekday.toLocaleString('ru');
+    document.getElementById('priceWeekend').textContent  = CONFIG.weekend.toLocaleString('ru');
+    document.getElementById('priceCleaning').textContent = CONFIG.cleaning.toLocaleString('ru');
+  }
+  updateGuestHint();
+
+  // Занятые даты
+  try {
+    const bk = await Promise.race([API.bookings(), timeout(5000)]);
+    const arr = Array.isArray(bk) ? bk : (bk.booked_dates || []);
+    CONFIG.bookedDates    = arr.map(b => b.date || b).filter(Boolean);
+    CONFIG.checkoutDates  = bk.checkout_dates || [];
+    // Дата выезда не блокируется — выезд в 12:00, заезд в 15:00
+    CONFIG.bookedDates = CONFIG.bookedDates.filter(
+      d => !CONFIG.checkoutDates.includes(d)
+    );
+    renderCal(); // перерисовываем с реальными данными
+  } catch(e) {
+    console.warn('Bookings API unavailable');
+  }
+
+  // Описание
+  try {
+    const desc = await Promise.race([API.description(), timeout(5000)]);
+    if(desc && desc.length > 5) document.getElementById('aboutText').textContent = desc;
+  } catch(e) {}
+
+  // Отзывы
+  loadReviews();
+
+  // Контакты
+  loadContacts();
+  loadPaymentSettings();
+
+  // Правила проживания
+  try {
+    const rules = await fetch(`${API.BASE}/api/house-rules`).then(r=>r.text());
+    if(rules && rules.length > 5) {
+      const el = document.getElementById('houseRulesContent');
+      if(el) el.textContent = rules;
+    }
+  } catch(e) {}
+
+  // Настройки сайта (название, тексты, шрифт, обложка, карта) — загрузка запущена в начале init()
+  await siteSettingsDone;
 
   // Фото галереи
   try {
