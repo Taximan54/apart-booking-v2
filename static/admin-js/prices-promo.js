@@ -374,6 +374,7 @@ function renderPromoTable(codes) {
   } else {
     entries.forEach(([code, percent]) => addPromoRow(code, percent));
   }
+  fillPromoSendSelect(codes);
 }
 
 function addPromoRow(code = '', percent = '') {
@@ -534,6 +535,8 @@ async function loadReviewPromo() {
     document.getElementById('reviewPercent').value = d.percent;
     document.getElementById('reviewSubject').value = d.subject || '';
     document.getElementById('reviewText').value = d.text || '';
+    const sendPercent = document.getElementById('promoSendPercent');
+    if (sendPercent && d.percent > 0) sendPercent.value = d.percent;
   } catch(e) {}
 }
 
@@ -571,6 +574,65 @@ async function sendReviewTest() {
     const d = await apiPost('/api/admin/review-promo/test', { email: document.getElementById('reviewTestEmail').value.trim() });
     document.getElementById('reviewStatus').textContent = `Пробное письмо отправлено на ${d.to}. Проверьте почту (и папки «Рассылки» и «Спам»).`;
     showToast('Пробное письмо отправлено', 'gold');
+  } catch(e) {
+    showToast('Ошибка: ' + e.message, 'err');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// Отправка промокода любому человеку (например, гостю, который жил до запуска сайта)
+function fillPromoSendSelect(codes) {
+  const sel = document.getElementById('promoSendCode');
+  if (!sel) return;
+  const current = sel.value;
+  sel.innerHTML = '';
+  const first = document.createElement('option');
+  first.value = '';
+  first.textContent = 'Создать новый личный промокод';
+  sel.appendChild(first);
+  Object.entries(codes || {}).forEach(([code, percent]) => {
+    if (!(Number(percent) > 0)) return;
+    const o = document.createElement('option');
+    o.value = code;
+    o.textContent = code + ' — скидка ' + percent + '%';
+    sel.appendChild(o);
+  });
+  if ([...sel.options].some(o => o.value === current)) sel.value = current;
+  onPromoSendCodeChange();
+}
+
+function onPromoSendCodeChange() {
+  const sel = document.getElementById('promoSendCode');
+  const box = document.getElementById('promoSendPercentBox');
+  if (sel && box) box.style.display = sel.value ? 'none' : '';
+}
+
+async function sendPromoToGuest() {
+  const email = document.getElementById('promoSendEmail').value.trim();
+  if (!email || !email.includes('@')) { showToast('Укажите email получателя', 'err'); return; }
+  const code = document.getElementById('promoSendCode').value;
+  const percent = parseInt(document.getElementById('promoSendPercent').value, 10);
+  if (!code && (isNaN(percent) || percent < 1 || percent > 90)) { showToast('Скидка должна быть от 1 до 90%', 'err'); return; }
+  const what = code ? 'промокод ' + code : 'новый промокод со скидкой ' + percent + '%';
+  if (!confirm('Отправить письмо с промокодом (' + what + ') на ' + email + '?')) return;
+  const btn = document.getElementById('promoSendBtn');
+  const status = document.getElementById('promoSendStatus');
+  btn.disabled = true;
+  try {
+    const d = await apiRequest('POST', '/api/admin/review-promo/send', {
+      email,
+      name: document.getElementById('promoSendName').value.trim(),
+      code,
+      percent: code ? 10 : percent,
+      subject: document.getElementById('promoSendSubject').value.trim(),
+      text: document.getElementById('promoSendText').value
+    });
+    status.textContent = 'Письмо отправлено на ' + d.to + '. Промокод: ' + d.code + ' (скидка ' + d.percent + '%).';
+    showToast('Промокод отправлен', 'gold');
+    document.getElementById('promoSendEmail').value = '';
+    document.getElementById('promoSendName').value = '';
+    if (d.created) await loadPromoCodes();   // новый промокод появится в таблице выше
   } catch(e) {
     showToast('Ошибка: ' + e.message, 'err');
   } finally {

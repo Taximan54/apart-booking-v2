@@ -18,17 +18,24 @@ from core.constants import (
 from core.bookings_repo import exists_by_ref
 from core.landlord import get_landlord_email
 from core.mailer import send_email
-from core.models import Prices, PromoCodes, PromoValidate, ReviewPromoTest, ReviewPromoUpdate
+from core.models import Prices, PromoCodes, PromoValidate, ReviewPromoSend, ReviewPromoTest, ReviewPromoUpdate
+from core.logger import get_logger
 from core.properties import admin_property_id, property_file, request_property_id
 from core.review_promo import (
+    MAX_PERCENT,
     REVIEW_DECISIONS,
     build_review_email,
     get_review_settings,
+    issue_personal_promo_code,
+    load_promo_codes,
     load_review_decisions,
     load_review_template_text,
+    remove_promo_code,
     save_review_settings,
     set_review_decision,
 )
+
+logger = get_logger(__name__)
 
 router = APIRouter()
 
@@ -120,6 +127,50 @@ async def send_review_promo_test(data: ReviewPromoTest, _: bool = Depends(requir
     subject, html, text = build_review_email("Иван", "RETURNTEST" if settings["percent"] > 0 else "", settings["percent"])
     await asyncio.to_thread(send_email, to, subject, html, None, text)
     return {"ok": True, "to": to}
+
+
+@router.post("/api/admin/review-promo/send")
+async def send_promo_to_guest(data: ReviewPromoSend, _: bool = Depends(require_admin)):
+    """
+    Письмо с промокодом любому человеку (например, гостю, который жил до запуска сайта, через другую площадку).
+    Промокод — существующий (поле code) или новый личный (скидка percent). Текст и тема — стандартные
+    из настроек письма после выезда или свои.
+    """
+    to = (data.email or "").strip()
+    if "@" not in to or " " in to or len(to) > 200:
+        raise HTTPException(status_code=400, detail="Укажите корректный адрес почты")
+    name = (data.name or "").strip()[:80]
+    subject = (data.subject or "").strip()
+    if len(subject) > 150:
+        raise HTTPException(status_code=400, detail="Тема письма слишком длинная (макс. 150 символов)")
+    text = (data.text or "").strip()
+
+    code = (data.code or "").strip().upper()
+    created = False
+    if code:
+        percent = load_promo_codes().get(code)
+        if not isinstance(percent, int) or percent <= 0:
+            raise HTTPException(status_code=400, detail="Такого промокода нет или у него нет скидки")
+    else:
+        percent = data.percent
+        if not 1 <= percent <= MAX_PERCENT:
+            raise HTTPException(status_code=400, detail=f"Скидка должна быть от 1 до {MAX_PERCENT}%")
+        try:
+            code = issue_personal_promo_code(percent)
+        except ValueError as e:
+            raise HTTPException(status_code=500, detail=str(e))
+        created = True
+
+    letter_subject, html, plain = build_review_email(name, code, percent, template_text=text or None, subject=subject or None)
+    try:
+        await asyncio.to_thread(send_email, to, letter_subject, html, None, plain)
+    except Exception as e:
+        logger.warning("Не удалось отправить промокод %s: %s", code, e)
+        if created:
+            remove_promo_code(code)   # письмо не ушло — новый промокод не оставляем
+        raise HTTPException(status_code=502, detail="Не удалось отправить письмо. Проверьте адрес и настройки почты")
+    logger.info("Промокод %s (скидка %s%%) отправлен письмом", code, percent)
+    return {"ok": True, "to": to, "code": code, "percent": percent, "created": created}
 
 
 class ReviewDecision(BaseModel):

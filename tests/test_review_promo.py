@@ -297,3 +297,88 @@ def test_scheduler_without_any_decision_sends_nothing(env, monkeypatch, tmp_path
     booking = _booking(7, "GP-ABC123", "Анна", "anna@example.com")
     sent, marked = _run_review_pass(monkeypatch, rp, tmp_path, [booking], {})
     assert sent == [] and marked == []
+
+
+# ---------------------------------------------------------------------------
+# Письмо с промокодом любому человеку («Промокоды → Отправить промокод человеку»)
+# ---------------------------------------------------------------------------
+
+def _send_env(env, monkeypatch):
+    from routers import pricing as r
+    rp, files = env
+    sent = []
+    monkeypatch.setattr(r, "send_email", lambda to, subject, html, attachments=None, text_body=None: sent.append((to, subject, html, text_body)))
+    return r, rp, files, sent
+
+
+def test_send_promo_to_guest_creates_new_personal_code(env, monkeypatch):
+    import inspect
+    from core.auth import require_admin
+    from core.models import ReviewPromoSend
+    r, rp, files, sent = _send_env(env, monkeypatch)
+    default = inspect.signature(r.send_promo_to_guest).parameters["_"].default
+    assert getattr(default, "dependency", None) is require_admin, "отправка промокода без проверки админа"
+    res = run(r.send_promo_to_guest(ReviewPromoSend(email=" guest@example.com ", name="Мария", percent=15), True))
+    assert res["to"] == "guest@example.com" and res["percent"] == 15 and res["created"] is True
+    assert res["code"].startswith("GUEST") and len(res["code"]) == 10
+    assert json.load(open(files["PROMO_FILE"], encoding="utf-8"))[res["code"]] == 15      # код сохранён и будет работать на сайте
+    to, subject, html, text = sent[0]
+    assert to == "guest@example.com" and "Мария" in text and res["code"] in text and "15%" in text
+
+
+def test_send_promo_to_guest_existing_code_is_not_changed(env, monkeypatch):
+    from core.models import ReviewPromoSend
+    r, rp, files, sent = _send_env(env, monkeypatch)
+    json.dump({"SUMMER": 20, "ZERO": 0}, open(files["PROMO_FILE"], "w", encoding="utf-8"))
+    res = run(r.send_promo_to_guest(ReviewPromoSend(email="a@example.com", code=" summer "), True))
+    assert res["code"] == "SUMMER" and res["percent"] == 20 and res["created"] is False
+    assert json.load(open(files["PROMO_FILE"], encoding="utf-8")) == {"SUMMER": 20, "ZERO": 0}
+    assert "SUMMER" in sent[0][3] and "20%" in sent[0][3]
+    for bad in ("NOPE", "ZERO"):                                                          # нет такого кода / у кода нет скидки
+        with pytest.raises(HTTPException) as e:
+            run(r.send_promo_to_guest(ReviewPromoSend(email="a@example.com", code=bad), True))
+        assert e.value.status_code == 400
+    assert len(sent) == 1
+
+
+def test_send_promo_to_guest_validation_sends_nothing(env, monkeypatch):
+    from core.models import ReviewPromoSend
+    r, rp, files, sent = _send_env(env, monkeypatch)
+    for bad in (ReviewPromoSend(email="без-собаки"), ReviewPromoSend(email="a b@c.d"), ReviewPromoSend(email="a@example.com", percent=0),
+                ReviewPromoSend(email="a@example.com", percent=95), ReviewPromoSend(email="a@example.com", subject="x" * 151)):
+        with pytest.raises(HTTPException) as e:
+            run(r.send_promo_to_guest(bad, True))
+        assert e.value.status_code == 400
+    assert sent == [] and not os.path.exists(files["PROMO_FILE"]), "при ошибке в данных ничего не отправляется и промокод не создаётся"
+
+
+def test_send_promo_to_guest_failed_send_removes_new_code(env, monkeypatch):
+    from core.models import ReviewPromoSend
+    r, rp, files, sent = _send_env(env, monkeypatch)
+    json.dump({"SUMMER": 20}, open(files["PROMO_FILE"], "w", encoding="utf-8"))
+
+    def broken(*a, **k):
+        raise RuntimeError("smtp down")
+    monkeypatch.setattr(r, "send_email", broken)
+    with pytest.raises(HTTPException) as e:
+        run(r.send_promo_to_guest(ReviewPromoSend(email="a@example.com", percent=10), True))
+    assert e.value.status_code == 502
+    assert json.load(open(files["PROMO_FILE"], encoding="utf-8")) == {"SUMMER": 20}       # новый код не остался, прежние на месте
+
+
+def test_send_promo_to_guest_custom_subject_and_text(env, monkeypatch):
+    from core.models import ReviewPromoSend
+    r, rp, files, sent = _send_env(env, monkeypatch)
+    res = run(r.send_promo_to_guest(ReviewPromoSend(email="a@example.com", name="Иван", percent=12, subject="Скидка для {{ИМЯ}}",
+                                                    text="Привет, {{ИМЯ}}! Ваш код {{ПРОМОКОД}} даёт {{ПРОЦЕНТ_СКИДКИ}}%."), True))
+    _, subject, _, text = sent[0]
+    assert subject == "Скидка для Иван"
+    assert text.startswith(f"Привет, Иван! Ваш код {res['code']} даёт 12%.")
+    assert "Спасибо за визит" not in text                                                 # стандартный текст не подмешивается
+
+
+def test_personal_promo_codes_are_unique_and_readable(env):
+    rp, files = env
+    codes = {rp.issue_personal_promo_code(10) for _ in range(30)}
+    assert len(codes) == 30 and all(c.startswith("GUEST") and not set(c[5:]) & set("01OIl") for c in codes)
+    assert set(json.load(open(files["PROMO_FILE"], encoding="utf-8"))) == codes

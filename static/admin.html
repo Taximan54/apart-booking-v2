@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Панель управления — Городская Пауза</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Montserrat:wght@300;400;500;600&family=PT+Serif:wght@400;700&family=IM+Fell+English&family=Yeseva+One&family=Marck+Script&family=Pacifico&family=Poiret+One&family=Great+Vibes&family=Bad+Script&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/static/admin.css?v=20261018g">
+<link rel="stylesheet" href="/static/admin.css?v=20261018h">
 </head>
 <body>
 
@@ -516,6 +516,48 @@
           </div>
           <div style="font-size:10px;color:var(--text-muted);margin-top:8px;line-height:1.6">Пробное письмо уходит с сохранённым текстом и скидкой (с тестовым именем и кодом RETURNTEST). Проверьте, в какую папку оно попало: во «Входящие» или в «Рассылки». Если в «Рассылки», один раз перенесите его во «Входящие» и нажмите «Не рассылка» / «Всегда во входящие»: почта запомнит отправителя.</div>
           <div id="reviewStatus" style="font-size:11px;color:var(--text-muted);margin-top:10px"></div>
+        </div>
+      </div>
+
+      <div class="card" style="max-width:700px;margin-top:24px">
+        <div class="card-header"><span class="card-title">Отправить промокод человеку</span></div>
+        <div class="card-body">
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:20px;padding:12px 16px;background:rgba(201,168,76,.04);border:1px solid rgba(201,168,76,.1);line-height:1.7">
+            Письмо с промокодом можно отправить любому человеку, например гостю, который жил у вас до запуска сайта или заезжал через другую площадку.<br>
+            По умолчанию уходит то же письмо, что и после выезда (текст из блока выше). Если нужен другой текст, впишите его ниже: метки <b>{{ИМЯ}}</b>, <b>{{ПРОМОКОД}}</b>, <b>{{ПРОЦЕНТ_СКИДКИ}}</b> работают и там.
+          </div>
+          <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px">
+            <div class="info-field" style="flex:2;min-width:220px">
+              <div class="info-label">Email получателя</div>
+              <input type="email" class="info-input" id="promoSendEmail" placeholder="guest@mail.ru">
+            </div>
+            <div class="info-field" style="flex:1;min-width:160px">
+              <div class="info-label">Имя (необязательно)</div>
+              <input type="text" class="info-input" id="promoSendName" maxlength="80" placeholder="Мария">
+            </div>
+          </div>
+          <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px">
+            <div class="info-field" style="flex:2;min-width:220px">
+              <div class="info-label">Промокод</div>
+              <select class="info-input" id="promoSendCode" onchange="onPromoSendCodeChange()" style="width:100%">
+                <option value="">Создать новый личный промокод</option>
+              </select>
+            </div>
+            <div class="info-field" style="width:170px" id="promoSendPercentBox">
+              <div class="info-label">Скидка, %</div>
+              <input type="number" class="info-input" id="promoSendPercent" min="1" max="90" step="1" value="10">
+            </div>
+          </div>
+          <div class="info-field" style="margin-bottom:16px">
+            <div class="info-label">Тема письма (необязательно)</div>
+            <input type="text" class="info-input" id="promoSendSubject" maxlength="150" placeholder="Если пусто — тема из блока выше">
+          </div>
+          <div class="info-field" style="margin-bottom:16px">
+            <div class="info-label">Свой текст письма (необязательно)</div>
+            <textarea class="info-input" id="promoSendText" rows="6" style="width:100%;resize:vertical;line-height:1.6" placeholder="Если пусто — стандартный текст письма из блока выше"></textarea>
+          </div>
+          <button class="btn btn-primary" id="promoSendBtn" onclick="sendPromoToGuest()">Отправить промокод</button>
+          <div id="promoSendStatus" style="font-size:11px;color:var(--text-muted);margin-top:10px;line-height:1.6"></div>
         </div>
       </div>
     </div>
@@ -1462,15 +1504,15 @@
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
-<script src="/static/admin-js/core.js?v=20261018g"></script>
-<script src="/static/admin-js/prices-promo.js?v=20261018g"></script>
-<script src="/static/admin-js/bookings-dashboard.js?v=20261018g"></script>
-<script src="/static/admin-js/ui-contract.js?v=20261018g"></script>
-<script src="/static/admin-js/archive-photos.js?v=20261018g"></script>
-<script src="/static/admin-js/content.js?v=20261018g"></script>
-<script src="/static/admin-js/site-settings.js?v=20261018g"></script>
-<script src="/static/admin-js/properties.js?v=20261018g"></script>
-<script src="/static/admin-js/integrations.js?v=20261018g"></script>
-<script src="/static/admin-js/init.js?v=20261018g"></script>
+<script src="/static/admin-js/core.js?v=20261018h"></script>
+<script src="/static/admin-js/prices-promo.js?v=20261018h"></script>
+<script src="/static/admin-js/bookings-dashboard.js?v=20261018h"></script>
+<script src="/static/admin-js/ui-contract.js?v=20261018h"></script>
+<script src="/static/admin-js/archive-photos.js?v=20261018h"></script>
+<script src="/static/admin-js/content.js?v=20261018h"></script>
+<script src="/static/admin-js/site-settings.js?v=20261018h"></script>
+<script src="/static/admin-js/properties.js?v=20261018h"></script>
+<script src="/static/admin-js/integrations.js?v=20261018h"></script>
+<script src="/static/admin-js/init.js?v=20261018h"></script>
 </body>
 </html>

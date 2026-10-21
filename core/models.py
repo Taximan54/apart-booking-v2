@@ -67,6 +67,15 @@ class ReviewPromoTest(BaseModel):
     email: str = ""        # куда отправить пробное письмо (пусто — на почту из «Контактов»)
 
 
+class ReviewPromoSend(BaseModel):
+    email: str             # кому отправить письмо с промокодом
+    name: str = ""         # имя получателя (необязательно)
+    code: str = ""         # существующий промокод (пусто — создать новый личный)
+    percent: int = 10      # скидка для нового промокода
+    subject: str = ""      # своя тема письма (пусто — тема из настроек письма после выезда)
+    text: str = ""         # свой текст письма (пусто — стандартный текст письма после выезда)
+
+
 class PropertyCreate(BaseModel):
     name: str
     address: str = ""

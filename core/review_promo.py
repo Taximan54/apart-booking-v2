@@ -8,6 +8,7 @@ import html as html_lib
 import json
 import os
 import re
+import secrets
 
 from core.constants import (
     DEFAULT_REVIEW_SUBJECT,
@@ -95,17 +96,50 @@ def set_review_decision(ref, decision: str) -> None:
 # Промокод
 # ---------------------------------------------------------------------------
 
+def load_promo_codes() -> dict:
+    if not os.path.exists(PROMO_FILE):
+        return {}
+    with open(PROMO_FILE, "r", encoding="utf-8") as f:
+        data = json.load(f)
+    return data if isinstance(data, dict) else {}
+
+
+def _save_promo_codes(codes: dict) -> None:
+    with open(PROMO_FILE, "w", encoding="utf-8") as f:
+        json.dump(codes, f, ensure_ascii=False)
+
+
 def issue_promo_code(booking_ref, percent: int) -> str:
     """Создаёт личный промокод гостя (RETURN + 4 последних символа номера брони) и сохраняет его."""
     code = "RETURN" + str(booking_ref)[-4:].upper()
-    codes = {}
-    if os.path.exists(PROMO_FILE):
-        with open(PROMO_FILE, "r", encoding="utf-8") as f:
-            codes = json.load(f)
+    codes = load_promo_codes()
     codes[code] = percent
-    with open(PROMO_FILE, "w", encoding="utf-8") as f:
-        json.dump(codes, f, ensure_ascii=False)
+    _save_promo_codes(codes)
     return code
+
+
+# Символы без похожих друг на друга (нет 0/O, 1/I): код проще продиктовать или переписать
+_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+
+
+def issue_personal_promo_code(percent: int) -> str:
+    """Создаёт новый личный промокод (GUEST + 5 символов) для отправки любому человеку и сохраняет его."""
+    codes = load_promo_codes()
+    for _ in range(100):
+        code = "GUEST" + "".join(secrets.choice(_CODE_ALPHABET) for _ in range(5))
+        if code not in codes:
+            codes[code] = percent
+            _save_promo_codes(codes)
+            return code
+    raise ValueError("Не удалось подобрать свободный промокод")
+
+
+def remove_promo_code(code: str) -> None:
+    """Удаляет промокод (если письмо с ним не удалось отправить)."""
+    codes = load_promo_codes()
+    if code in codes:
+        del codes[code]
+        _save_promo_codes(codes)
 
 
 # ---------------------------------------------------------------------------
