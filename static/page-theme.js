@@ -47,6 +47,13 @@
   var slug = new URLSearchParams(location.search).get('property') || '';
   var CACHE_KEY = 'cpPageTheme:' + slug;
 
+  // Светлый ли фон (для светлых тем админка делает значки и ошибки темнее)
+  function isLight(hex) {
+    var m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex || '');
+    if (!m) return false;
+    return (0.299 * parseInt(m[1], 16) + 0.587 * parseInt(m[2], 16) + 0.114 * parseInt(m[3], 16)) > 150;
+  }
+
   function apply(bgKey, colorKey) {
     var root = document.documentElement;
     var bg = BACKGROUND_THEMES[bgKey] || BACKGROUND_THEMES.black;
@@ -64,7 +71,13 @@
     root.style.setProperty('--gold-dark', c.dark);
     root.style.setProperty('--gold-muted', c.muted);
     root.style.setProperty('--accent-gradient', c.gradient);
+    root.style.setProperty('--black-hover', 'color-mix(in srgb, ' + bg.card + ' 92%, ' + bg.text_primary + ' 8%)');
+    root.classList.toggle('theme-light', isLight(bg.bg));
   }
+
+  // Для админки: тему применяет сама админка (по выбранному объекту), автозагрузка ниже не нужна
+  window.CityPauseTheme = { apply: apply };
+  if (window.CP_THEME_NO_AUTO) return;
 
   // Сначала — запомненная тема (чтобы страница не мигала чёрным), потом — свежая с сервера
   try {

@@ -161,7 +161,7 @@ function openBookingModal(encoded) {
       : '—'],
   );
   document.getElementById('modalDetails').innerHTML = detailRows
-    .map(([l,v]) => `<div class="mbd-box"><div class="mbd-label">${l}</div><div class="mbd-val">${v}</div></div>`).join('');
+    .map(([l,v]) => `<div class="mbd-box${['Email','Пожелания','Фото паспорта','Промокод'].includes(l) ? ' mbd-wide' : ''}"><div class="mbd-label">${l}</div><div class="mbd-val">${v}</div></div>`).join('');
 
   // Показываем кнопки в зависимости от статуса
   const s = b.status;
