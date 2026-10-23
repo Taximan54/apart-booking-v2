@@ -31,7 +31,7 @@ async function loadPropertySwitch() {
 function renderPropertySwitch() {
   const items = propState.properties;
   propCacheWrite(items);
-  renderPropertyBadge(items);   // плавающий переключатель: не зависит от бокового меню
+  renderPropertyBadge(items);   // ссылка на сайт объекта и название вкладки
   const box = document.getElementById('sbPropertyBox');
   const sel = document.getElementById('propertySwitch');
   if (!box || !sel) return;
@@ -45,9 +45,8 @@ function renderPropertySwitch() {
   sel.value = ADMIN_PROPERTY_ID;
 }
 
-// Плавающий переключатель объектов в углу экрана: виден всегда, пока объектов больше одного,
-// и не зависит от бокового меню. Список объектов запоминается в браузере, поэтому переключатель
-// появляется сразу при открытии админки, даже если сервер ответит не сразу.
+// Список объектов запоминается в браузере (используется для названия во вкладке и ссылки на сайт объекта
+// сразу при открытии админки, до ответа сервера)
 const PROP_CACHE_KEY = 'adminPropertyList';
 
 function propCacheRead() {
@@ -63,47 +62,18 @@ function propCacheWrite(items) {
   } catch(e) {}
 }
 
+// Выбор объекта — только в боковом меню (сверху слева). Здесь обновляются ссылка «Страница сайта ↗»
+// под переключателем и название выбранного объекта во вкладке браузера.
 function renderPropertyBadge(items) {
-  let box = document.getElementById('propertyFloat');
-  if (!box) {
-    box = document.createElement('div');
-    box.id = 'propertyFloat';
-    box.style.cssText = 'position:fixed;left:12px;bottom:12px;z-index:9500;align-items:center;gap:8px;padding:6px 10px;background:var(--black-card);border:1px solid var(--gold);font-size:11px;letter-spacing:.05em;color:var(--gold)';
-    const label = document.createElement('span');
-    label.textContent = 'Объект:';
-    const sel = document.createElement('select');
-    sel.id = 'propertyFloatSelect';
-    sel.className = 'info-input';
-    sel.style.cssText = 'min-width:140px;padding:4px 8px;font-size:12px';
-    sel.onchange = () => switchProperty(sel.value);
-    const siteLink = document.createElement('a');
-    siteLink.id = 'propertyFloatLink';
-    siteLink.target = '_blank';
-    siteLink.textContent = 'Сайт ↗';
-    siteLink.style.cssText = 'color:var(--gold);text-decoration:none;white-space:nowrap';
-    box.append(label, sel, siteLink);
-    document.body.appendChild(box);
-  }
-  const old = document.getElementById('propertyBadge');
-  if (old) old.remove();
-  const sel = document.getElementById('propertyFloatSelect');
+  const oldFloat = document.getElementById('propertyFloat');   // прежний плавающий переключатель внизу слева убран
+  if (oldFloat) oldFloat.remove();
   const show = items.length > 1;
-  box.style.setProperty('display', show ? 'flex' : 'none', 'important');
-  sel.innerHTML = '';
-  items.forEach(p => {
-    const o = document.createElement('option');
-    o.value = p.id;
-    o.textContent = p.name + (p.active === false ? ' (отключён)' : '');
-    sel.appendChild(o);
-  });
-  sel.value = ADMIN_PROPERTY_ID;
-  // название выбранного объекта во вкладке браузера и ссылка на его страницу сайта
   const cur = items.find(p => String(p.id) === ADMIN_PROPERTY_ID);
-  const siteLink = document.getElementById('propertyFloatLink');
+  const siteLink = document.getElementById('propertySiteLink');
   if (siteLink) {
     const isMain = cur && (cur.is_default || String(cur.id) === '1');
     const url = cur ? (isMain ? '/' : (cur.slug ? '/o/' + encodeURIComponent(cur.slug) : '')) : '';
-    siteLink.style.display = url ? '' : 'none';
+    siteLink.style.display = url ? 'inline-block' : 'none';
     if (url) siteLink.href = url;
   }
   if (!window.__adminBaseTitle) window.__adminBaseTitle = document.title;
