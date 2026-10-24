@@ -2,6 +2,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import HTMLResponse
 
+from core.catalog import build_public_catalog
 from core.properties import get_property_by_slug, public_property_id
 from services.booking_service import get_booked_ranges
 
@@ -25,6 +26,17 @@ async def property_page(slug: str):
         raise HTTPException(status_code=404, detail="Объект не найден")
     with open("static/index.html", encoding="utf-8") as f:
         return f.read()
+
+@router.get("/apartments", response_class=HTMLResponse)
+async def apartments_page():
+    """Каталог апартаментов: страница, где гость выбирает квартиру."""
+    with open("static/apartments.html", encoding="utf-8") as f:
+        return f.read()
+
+@router.get("/api/catalog")
+async def catalog():
+    """Публичные данные каталога: карточки видимых действующих объектов (фото, описание, цена, удобства)."""
+    return build_public_catalog()
 
 @router.get("/health")
 async def health():

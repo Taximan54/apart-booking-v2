@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Апартаменты</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500&family=Montserrat:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{--gold:#C9A84C;--black:#0A0A0A;--black-card:#141414;--black-border:#1E1E1E;--text-primary:#F0E6C8;--text-secondary:#A89060;--text-muted:#5A4A30;}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--text-primary);line-height:1.7;min-height:100vh;transition:opacity .25s ease}
+html.cp-wait body{opacity:0}
+header{padding:24px 60px;border-bottom:1px solid var(--black-border);display:flex;align-items:center;justify-content:space-between}
+.logo{font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:300;color:var(--gold);letter-spacing:.3em;text-decoration:none}
+.container{max-width:1240px;margin:0 auto;padding:60px 40px}
+h1{font-family:'Cormorant Garamond',serif;font-size:46px;font-weight:300;color:var(--text-primary);margin-bottom:12px;text-align:center}
+.subtitle{font-size:13px;color:var(--text-muted);text-align:center;margin-bottom:56px;letter-spacing:.05em}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:32px;align-items:start}
+.cards.single{max-width:560px;margin:0 auto}
+.card{background:var(--black-card);border:1px solid var(--black-border);overflow:hidden;display:flex;flex-direction:column;transition:border-color .3s}
+.card:hover{border-color:var(--gold)}
+/* Фото: листаются стрелками, точками и свайпом */
+.slider{position:relative;overflow:hidden;aspect-ratio:4/3;background:var(--black-border);outline:none}
+.track{display:flex;height:100%;transition:transform .45s ease}
+.slide{flex:0 0 100%;height:100%;position:relative}
+.slide img{width:100%;height:100%;object-fit:cover;display:block}
+.slider.empty{display:flex;align-items:center;justify-content:center;font-size:44px;color:var(--text-muted)}
+.arrow{position:absolute;top:50%;transform:translateY(-50%);width:42px;height:42px;border:none;border-radius:50%;background:rgba(10,10,10,.55);color:#fff;font-size:24px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .2s,opacity .2s;opacity:.85}
+.arrow:hover{background:rgba(10,10,10,.85);opacity:1}
+.arrow.prev{left:12px}.arrow.next{right:12px}
+.dots{position:absolute;left:0;right:0;bottom:12px;display:flex;justify-content:center;gap:6px;pointer-events:none}
+.dots span{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.45);transition:background .2s,transform .2s}
+.dots span.on{background:#fff;transform:scale(1.25)}
+.counter{position:absolute;top:12px;right:12px;font-size:11px;letter-spacing:.08em;color:#fff;background:rgba(10,10,10,.55);padding:3px 10px;border-radius:12px}
+.body{padding:24px 24px 26px;display:flex;flex-direction:column;gap:12px;flex:1}
+.name{font-family:'Cormorant Garamond',serif;font-size:30px;font-weight:400;line-height:1.2}
+.name a{color:var(--text-primary);text-decoration:none}
+.name a:hover{color:var(--gold)}
+.caption{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--gold)}
+.desc{font-size:13px;color:var(--text-secondary);font-weight:300;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+.amen{display:flex;flex-wrap:wrap;gap:8px}
+.amen span{font-size:12px;color:var(--text-secondary);border:1px solid var(--black-border);padding:4px 10px;white-space:nowrap}
+.foot{margin-top:auto;padding-top:14px;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;border-top:1px solid var(--black-border)}
+.price{font-size:12px;color:var(--text-muted)}
+.price b{font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:500;color:var(--text-primary)}
+.btn{display:inline-block;padding:12px 22px;font-size:11px;letter-spacing:.18em;text-transform:uppercase;text-decoration:none;color:var(--black);background:var(--gold);transition:opacity .3s}
+.btn:hover{opacity:.85}
+.msg{text-align:center;color:var(--text-muted);font-size:13px;padding:60px 20px;grid-column:1/-1}
+footer{padding:40px 60px;border-top:1px solid var(--black-border);text-align:center;font-size:11px;color:var(--text-muted);letter-spacing:.1em}
+@media(max-width:768px){header{padding:20px 24px}.container{padding:36px 16px}h1{font-size:32px}.cards{grid-template-columns:1fr;gap:24px}.logo{font-size:20px}footer{padding:24px}.arrow{width:38px;height:38px}}
+</style>
+<script>
+// Пока загружаются данные каталога, страница скрыта (чтобы не мигали цвета по умолчанию); через 2 сек покажется в любом случае
+document.documentElement.classList.add('cp-wait');
+setTimeout(function(){document.documentElement.classList.remove('cp-wait')},2000);
+window.CP_THEME_NO_AUTO = true;
+</script>
+<script src="/static/page-theme.js?v=20261018c"></script>
+<script>
+// Оформление из прошлого захода применяем сразу
+(function(){try{var c=JSON.parse(localStorage.getItem('cpCatalogTheme')||'null');if(c&&window.CityPauseTheme)window.CityPauseTheme.apply(c.bg,c.color);}catch(e){}})();
+</script>
+</head>
+<body>
+
+<header>
+  <a href="/apartments" class="logo" id="brand">Апартаменты</a>
+</header>
+
+<div class="container">
+  <h1 id="pageTitle">Наши апартаменты</h1>
+  <div class="subtitle" id="pageSubtitle"></div>
+  <div class="cards" id="cards"><div class="msg">Загрузка…</div></div>
+</div>
+
+<footer id="footer"></footer>
+
+<script>
+function el(tag, cls, text) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text != null) e.textContent = text;
+  return e;
+}
+
+// Слайдер фото: стрелки, точки, свайп, клавиши ← →. Фото подгружаются по мере листания (текущее и соседнее).
+function buildSlider(photos, name) {
+  const slider = el('div', 'slider');
+  if (!photos.length) {
+    slider.classList.add('empty');
+    slider.textContent = '🏠';
+    return slider;
+  }
+  slider.tabIndex = 0;
+  const track = el('div', 'track');
+  const imgs = photos.map((p, i) => {
+    const slide = el('div', 'slide');
+    const img = document.createElement('img');
+    img.alt = p.label && p.label !== '' ? p.label : name;
+    img.decoding = 'async';
+    img.dataset.src = p.url;
+    slide.appendChild(img);
+    track.appendChild(slide);
+    return img;
+  });
+  slider.appendChild(track);
+  let current = 0;
+  const dots = el('div', 'dots');
+  const counter = el('div', 'counter');
+  const load = i => { const im = imgs[(i + imgs.length) % imgs.length]; if (im.dataset.src) { im.src = im.dataset.src; delete im.dataset.src; } };
+  function show(i) {
+    current = (i + photos.length) % photos.length;
+    track.style.transform = 'translateX(-' + (current * 100) + '%)';
+    load(current); load(current + 1);
+    [...dots.children].forEach((d, n) => d.classList.toggle('on', n === current));
+    counter.textContent = (current + 1) + ' / ' + photos.length;
+  }
+  if (photos.length > 1) {
+    photos.forEach(() => dots.appendChild(el('span')));
+    const prev = el('button', 'arrow prev', '‹'); prev.type = 'button'; prev.setAttribute('aria-label', 'Предыдущее фото');
+    const next = el('button', 'arrow next', '›'); next.type = 'button'; next.setAttribute('aria-label', 'Следующее фото');
+    prev.onclick = () => show(current - 1);
+    next.onclick = () => show(current + 1);
+    slider.append(prev, next, dots, counter);
+    slider.addEventListener('keydown', e => { if (e.key === 'ArrowLeft') show(current - 1); if (e.key === 'ArrowRight') show(current + 1); });
+    let startX = null, startY = null;
+    slider.addEventListener('touchstart', e => { startX = e.touches[0].clientX; startY = e.touches[0].clientY; }, {passive: true});
+    slider.addEventListener('touchend', e => {
+      if (startX === null) return;
+      const dx = e.changedTouches[0].clientX - startX, dy = e.changedTouches[0].clientY - startY;
+      if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) show(current + (dx < 0 ? 1 : -1));
+      startX = null;
+    }, {passive: true});
+  }
+  show(0);
+  return slider;
+}
+
+function buildCard(item) {
+  const card = el('article', 'card');
+  card.appendChild(buildSlider(item.photos || [], item.name));
+  const body = el('div', 'body');
+  const h = el('h2', 'name');
+  const link = el('a', null, item.name);
+  link.href = item.url;
+  h.appendChild(link);
+  body.appendChild(h);
+  if (item.caption) body.appendChild(el('div', 'caption', item.caption));
+  if (item.description) body.appendChild(el('p', 'desc', item.description));
+  if (item.amenities && item.amenities.length) {
+    const amen = el('div', 'amen');
+    item.amenities.forEach(a => amen.appendChild(el('span', null, ((a.icon ? a.icon + ' ' : '') + a.name))));
+    body.appendChild(amen);
+  }
+  const foot = el('div', 'foot');
+  const price = el('div', 'price');
+  if (item.price_from > 0) {
+    price.append('от ');
+    price.appendChild(el('b', null, item.price_from.toLocaleString('ru-RU') + ' ₽'));
+    price.append(' / сутки');
+  }
+  const btn = el('a', 'btn', 'Смотреть апартаменты');
+  btn.href = item.url;
+  foot.append(price, btn);
+  body.appendChild(foot);
+  card.appendChild(body);
+  return card;
+}
+
+async function loadCatalog() {
+  const cards = document.getElementById('cards');
+  try {
+    const r = await fetch('/api/catalog');
+    if (!r.ok) throw new Error(r.status);
+    const data = await r.json();
+    if (window.CityPauseTheme) window.CityPauseTheme.apply(data.background_theme, data.color_theme);
+    try { localStorage.setItem('cpCatalogTheme', JSON.stringify({bg: data.background_theme, color: data.color_theme})); } catch (e) {}
+    document.getElementById('brand').textContent = data.brand;
+    document.getElementById('pageTitle').textContent = data.title;
+    document.getElementById('pageSubtitle').textContent = data.subtitle;
+    document.getElementById('footer').textContent = '© ' + new Date().getFullYear() + ' ' + data.brand;
+    document.title = data.title + ' — ' + data.brand;
+    cards.innerHTML = '';
+    if (!data.items.length) {
+      cards.appendChild(el('div', 'msg', 'Скоро здесь появятся апартаменты.'));
+    } else {
+      cards.classList.toggle('single', data.items.length === 1);
+      data.items.forEach(item => cards.appendChild(buildCard(item)));
+    }
+  } catch (e) {
+    cards.innerHTML = '';
+    cards.appendChild(el('div', 'msg', 'Не удалось загрузить каталог. Попробуйте обновить страницу.'));
+  } finally {
+    document.documentElement.classList.remove('cp-wait');
+  }
+}
+loadCatalog();
+</script>
+</body>
+</html>

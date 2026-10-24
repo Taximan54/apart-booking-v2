@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Панель управления — Городская Пауза</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Montserrat:wght@300;400;500;600&family=PT+Serif:wght@400;700&family=IM+Fell+English&family=Yeseva+One&family=Marck+Script&family=Pacifico&family=Poiret+One&family=Great+Vibes&family=Bad+Script&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/static/admin.css?v=20261018j">
+<link rel="stylesheet" href="/static/admin.css?v=20261018k">
 <script>window.CP_THEME_NO_AUTO = true;</script>
 <script src="/static/page-theme.js?v=20261018c"></script>
 <script>
@@ -84,6 +84,7 @@
       <div class="sb-section-label">Система</div>
       <a class="sb-item" onclick="showPanel('settings',this)"><span class="sb-icon">⊛</span>Настройки</a>
       <a class="sb-item" id="sbProperties" onclick="showPanel('properties',this)"><span class="sb-icon">⌂</span>Объекты</a>
+<a class="sb-item" id="sbCatalog" onclick="showPanel('catalog',this)"><span class="sb-icon">▦</span>Каталог сайта</a>
       <a class="sb-item" id="sbIntegrations" onclick="showPanel('integrations',this)"><span class="sb-icon">⇄</span>Интеграции</a>
       <a class="sb-item" onclick="logout()"><span class="sb-icon">⏻</span>Выйти</a>
     </div>
@@ -1436,6 +1437,44 @@
     </div>
 
   </div>
+    <!-- CATALOG -->
+    <div class="panel" id="panel-catalog">
+      <div class="card" style="max-width:900px;margin-bottom:24px">
+        <div class="card-header"><span class="card-title">Страница «Все апартаменты»</span></div>
+        <div class="card-body">
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:20px;padding:12px 16px;background:rgba(201,168,76,.04);border:1px solid rgba(201,168,76,.1);line-height:1.7">
+            Это общая страница, на которой гость видит все ваши апартаменты, листает их фото и переходит на сайт нужной квартиры. Настройки общие для всех объектов.
+            Список объектов берётся из раздела «Объекты» автоматически: новый объект появляется здесь сам, отключённый или удалённый исчезает.
+            Пункт «Апартаменты» в меню сайта появляется, когда в каталоге два и более объектов.
+            <a href="/apartments" target="_blank" style="color:var(--gold)">Открыть страницу ↗</a>
+          </div>
+          <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px">
+            <div class="info-field" style="flex:1;min-width:220px"><div class="info-label">Название сети (в шапке страницы)</div>
+              <input type="text" class="info-input" id="catBrand" maxlength="80"></div>
+            <div class="info-field" style="flex:1;min-width:220px"><div class="info-label">Заголовок</div>
+              <input type="text" class="info-input" id="catTitle" maxlength="100"></div>
+          </div>
+          <div class="info-field" style="margin-bottom:16px"><div class="info-label">Подзаголовок</div>
+            <input type="text" class="info-input" id="catSubtitle" maxlength="300"></div>
+          <div style="display:flex;gap:16px;flex-wrap:wrap">
+            <div class="info-field" style="flex:1;min-width:220px"><div class="info-label">Фон страницы</div>
+              <select class="info-input" id="catBackground" style="width:100%"></select></div>
+            <div class="info-field" style="flex:1;min-width:220px"><div class="info-label">Цвет акцентов</div>
+              <select class="info-input" id="catColor" style="width:100%"></select></div>
+          </div>
+        </div>
+      </div>
+      <div class="card" style="max-width:900px">
+        <div class="card-header"><span class="card-title">Объекты в каталоге</span></div>
+        <div class="card-body">
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:16px;line-height:1.7">
+            Порядок меняется стрелками. Фото, описание, цена и удобства в карточках берутся из самих объектов (разделы «Фото и медиа», «Цены», «Настройки сайта»).</div>
+          <div id="catItems"></div>
+          <button class="btn btn-primary" onclick="saveCatalog()">Сохранить каталог</button>
+        </div>
+      </div>
+    </div>
+
     <!-- PROPERTIES -->
     <div class="panel" id="panel-properties">
       <div class="card" style="max-width:900px;margin-bottom:24px">
@@ -1511,16 +1550,17 @@
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
-<script src="/static/admin-js/core.js?v=20261018j"></script>
-<script src="/static/admin-js/theme.js?v=20261018j"></script>
-<script src="/static/admin-js/prices-promo.js?v=20261018j"></script>
-<script src="/static/admin-js/bookings-dashboard.js?v=20261018j"></script>
-<script src="/static/admin-js/ui-contract.js?v=20261018j"></script>
-<script src="/static/admin-js/archive-photos.js?v=20261018j"></script>
-<script src="/static/admin-js/content.js?v=20261018j"></script>
-<script src="/static/admin-js/site-settings.js?v=20261018j"></script>
-<script src="/static/admin-js/properties.js?v=20261018j"></script>
-<script src="/static/admin-js/integrations.js?v=20261018j"></script>
-<script src="/static/admin-js/init.js?v=20261018j"></script>
+<script src="/static/admin-js/core.js?v=20261018k"></script>
+<script src="/static/admin-js/theme.js?v=20261018k"></script>
+<script src="/static/admin-js/prices-promo.js?v=20261018k"></script>
+<script src="/static/admin-js/bookings-dashboard.js?v=20261018k"></script>
+<script src="/static/admin-js/ui-contract.js?v=20261018k"></script>
+<script src="/static/admin-js/archive-photos.js?v=20261018k"></script>
+<script src="/static/admin-js/content.js?v=20261018k"></script>
+<script src="/static/admin-js/site-settings.js?v=20261018k"></script>
+<script src="/static/admin-js/properties.js?v=20261018k"></script>
+<script src="/static/admin-js/catalog.js?v=20261018k"></script>
+<script src="/static/admin-js/integrations.js?v=20261018k"></script>
+<script src="/static/admin-js/init.js?v=20261018k"></script>
 </body>
 </html>

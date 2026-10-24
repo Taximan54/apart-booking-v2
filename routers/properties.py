@@ -3,7 +3,8 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from core import bookings_repo as repo
 from core.auth import require_admin
-from core.models import PropertyCreate, PropertyUpdate
+from core.catalog import CatalogError, admin_catalog_state, save_catalog_settings
+from core.models import CatalogSettings, PropertyCreate, PropertyUpdate
 from core.properties import (
     PropertyError,
     copy_property_settings,
@@ -69,3 +70,21 @@ async def remove_property(property_id: int, _: bool = Depends(require_admin)):
     except PropertyError as e:
         _bad_request(e)
     return _state()
+
+
+# =====================================================
+# КАТАЛОГ АПАРТАМЕНТОВ (страница «Все апартаменты»): настройки общие для всех объектов
+# =====================================================
+
+@router.get("/api/admin/catalog")
+async def get_catalog_admin(_: bool = Depends(require_admin)):
+    return admin_catalog_state()
+
+
+@router.post("/api/admin/catalog")
+async def set_catalog_admin(data: CatalogSettings, _: bool = Depends(require_admin)):
+    try:
+        save_catalog_settings(data.brand, data.title, data.subtitle, data.background_theme, data.color_theme, data.items)
+    except CatalogError as e:
+        _bad_request(e)
+    return admin_catalog_state()

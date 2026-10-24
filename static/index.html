@@ -350,6 +350,7 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
       <a href="/static/house_rules.html" id="navLabel-house_rules">Правила проживания</a>
       <a href="/static/places.html" id="navLabel-places">Куда сходить?</a>
       <a href="#contacts" id="navLabel-contacts">Контакты</a>
+      <a href="/apartments" class="js-nav-apartments" style="display:none">Апартаменты</a>
       <a href="#" id="navLabel-extra" style="display:none"></a>
     </div>
   </nav>
@@ -367,6 +368,7 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
   <a href="/static/house_rules.html" id="navLabel-house_rules-m" onclick="closeMobileNav()">Правила проживания</a>
   <a href="/static/places.html" id="navLabel-places-m" onclick="closeMobileNav()">Куда сходить?</a>
   <a href="#contacts" id="navLabel-contacts-m" onclick="closeMobileNav()">Контакты</a>
+  <a href="/apartments" class="js-nav-apartments" style="display:none" onclick="closeMobileNav()">Апартаменты</a>
   <a href="#" id="navLabel-extra-m" style="display:none" onclick="closeMobileNav()"></a>
   <a href="#booking" class="nav-btn" id="navLabel-booking-m" onclick="closeMobileNav()">Забронировать</a>
 </div>
@@ -903,6 +905,10 @@ if (PROPERTY_SLUG) {
     return originalFetch(input, init);
   };
 }
+// Пункт меню «Апартаменты» (каталог) показываем, когда в каталоге два и более объектов
+fetch('/api/catalog').then(r => r.json()).then(c => {
+  if (c && c.count >= 2) document.querySelectorAll('.js-nav-apartments').forEach(a => { a.style.display = ''; });
+}).catch(() => {});
 // Ссылки на «Правила проживания» ведут на правила этого же объекта (и в его теме оформления)
 if (PROPERTY_SLUG) {
   document.querySelectorAll('a[href="/static/house_rules.html"]').forEach(a => {

@@ -9,7 +9,7 @@ from PIL import Image
 
 from core.auth import require_admin
 from core.constants import PHOTOS_ORDER_FILE, PHOTOS_DIR, PASSPORT_DIR
-from core.data_store import load_discounts, get_site_settings_dict, load_places, load_properties
+from core.data_store import load_discounts, get_site_settings_dict, load_places
 from core.models import PhotoOrder, PhotoLabel
 from core.passports import apply_passport_watermark, load_passport_map, save_uploaded_passport_photo
 from core.logger import get_logger
@@ -174,10 +174,6 @@ async def set_photo_label(filename: str, lb: PhotoLabel, _: bool = Depends(requi
     with open(property_file(PHOTOS_ORDER_FILE, property_id), "w", encoding="utf-8") as f:
         json.dump(order_data, f, ensure_ascii=False)
     return {"ok": True}
-
-@router.get("/api/admin/properties")
-async def get_properties(_: bool = Depends(require_admin)):
-    return load_properties()
 
 @router.post("/api/upload-passport-photo")
 async def upload_passport_photo(file: UploadFile = File(...)):

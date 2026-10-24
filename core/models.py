@@ -76,6 +76,23 @@ class ReviewPromoSend(BaseModel):
     text: str = ""         # свой текст письма (пусто — стандартный текст письма после выезда)
 
 
+class CatalogItemSettings(BaseModel):
+    id: int                # номер объекта
+    visible: bool = True   # показывать ли объект в каталоге
+    title: str = ""        # название в каталоге (пусто — название сайта объекта)
+    caption: str = ""      # короткая подпись, например «Центр, рядом с оперным»
+    site_url: str = ""     # свой адрес сайта (если у объекта отдельный домен)
+
+
+class CatalogSettings(BaseModel):
+    brand: str = ""              # название сети в шапке страницы (пусто — название бренда из «Данных арендодателя»)
+    title: str = ""
+    subtitle: str = ""
+    background_theme: str = ""   # пусто — как у основного сайта
+    color_theme: str = ""
+    items: List[CatalogItemSettings] = Field(default_factory=list)   # порядок в списке = порядок в каталоге
+
+
 class PropertyCreate(BaseModel):
     name: str
     address: str = ""
