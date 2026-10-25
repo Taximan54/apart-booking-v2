@@ -16,15 +16,21 @@ header{padding:24px 60px;border-bottom:1px solid var(--black-border);display:fle
 .container{max-width:800px;margin:0 auto;padding:60px 40px}
 h1{font-family:'Cormorant Garamond',serif;font-size:42px;font-weight:300;color:var(--text-primary);margin-bottom:48px}
 .rules-text{font-family:'Cormorant Garamond',serif;font-size:22px;color:var(--text-secondary);line-height:2;font-weight:400}
+.logo-box{flex-shrink:0;display:flex;flex-direction:column;align-items:flex-start;gap:6px}
+.catalog-link{display:inline-block;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);text-decoration:none;border:1px solid var(--gold);padding:3px 12px;transition:opacity .3s}
+.catalog-link:hover{opacity:.7}
 footer{padding:40px 60px;border-top:1px solid var(--black-border);text-align:center;font-size:11px;color:var(--text-muted);letter-spacing:.1em;margin-top:60px}
 @media(max-width:768px){header{padding:20px 24px}.container{padding:40px 24px}h1{font-size:28px}footer{padding:24px}}
 </style>
-<script src="/static/page-theme.js?v=20261018b"></script>
+<script src="/static/page-theme.js?v=20261018d"></script>
 </head>
 <body>
 
 <header>
-  <a href="/" class="logo">Городская Пауза</a>
+  <div class="logo-box">
+    <a href="/" class="logo">Городская Пауза</a>
+    <a href="/apartments" class="catalog-link js-catalog-link" style="display:none">Квартиры</a>
+  </div>
   <a href="/" class="back">← На главную</a>
 </header>
 

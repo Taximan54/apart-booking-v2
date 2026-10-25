@@ -3,7 +3,7 @@
 
 Каталог всегда синхронизирован с объектами: список берётся из реестра объектов, поэтому новый объект
 появляется в каталоге сам, а удалённый или отключённый исчезает. Отдельно хранятся только настройки каталога
-(тексты страницы, оформление и по каждому объекту: показывать ли, название, подпись, свой адрес сайта, порядок)
+(тексты страницы, оформление, шрифты, сетка и по каждому объекту: показывать ли, название, подпись, свой адрес сайта, порядок)
 в /data/catalog.json. Они общие для всех объектов.
 """
 import json
@@ -11,7 +11,7 @@ import os
 import re
 from urllib.parse import quote
 
-from core.constants import DATA_DIR, DEFAULT_PRICES, DESC_FILE, PRICE_FILE, SETTINGS_FILE
+from core.constants import DATA_DIR, DEFAULT_PRICES, PRICE_FILE, SETTINGS_FILE
 from core.data_store import get_site_settings_dict
 from core.landlord import landlord_brand
 from core.logger import get_logger
@@ -29,8 +29,20 @@ DEFAULT_SUBTITLE = "Выберите квартиру для своего отд
 BACKGROUND_THEMES = ("black", "white", "pistachio", "cream", "midnight", "sand", "mocha", "emerald_night", "terracotta", "indigo")
 COLOR_THEMES = ("gold", "emerald", "sapphire", "burgundy", "amethyst", "dusty_rose", "teal", "copper", "graphite", "onyx")
 
+DEFAULT_BUTTON_LABEL = "Квартиры"   # название кнопки перехода в каталог на страницах сайта
+MAX_BUTTON_LABEL = 30
+COLUMNS = ("auto", "1", "2", "3", "4")   # сетка карточек на компьютере: сколько в ряд
+
+# Шрифты каталога (все с поддержкой кириллицы). Ключи совпадают с ключами шрифтов сайта в «Настройках сайта»;
+# montserrat — спокойный шрифт без засечек. Группы: шапка, заголовок, подзаголовок, названия квартир, текст в карточках.
+FONT_KEYS = ("cormorant", "im_fell", "unifraktur", "tangerine", "pacifico", "berkshire", "poiret", "montserrat")
+FONT_DEFAULTS = {"brand": "cormorant", "title": "cormorant", "subtitle": "montserrat", "card": "cormorant", "text": "montserrat"}
+FONT_GROUPS_WITH_BOLD = ("brand", "title", "subtitle", "card")
+MIN_SCALE, MAX_SCALE = 0.5, 2.5
+
 MAX_PHOTOS = 12
 MAX_AMENITIES = 6
+MAX_CAPTION = 200
 
 
 class CatalogError(Exception):
@@ -50,9 +62,42 @@ def _clean_item(item, truncate: bool = True) -> dict:
         "id": int(item["id"]),
         "visible": item.get("visible", True) is not False,
         "title": text("title", 80),
-        "caption": text("caption", 120),
+        "caption": text("caption", MAX_CAPTION),
         "site_url": text("site_url", 300),
     }
+
+
+def _clean_fonts(raw, strict: bool = False) -> dict:
+    """Шрифты каталога: для каждой группы шрифт (пусто — по умолчанию), жирность и размер (масштаб)."""
+    raw = raw if isinstance(raw, dict) else {}
+    result = {}
+    for group in FONT_DEFAULTS:
+        font = str(raw.get(f"{group}_font") or "").strip()
+        if font and font not in FONT_KEYS:
+            if strict:
+                raise CatalogError("Неизвестный шрифт")
+            font = ""
+        try:
+            scale = float(raw.get(f"{group}_scale") or 1.0)
+        except (TypeError, ValueError):
+            scale = 1.0
+        if not MIN_SCALE <= scale <= MAX_SCALE:
+            if strict:
+                raise CatalogError("Размер шрифта должен быть от 0,5 до 2,5")
+            scale = 1.0
+        result[f"{group}_font"] = font
+        result[f"{group}_scale"] = round(scale, 2)
+        if group in FONT_GROUPS_WITH_BOLD:
+            result[f"{group}_bold"] = bool(raw.get(f"{group}_bold"))
+    return result
+
+
+def _resolved_fonts(fonts: dict) -> dict:
+    """Шрифты для страницы: пустой шрифт заменяется шрифтом по умолчанию."""
+    resolved = dict(fonts)
+    for group, default in FONT_DEFAULTS.items():
+        resolved[f"{group}_font"] = fonts.get(f"{group}_font") or default
+    return resolved
 
 
 def load_catalog_settings() -> dict:
@@ -73,7 +118,11 @@ def load_catalog_settings() -> dict:
             continue
     background = data.get("background_theme")
     color = data.get("color_theme")
+    columns = str(data.get("columns") or "auto")
     return {
+        "button_label": str(data.get("button_label") or "").strip()[:MAX_BUTTON_LABEL],
+        "columns": columns if columns in COLUMNS else "auto",
+        "fonts": _clean_fonts(data.get("fonts")),
         "brand": str(data.get("brand") or "").strip()[:80],
         "title": str(data.get("title") or "").strip()[:100],
         "subtitle": str(data.get("subtitle") or "").strip()[:300],
@@ -90,7 +139,7 @@ def _check_site_url(url: str) -> None:
         raise CatalogError("Свой адрес сайта должен начинаться с http://, https:// или «/», без пробелов")
 
 
-def save_catalog_settings(brand, title, subtitle, background_theme, color_theme, items) -> dict:
+def save_catalog_settings(brand, title, subtitle, background_theme, color_theme, items, button_label="", columns="auto", fonts=None) -> dict:
     brand, title, subtitle = (brand or "").strip(), (title or "").strip(), (subtitle or "").strip()
     if len(brand) > 80:
         raise CatalogError("Название сети слишком длинное (макс. 80 символов)")
@@ -98,6 +147,15 @@ def save_catalog_settings(brand, title, subtitle, background_theme, color_theme,
         raise CatalogError("Заголовок слишком длинный (макс. 100 символов)")
     if len(subtitle) > 300:
         raise CatalogError("Подзаголовок слишком длинный (макс. 300 символов)")
+    button_label = (button_label or "").strip()
+    if len(button_label) > MAX_BUTTON_LABEL:
+        raise CatalogError(f"Название кнопки слишком длинное (макс. {MAX_BUTTON_LABEL} символов)")
+    columns = str(columns or "auto")
+    if columns not in COLUMNS:
+        raise CatalogError("Неизвестный вариант сетки")
+    if fonts is not None and not isinstance(fonts, dict):
+        fonts = fonts.model_dump() if hasattr(fonts, "model_dump") else fonts.dict()
+    clean_fonts = _clean_fonts(fonts, strict=True)
     if background_theme and background_theme not in BACKGROUND_THEMES:
         raise CatalogError("Неизвестный фон")
     if color_theme and color_theme not in COLOR_THEMES:
@@ -110,12 +168,12 @@ def save_catalog_settings(brand, title, subtitle, background_theme, color_theme,
         seen.add(row["id"])
         if len(row["title"]) > 80:
             raise CatalogError("Название в каталоге слишком длинное (макс. 80 символов)")
-        if len(row["caption"]) > 120:
-            raise CatalogError("Подпись слишком длинная (макс. 120 символов)")
+        if len(row["caption"]) > MAX_CAPTION:
+            raise CatalogError(f"Подпись слишком длинная (макс. {MAX_CAPTION} символов)")
         _check_site_url(row["site_url"])
         clean.append(row)
     data = {"brand": brand, "title": title, "subtitle": subtitle, "background_theme": background_theme or "",
-            "color_theme": color_theme or "", "items": clean}
+            "color_theme": color_theme or "", "button_label": button_label, "columns": columns, "fonts": clean_fonts, "items": clean}
     os.makedirs(os.path.dirname(CATALOG_FILE), exist_ok=True)
     tmp = CATALOG_FILE + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:
@@ -186,20 +244,6 @@ def _price_from(prices: dict) -> int:
     return min(values) if values else 0
 
 
-def _excerpt(property_id: int, limit: int = 220) -> str:
-    path = property_file(DESC_FILE, property_id)
-    if not os.path.exists(path):
-        return ""
-    try:
-        with open(path, "r", encoding="utf-8") as f:
-            text = re.sub(r"\s+", " ", f.read()).strip()
-    except Exception:
-        return ""
-    if len(text) > limit:
-        text = text[:limit].rsplit(" ", 1)[0].rstrip(",.;:-– ") + "…"
-    return text
-
-
 def _photos(property_id: int, settings: dict) -> list:
     from routers.photos import get_photos_list   # импорт здесь, чтобы не создавать циклов при запуске
     photos = [{"url": p["url"], "label": p.get("label") or ""} for p in get_photos_list(property_id)][:MAX_PHOTOS]
@@ -241,7 +285,6 @@ def build_public_catalog() -> dict:
                 "name": cfg["title"] or _own_site_name(prop),
                 "caption": cfg["caption"],
                 "url": object_url(prop, cfg),
-                "description": _excerpt(prop["id"]),
                 "price_from": _price_from(prices),
                 "amenities": _amenities(site),
                 "photos": photos,
@@ -254,6 +297,9 @@ def build_public_catalog() -> dict:
         "subtitle": settings["subtitle"] or DEFAULT_SUBTITLE,
         "background_theme": settings["background_theme"] or main_settings.get("background_theme") or "black",
         "color_theme": settings["color_theme"] or main_settings.get("color_theme") or "gold",
+        "button_label": settings["button_label"] or DEFAULT_BUTTON_LABEL,
+        "columns": settings["columns"],
+        "fonts": _resolved_fonts(settings["fonts"]),
         "count": len(items),
         "items": items,
     }
@@ -277,7 +323,8 @@ def admin_catalog_state() -> dict:
             "url": object_url(prop, cfg),
         })
     return {
-        "settings": {k: settings[k] for k in ("brand", "title", "subtitle", "background_theme", "color_theme")},
+        "settings": {k: settings[k] for k in ("brand", "title", "subtitle", "background_theme", "color_theme", "button_label", "columns", "fonts")},
         "items": rows,
-        "defaults": {"brand": landlord_brand(), "title": DEFAULT_TITLE, "subtitle": DEFAULT_SUBTITLE},
+        "defaults": {"brand": landlord_brand(), "title": DEFAULT_TITLE, "subtitle": DEFAULT_SUBTITLE,
+                     "button_label": DEFAULT_BUTTON_LABEL, "fonts": _resolved_fonts(_clean_fonts({}))},
     }

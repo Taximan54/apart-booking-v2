@@ -93,4 +93,19 @@
       try { localStorage.setItem(CACHE_KEY, JSON.stringify({ bg: s.background_theme, color: s.color_theme, name: s.site_name || '' })); } catch (e) {}
     })
     .catch(function() {});
+
+  // Кнопка перехода в каталог апартаментов (под названием сайта): видна, когда в каталоге два и более объекта
+  fetch('/api/catalog')
+    .then(function(r) { return r.json(); })
+    .then(function(c) {
+      if (!c || c.count < 2) return;
+      function show() {
+        document.querySelectorAll('.js-catalog-link').forEach(function(a) {
+          a.textContent = c.button_label || 'Квартиры';
+          a.style.display = '';
+        });
+      }
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', show); else show();
+    })
+    .catch(function() {});
 })();

@@ -84,12 +84,33 @@ class CatalogItemSettings(BaseModel):
     site_url: str = ""     # свой адрес сайта (если у объекта отдельный домен)
 
 
+class CatalogFonts(BaseModel):
+    # для каждой группы: шрифт (пусто — по умолчанию), жирность, размер (масштаб 0,5–2,5)
+    brand_font: str = ""
+    brand_bold: bool = False
+    brand_scale: float = 1.0
+    title_font: str = ""
+    title_bold: bool = False
+    title_scale: float = 1.0
+    subtitle_font: str = ""
+    subtitle_bold: bool = False
+    subtitle_scale: float = 1.0
+    card_font: str = ""
+    card_bold: bool = False
+    card_scale: float = 1.0
+    text_font: str = ""
+    text_scale: float = 1.0
+
+
 class CatalogSettings(BaseModel):
     brand: str = ""              # название сети в шапке страницы (пусто — название бренда из «Данных арендодателя»)
     title: str = ""
     subtitle: str = ""
     background_theme: str = ""   # пусто — как у основного сайта
     color_theme: str = ""
+    button_label: str = ""       # название кнопки перехода в каталог на страницах сайта (пусто — «Квартиры»)
+    columns: str = "auto"        # сетка карточек: auto / 1 / 2 / 3 / 4 в ряд
+    fonts: CatalogFonts = Field(default_factory=CatalogFonts)
     items: List[CatalogItemSettings] = Field(default_factory=list)   # порядок в списке = порядок в каталоге
 
 

@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Панель управления — Городская Пауза</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Montserrat:wght@300;400;500;600&family=PT+Serif:wght@400;700&family=IM+Fell+English&family=Yeseva+One&family=Marck+Script&family=Pacifico&family=Poiret+One&family=Great+Vibes&family=Bad+Script&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/static/admin.css?v=20261018k">
+<link rel="stylesheet" href="/static/admin.css?v=20261018l">
 <script>window.CP_THEME_NO_AUTO = true;</script>
 <script src="/static/page-theme.js?v=20261018c"></script>
 <script>
@@ -1456,12 +1456,23 @@
           </div>
           <div class="info-field" style="margin-bottom:16px"><div class="info-label">Подзаголовок</div>
             <input type="text" class="info-input" id="catSubtitle" maxlength="300"></div>
+          <div class="info-field" style="margin-bottom:16px;max-width:420px"><div class="info-label">Название кнопки перехода в каталог (под названием сайта; скрыта, если квартира одна)</div>
+            <input type="text" class="info-input" id="catButtonLabel" maxlength="30"></div>
           <div style="display:flex;gap:16px;flex-wrap:wrap">
             <div class="info-field" style="flex:1;min-width:220px"><div class="info-label">Фон страницы</div>
               <select class="info-input" id="catBackground" style="width:100%"></select></div>
             <div class="info-field" style="flex:1;min-width:220px"><div class="info-label">Цвет акцентов</div>
               <select class="info-input" id="catColor" style="width:100%"></select></div>
           </div>
+        </div>
+      </div>
+      <div class="card" style="max-width:900px;margin-bottom:24px">
+        <div class="card-header"><span class="card-title">Сетка и шрифты</span></div>
+        <div class="card-body">
+          <div class="info-field" style="margin-bottom:20px;max-width:340px"><div class="info-label">Сколько карточек в ряду (на компьютере; на телефоне всегда по одной)</div>
+            <select class="info-input" id="catColumns" style="width:100%"></select></div>
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:12px;line-height:1.7">Все шрифты поддерживают русский язык. Карточки всегда одного размера.</div>
+          <div id="catFonts"></div>
         </div>
       </div>
       <div class="card" style="max-width:900px">
@@ -1550,17 +1561,17 @@
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
-<script src="/static/admin-js/core.js?v=20261018k"></script>
-<script src="/static/admin-js/theme.js?v=20261018k"></script>
-<script src="/static/admin-js/prices-promo.js?v=20261018k"></script>
-<script src="/static/admin-js/bookings-dashboard.js?v=20261018k"></script>
-<script src="/static/admin-js/ui-contract.js?v=20261018k"></script>
-<script src="/static/admin-js/archive-photos.js?v=20261018k"></script>
-<script src="/static/admin-js/content.js?v=20261018k"></script>
-<script src="/static/admin-js/site-settings.js?v=20261018k"></script>
-<script src="/static/admin-js/properties.js?v=20261018k"></script>
-<script src="/static/admin-js/catalog.js?v=20261018k"></script>
-<script src="/static/admin-js/integrations.js?v=20261018k"></script>
-<script src="/static/admin-js/init.js?v=20261018k"></script>
+<script src="/static/admin-js/core.js?v=20261018l"></script>
+<script src="/static/admin-js/theme.js?v=20261018l"></script>
+<script src="/static/admin-js/prices-promo.js?v=20261018l"></script>
+<script src="/static/admin-js/bookings-dashboard.js?v=20261018l"></script>
+<script src="/static/admin-js/ui-contract.js?v=20261018l"></script>
+<script src="/static/admin-js/archive-photos.js?v=20261018l"></script>
+<script src="/static/admin-js/content.js?v=20261018l"></script>
+<script src="/static/admin-js/site-settings.js?v=20261018l"></script>
+<script src="/static/admin-js/properties.js?v=20261018l"></script>
+<script src="/static/admin-js/catalog.js?v=20261018l"></script>
+<script src="/static/admin-js/integrations.js?v=20261018l"></script>
+<script src="/static/admin-js/init.js?v=20261018l"></script>
 </body>
 </html>

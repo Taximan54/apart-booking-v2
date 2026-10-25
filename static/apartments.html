@@ -4,20 +4,31 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Апартаменты</title>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500&family=Montserrat:wght@300;400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;700&family=Montserrat:wght@300;400;500;700&family=PT+Serif:wght@400;700&family=Yeseva+One&family=Marck+Script&family=Pacifico&family=Poiret+One&family=Bad+Script&display=swap" rel="stylesheet">
 <style>
-:root{--gold:#C9A84C;--black:#0A0A0A;--black-card:#141414;--black-border:#1E1E1E;--text-primary:#F0E6C8;--text-secondary:#A89060;--text-muted:#5A4A30;}
+:root{--gold:#C9A84C;--black:#0A0A0A;--black-card:#141414;--black-border:#1E1E1E;--text-primary:#F0E6C8;--text-secondary:#A89060;--text-muted:#5A4A30;
+--brand-font:'Cormorant Garamond',serif;--brand-weight:300;--brand-scale:1;
+--title-font:'Cormorant Garamond',serif;--title-weight:300;--title-scale:1;
+--subtitle-font:'Montserrat',sans-serif;--subtitle-weight:400;--subtitle-scale:1;
+--card-font:'Cormorant Garamond',serif;--card-weight:400;--card-scale:1;
+--text-font:'Montserrat',sans-serif;--text-weight:400;--text-scale:1;}
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--text-primary);line-height:1.7;min-height:100vh;transition:opacity .25s ease}
+body{font-family:var(--text-font);background:var(--black);color:var(--text-primary);line-height:1.7;min-height:100vh;transition:opacity .25s ease}
 html.cp-wait body{opacity:0}
 header{padding:24px 60px;border-bottom:1px solid var(--black-border);display:flex;align-items:center;justify-content:space-between}
-.logo{font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:300;color:var(--gold);letter-spacing:.3em;text-decoration:none}
+.logo{font-family:var(--brand-font);font-size:calc(24px * var(--brand-scale));font-weight:var(--brand-weight);color:var(--gold);letter-spacing:.3em;text-decoration:none}
 .container{max-width:1240px;margin:0 auto;padding:60px 40px}
-h1{font-family:'Cormorant Garamond',serif;font-size:46px;font-weight:300;color:var(--text-primary);margin-bottom:12px;text-align:center}
-.subtitle{font-size:13px;color:var(--text-muted);text-align:center;margin-bottom:56px;letter-spacing:.05em}
-.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:32px;align-items:start}
+.container.wide{max-width:1500px}
+h1{font-family:var(--title-font);font-size:calc(46px * var(--title-scale));font-weight:var(--title-weight);color:var(--text-primary);margin-bottom:12px;text-align:center}
+.subtitle{font-family:var(--subtitle-font);font-size:calc(13px * var(--subtitle-scale));font-weight:var(--subtitle-weight);color:var(--text-muted);text-align:center;margin-bottom:56px;letter-spacing:.05em}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:32px;align-items:stretch}
+.cards.cols-1{grid-template-columns:minmax(0,640px);justify-content:center}
+.cards.cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.cards.cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.cards.cols-4{grid-template-columns:repeat(4,minmax(0,1fr))}
+@media(max-width:1199px){.cards.cols-3,.cards.cols-4{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .cards.single{max-width:560px;margin:0 auto}
-.card{background:var(--black-card);border:1px solid var(--black-border);overflow:hidden;display:flex;flex-direction:column;transition:border-color .3s}
+.card{background:var(--black-card);border:1px solid var(--black-border);overflow:hidden;display:flex;flex-direction:column;height:100%;transition:border-color .3s}
 .card:hover{border-color:var(--gold)}
 /* Фото: листаются стрелками, точками и свайпом */
 .slider{position:relative;overflow:hidden;aspect-ratio:4/3;background:var(--black-border);outline:none}
@@ -33,21 +44,20 @@ h1{font-family:'Cormorant Garamond',serif;font-size:46px;font-weight:300;color:v
 .dots span.on{background:#fff;transform:scale(1.25)}
 .counter{position:absolute;top:12px;right:12px;font-size:11px;letter-spacing:.08em;color:#fff;background:rgba(10,10,10,.55);padding:3px 10px;border-radius:12px}
 .body{padding:24px 24px 26px;display:flex;flex-direction:column;gap:12px;flex:1}
-.name{font-family:'Cormorant Garamond',serif;font-size:30px;font-weight:400;line-height:1.2}
+.name{font-family:var(--card-font);font-size:calc(30px * var(--card-scale));font-weight:var(--card-weight);line-height:1.2}
 .name a{color:var(--text-primary);text-decoration:none}
 .name a:hover{color:var(--gold)}
-.caption{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--gold)}
-.desc{font-size:13px;color:var(--text-secondary);font-weight:300;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+.caption{font-family:var(--text-font);font-size:calc(14px * var(--text-scale));font-weight:var(--text-weight);color:var(--text-secondary);line-height:1.6;white-space:pre-line}
 .amen{display:flex;flex-wrap:wrap;gap:8px}
-.amen span{font-size:12px;color:var(--text-secondary);border:1px solid var(--black-border);padding:4px 10px;white-space:nowrap}
+.amen span{font-family:var(--text-font);font-size:calc(12px * var(--text-scale));color:var(--text-secondary);border:1px solid var(--black-border);padding:4px 10px;white-space:nowrap}
 .foot{margin-top:auto;padding-top:14px;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;border-top:1px solid var(--black-border)}
-.price{font-size:12px;color:var(--text-muted)}
-.price b{font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:500;color:var(--text-primary)}
-.btn{display:inline-block;padding:12px 22px;font-size:11px;letter-spacing:.18em;text-transform:uppercase;text-decoration:none;color:var(--black);background:var(--gold);transition:opacity .3s}
+.price{font-family:var(--text-font);font-size:calc(12px * var(--text-scale));color:var(--text-muted)}
+.price b{font-family:var(--card-font);font-size:calc(26px * var(--card-scale));font-weight:var(--card-weight);color:var(--text-primary)}
+.btn{display:inline-block;padding:12px 22px;font-family:var(--text-font);font-size:calc(11px * var(--text-scale));letter-spacing:.18em;text-transform:uppercase;text-decoration:none;color:var(--black);background:var(--gold);transition:opacity .3s}
 .btn:hover{opacity:.85}
 .msg{text-align:center;color:var(--text-muted);font-size:13px;padding:60px 20px;grid-column:1/-1}
 footer{padding:40px 60px;border-top:1px solid var(--black-border);text-align:center;font-size:11px;color:var(--text-muted);letter-spacing:.1em}
-@media(max-width:768px){header{padding:20px 24px}.container{padding:36px 16px}h1{font-size:32px}.cards{grid-template-columns:1fr;gap:24px}.logo{font-size:20px}footer{padding:24px}.arrow{width:38px;height:38px}}
+@media(max-width:768px){header{padding:20px 24px}.container{padding:36px 16px}h1{font-size:calc(32px * var(--title-scale))}.cards,.cards.cols-2,.cards.cols-3,.cards.cols-4{grid-template-columns:minmax(0,1fr);gap:24px}.logo{font-size:calc(20px * var(--brand-scale))}footer{padding:24px}.arrow{width:38px;height:38px}}
 </style>
 <script>
 // Пока загружаются данные каталога, страница скрыта (чтобы не мигали цвета по умолчанию); через 2 сек покажется в любом случае
@@ -136,6 +146,38 @@ function buildSlider(photos, name) {
   return slider;
 }
 
+// Шрифты страницы (настраиваются в админке: «Каталог сайта»). Все с поддержкой кириллицы.
+const FONTS = {
+  cormorant:  {family: "'Cormorant Garamond',serif", weight: 400},
+  im_fell:    {family: "'PT Serif',serif",            weight: 700},
+  unifraktur: {family: "'Yeseva One',serif",          weight: 400},
+  tangerine:  {family: "'Marck Script',cursive",      weight: 400},
+  pacifico:   {family: "'Pacifico',cursive",          weight: 400},
+  berkshire:  {family: "'Bad Script',cursive",        weight: 400},
+  poiret:     {family: "'Poiret One',sans-serif",     weight: 400},
+  montserrat: {family: "'Montserrat',sans-serif",     weight: 400},
+};
+const FONT_DEFAULTS = {brand: 'cormorant', title: 'cormorant', subtitle: 'montserrat', card: 'cormorant', text: 'montserrat'};
+
+// Применяет шрифты и возвращает список загрузок шрифтов (чтобы показать страницу, когда они готовы)
+function applyFonts(fonts) {
+  fonts = fonts || {};
+  const root = document.documentElement;
+  const loads = [];
+  Object.keys(FONT_DEFAULTS).forEach(g => {
+    const key = FONTS[fonts[g + '_font']] ? fonts[g + '_font'] : FONT_DEFAULTS[g];
+    const f = FONTS[key];
+    const light = key === 'cormorant' && (g === 'brand' || g === 'title');   // как раньше: тонкое начертание для шапки и заголовка
+    const weight = fonts[g + '_bold'] ? 700 : (light ? 300 : f.weight);
+    const scale = Number(fonts[g + '_scale']) || 1;
+    root.style.setProperty('--' + g + '-font', f.family);
+    root.style.setProperty('--' + g + '-weight', weight);
+    root.style.setProperty('--' + g + '-scale', scale);
+    if (document.fonts && document.fonts.load) loads.push(document.fonts.load(weight + ' 1em ' + f.family).catch(() => {}));
+  });
+  return loads;
+}
+
 function buildCard(item) {
   const card = el('article', 'card');
   card.appendChild(buildSlider(item.photos || [], item.name));
@@ -146,7 +188,6 @@ function buildCard(item) {
   h.appendChild(link);
   body.appendChild(h);
   if (item.caption) body.appendChild(el('div', 'caption', item.caption));
-  if (item.description) body.appendChild(el('p', 'desc', item.description));
   if (item.amenities && item.amenities.length) {
     const amen = el('div', 'amen');
     item.amenities.forEach(a => amen.appendChild(el('span', null, ((a.icon ? a.icon + ' ' : '') + a.name))));
@@ -180,6 +221,10 @@ async function loadCatalog() {
     document.getElementById('pageSubtitle').textContent = data.subtitle;
     document.getElementById('footer').textContent = '© ' + new Date().getFullYear() + ' ' + data.brand;
     document.title = data.title + ' — ' + data.brand;
+    const fontLoads = applyFonts(data.fonts);
+    const columns = ['1', '2', '3', '4'].includes(String(data.columns)) ? String(data.columns) : 'auto';
+    cards.classList.add('cols-' + columns);
+    document.querySelector('.container').classList.toggle('wide', columns === '4');
     cards.innerHTML = '';
     if (!data.items.length) {
       cards.appendChild(el('div', 'msg', 'Скоро здесь появятся апартаменты.'));
@@ -187,6 +232,8 @@ async function loadCatalog() {
       cards.classList.toggle('single', data.items.length === 1);
       data.items.forEach(item => cards.appendChild(buildCard(item)));
     }
+    // показываем страницу, когда нужные шрифты загружены (но не дольше 1,5 сек)
+    await Promise.race([Promise.all(fontLoads), new Promise(r => setTimeout(r, 1500))]);
   } catch (e) {
     cards.innerHTML = '';
     cards.appendChild(el('div', 'msg', 'Не удалось загрузить каталог. Попробуйте обновить страницу.'));

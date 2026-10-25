@@ -29,7 +29,6 @@ def cat(tmp_path, monkeypatch):
     monkeypatch.setattr(catalog, "_own_site_name", lambda prop: "Дом у оперного" if prop["id"] == 1 else prop["name"])
     monkeypatch.setattr(catalog, "_photos", lambda pid, settings: [{"url": f"/data/photos/p{pid}.jpg", "label": ""}])
     monkeypatch.setattr(catalog, "_prices", lambda pid: {"weekday": 3500, "weekend": 4500})
-    monkeypatch.setattr(catalog, "_excerpt", lambda pid, limit=220: f"Описание {pid}")
     monkeypatch.setattr(catalog, "landlord_brand", lambda: "Городская Пауза")
     return catalog, state
 
@@ -40,11 +39,14 @@ def test_public_catalog_shows_only_active_objects_with_card_data(cat):
     assert [i["id"] for i in data["items"]] == [1, 2] and data["count"] == 2           # отключённый объект не виден
     first = data["items"][0]
     assert first["name"] == "Дом у оперного" and first["url"] == "/" and first["price_from"] == 3500
-    assert first["photos"] == [{"url": "/data/photos/p1.jpg", "label": ""}] and first["description"] == "Описание 1"
+    assert first["photos"] == [{"url": "/data/photos/p1.jpg", "label": ""}]
+    assert "description" not in first                                                   # в карточке только подпись из админки
     assert [a["name"] for a in first["amenities"]] == ["Wi-Fi", "Парковка"]              # пустое удобство пропущено
     assert data["items"][1]["url"] == "/o/obj-2"
     assert data["brand"] == "Городская Пауза" and data["title"] == catalog.DEFAULT_TITLE and data["subtitle"] == catalog.DEFAULT_SUBTITLE
     assert (data["background_theme"], data["color_theme"]) == ("white", "emerald")      # как у основного сайта
+    assert data["button_label"] == "Квартиры" and data["columns"] == "auto"
+    assert data["fonts"]["brand_font"] == "cormorant" and data["fonts"]["text_font"] == "montserrat" and data["fonts"]["card_scale"] == 1.0
 
 
 def test_saved_settings_order_visibility_and_texts(cat):
@@ -84,7 +86,8 @@ def test_validation(cat):
     bad_calls = [
         dict(background_theme="neon"), dict(color_theme="rainbow"), dict(title="x" * 101), dict(subtitle="x" * 301), dict(brand="x" * 81),
         dict(items=[{"id": 1, "site_url": "javascript:alert(1)"}]), dict(items=[{"id": 1, "site_url": "https://a b.ru"}]),
-        dict(items=[{"id": 1, "title": "x" * 81}]), dict(items=[{"id": 1, "caption": "x" * 121}]), dict(items=[{"id": 1, "site_url": "https://a.ru/" + "x" * 300}]),
+        dict(items=[{"id": 1, "title": "x" * 81}]), dict(items=[{"id": 1, "caption": "x" * 201}]), dict(button_label="x" * 31), dict(columns="7"),
+        dict(fonts={"brand_font": "comic_sans"}), dict(fonts={"title_scale": 3}), dict(fonts={"card_scale": 0.1}), dict(items=[{"id": 1, "site_url": "https://a.ru/" + "x" * 300}]),
     ]
     for kwargs in bad_calls:
         params = dict(brand="", title="", subtitle="", background_theme="", color_theme="", items=[])
@@ -96,6 +99,36 @@ def test_validation(cat):
     assert [i["id"] for i in catalog.load_catalog_settings()["items"]] == [1]            # повтор объекта отбрасывается
 
 
+def test_fonts_columns_and_button_label(cat):
+    catalog, _ = cat
+    catalog.save_catalog_settings("", "", "", "", "", [], button_label=" Все квартиры ", columns="3", fonts={
+        "brand_font": "pacifico", "brand_bold": True, "brand_scale": 1.5, "title_font": "poiret", "card_scale": 0.85, "text_font": "im_fell", "text_scale": 1.15})
+    data = catalog.build_public_catalog()
+    assert data["button_label"] == "Все квартиры" and data["columns"] == "3"
+    f = data["fonts"]
+    assert (f["brand_font"], f["brand_bold"], f["brand_scale"]) == ("pacifico", True, 1.5)
+    assert f["title_font"] == "poiret" and f["subtitle_font"] == "montserrat"             # не заданный шрифт — по умолчанию
+    assert f["card_scale"] == 0.85 and f["text_font"] == "im_fell" and f["text_scale"] == 1.15 and "text_bold" not in f
+    admin = catalog.admin_catalog_state()
+    assert admin["settings"]["fonts"]["brand_font"] == "pacifico" and admin["defaults"]["button_label"] == "Квартиры"
+    # всё, что не поддерживает русский или неизвестно, при чтении заменяется значением по умолчанию
+    import json
+    saved = json.load(open(catalog.CATALOG_FILE, encoding="utf-8"))
+    saved["fonts"]["brand_font"] = "great_vibes"
+    saved["fonts"]["title_scale"] = 99
+    saved["columns"] = "9"
+    json.dump(saved, open(catalog.CATALOG_FILE, "w", encoding="utf-8"))
+    data = catalog.build_public_catalog()
+    assert data["fonts"]["brand_font"] == "cormorant" and data["fonts"]["title_scale"] == 1.0 and data["columns"] == "auto"
+
+
+def test_caption_up_to_200_characters(cat):
+    catalog, _ = cat
+    caption = "Центр города, у оперного театра. " * 6
+    catalog.save_catalog_settings("", "", "", "", "", [{"id": 1, "caption": caption[:200]}])
+    assert catalog.build_public_catalog()["items"][0]["caption"] == caption[:200].strip()
+
+
 def test_broken_settings_file_gives_defaults(cat):
     catalog, _ = cat
     open(catalog.CATALOG_FILE, "w", encoding="utf-8").write("{не json")
@@ -103,18 +136,11 @@ def test_broken_settings_file_gives_defaults(cat):
     assert catalog.build_public_catalog()["count"] == 2
 
 
-def test_price_from_and_excerpt(tmp_path, monkeypatch):
+def test_price_from():
     import core.catalog as catalog
     assert catalog._price_from({"weekday": 3500, "weekend": 4500}) == 3500
     assert catalog._price_from({"weekday": 0, "weekend": 4000}) == 4000
     assert catalog._price_from({"weekday": "?", "weekend": None}) == 0
-    desc = tmp_path / "description.txt"
-    monkeypatch.setattr(catalog, "DESC_FILE", str(desc))
-    monkeypatch.setattr(catalog, "property_file", lambda path, pid=1: path)
-    assert catalog._excerpt(1) == ""                                                      # описания нет
-    desc.write_text("Уютная  студия\n\nв центре города, " + "рядом с метро " * 30, encoding="utf-8")
-    text = catalog._excerpt(1, limit=60)
-    assert text.startswith("Уютная студия в центре города") and text.endswith("…") and len(text) <= 62 and "\n" not in text
 
 
 def test_old_properties_route_in_photos_router_is_gone():
@@ -134,14 +160,19 @@ def test_catalog_routes_and_page():
     page = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "static", "apartments.html")
     text = open(page, encoding="utf-8").read()
     assert "/api/catalog" in text and "CP_THEME_NO_AUTO" in text
+    assert "item.description" not in text                                                # в карточке нет описания
 
 
 def test_admin_catalog_api(cat):
-    from core.models import CatalogSettings, CatalogItemSettings
+    from core.models import CatalogFonts, CatalogSettings, CatalogItemSettings
     from routers import properties
     catalog, _ = cat
-    state = run(properties.set_catalog_admin(CatalogSettings(title="Наши квартиры", items=[CatalogItemSettings(id=2, caption="Центр"), CatalogItemSettings(id=1)]), True))
+    state = run(properties.set_catalog_admin(CatalogSettings(title="Наши квартиры", button_label="Все квартиры", columns="2",
+                fonts=CatalogFonts(title_font="poiret", title_scale=1.3, card_bold=True),
+                items=[CatalogItemSettings(id=2, caption="Центр"), CatalogItemSettings(id=1)]), True))
     assert state["settings"]["title"] == "Наши квартиры" and [r["id"] for r in state["items"]][:2] == [2, 1]
+    assert state["settings"]["button_label"] == "Все квартиры" and state["settings"]["columns"] == "2"
+    assert state["settings"]["fonts"]["title_font"] == "poiret" and state["settings"]["fonts"]["title_scale"] == 1.3 and state["settings"]["fonts"]["card_bold"] is True
     assert run(properties.get_catalog_admin(True))["items"][0]["caption"] == "Центр"
     with pytest.raises(HTTPException) as e:
         run(properties.set_catalog_admin(CatalogSettings(background_theme="neon"), True))
