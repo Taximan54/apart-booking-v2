@@ -70,6 +70,8 @@ window.CP_THEME_NO_AUTO = true;
 // Оформление из прошлого захода применяем сразу
 (function(){try{var c=JSON.parse(localStorage.getItem('cpCatalogTheme')||'null');if(c&&window.CityPauseTheme)window.CityPauseTheme.apply(c.bg,c.color);}catch(e){}})();
 </script>
+<link rel="stylesheet" href="/static/buttons.css?v=20261025a">
+<script src="/static/buttons.js?v=20261025a" defer></script>
 </head>
 <body>
 
@@ -200,7 +202,7 @@ function buildCard(item) {
     price.appendChild(el('b', null, item.price_from.toLocaleString('ru-RU') + ' ₽'));
     price.append(' / сутки');
   }
-  const btn = el('a', 'btn', 'Смотреть апартаменты');
+  const btn = el('a', 'btn btn-primary', 'Смотреть апартаменты');
   btn.href = item.url;
   foot.append(price, btn);
   body.appendChild(foot);

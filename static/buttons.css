@@ -1,0 +1,79 @@
+/* Единое оформление кнопок: сайт, каталог, правила, акции и админка.
+   Форма «капсула», мягкое приподнимание при наведении, «вдавливание» при нажатии,
+   блик на главной кнопке, заливка на контурной, волна от точки нажатия (buttons.js).
+   Цвета берутся из темы выбранного объекта (--gold, --black и др.).
+   Подключается ПОСЛЕ основных стилей страницы, поэтому переопределяет прежний вид кнопок. */
+
+:root{--danger:#e5484d}
+html.theme-light{--danger:#b91c1c}
+
+/* ---------- Общая основа ---------- */
+.btn,.btn-gold,.btn-gold-w,.btn-outline,.btn-outline-s,.nav-btn{
+  border-radius:999px;position:relative;overflow:hidden;
+  transition:transform .18s ease,box-shadow .2s ease,background-color .2s,color .25s,border-color .2s,opacity .2s;
+  -webkit-tap-highlight-color:transparent;
+}
+.btn:focus-visible,.btn-gold:focus-visible,.btn-gold-w:focus-visible,.btn-outline:focus-visible,.btn-outline-s:focus-visible,.nav-btn:focus-visible,.catalog-link:focus-visible,.cal-nav:focus-visible,.cal-nav-btn:focus-visible{
+  outline:2px solid var(--gold);outline-offset:3px}
+.btn:active,.btn-gold:active,.btn-gold-w:active,.btn-outline:active,.btn-outline-s:active,.nav-btn:active{transform:translateY(0) scale(.96) !important;box-shadow:none}
+
+/* ---------- Главные кнопки: градиент темы + блик ---------- */
+.btn-primary,.btn-gold,.btn-gold-w{
+  background:var(--accent-gradient,linear-gradient(135deg,var(--gold),var(--gold-light,var(--gold))));
+  color:var(--black);
+  box-shadow:0 4px 14px -6px color-mix(in srgb,var(--gold) 70%,transparent);
+}
+.btn-primary::after,.btn-gold::after,.btn-gold-w::after{
+  content:'';position:absolute;top:0;left:-70%;width:40%;height:100%;pointer-events:none;
+  background:linear-gradient(100deg,transparent,rgba(255,255,255,.5),transparent);
+  transform:skewX(-20deg);transition:left .65s ease}
+.btn-primary:hover,.btn-gold:hover,.btn-gold-w:hover{
+  background:var(--accent-gradient,linear-gradient(135deg,var(--gold),var(--gold-light,var(--gold))));
+  opacity:1;transform:translateY(-2px);
+  box-shadow:0 12px 26px -8px color-mix(in srgb,var(--gold) 85%,transparent)}
+.btn-primary:hover::after,.btn-gold:hover::after,.btn-gold-w:hover::after{left:140%}
+
+/* ---------- Контурные: заливка «наезжает» слева направо ---------- */
+.btn-outline,.btn-outline-s{
+  color:var(--gold);border:1px solid var(--gold);
+  background:linear-gradient(var(--gold),var(--gold)) no-repeat left center/0% 100%}
+.btn-outline:hover,.btn-outline-s:hover{background-size:100% 100%;color:var(--black);border-color:var(--gold);transform:translateY(-2px)}
+
+/* ---------- Второстепенные ---------- */
+.btn-ghost{background:transparent;color:var(--text-secondary,var(--text-muted));border:1px solid var(--black-border)}
+.btn-ghost:hover{border-color:var(--gold);color:var(--gold);transform:translateY(-1px)}
+
+/* ---------- Опасные («Удалить») ---------- */
+.btn-danger{background:transparent;color:var(--danger);border:1px solid color-mix(in srgb,var(--danger) 55%,transparent)}
+.btn-danger:hover{background:var(--danger);border-color:var(--danger);color:#fff}
+html.theme-light .btn-danger{color:var(--danger)}
+
+/* ---------- Кнопка «Забронировать» в шапке сайта (текст с градиентом, поэтому без заливки) ---------- */
+.nav-btn:hover{opacity:1;transform:translateY(-2px);box-shadow:0 8px 18px -8px color-mix(in srgb,var(--gold) 70%,transparent)}
+
+/* ---------- Кнопка «Квартиры» под названием ---------- */
+.catalog-link{border-radius:999px;transition:background-color .2s,transform .18s ease,box-shadow .2s;position:relative;overflow:hidden}
+.catalog-link:hover{opacity:1;background:color-mix(in srgb,var(--gold) 16%,transparent);transform:translateY(-1px)}
+
+/* ---------- Круглые кнопки-стрелки календарей ---------- */
+.cal-nav,.cal-nav-btn{border-radius:50%;position:relative;overflow:hidden;transition:transform .18s ease,border-color .2s,color .2s,background-color .2s}
+.cal-nav:hover,.cal-nav-btn:hover{background:color-mix(in srgb,var(--gold) 12%,transparent);transform:scale(1.07)}
+.cal-nav:active,.cal-nav-btn:active{transform:scale(.94)}
+
+/* ---------- Недоступные кнопки ---------- */
+.btn:disabled,.btn-gold:disabled,.btn-gold-w:disabled,.btn-outline:disabled,.btn-outline-s:disabled,.btn[aria-disabled="true"]{
+  opacity:.38;cursor:not-allowed;transform:none !important;box-shadow:none}
+.btn:disabled::after,.btn-gold-w:disabled::after{display:none}
+.btn-outline:disabled:hover,.btn-outline-s:disabled:hover{background-size:0% 100%;color:var(--gold)}
+
+/* ---------- Волна от точки нажатия (создаётся скриптом buttons.js) ---------- */
+.ripple{position:absolute;border-radius:50%;background:currentColor;opacity:.25;transform:scale(0);animation:cp-ripple .6s ease-out forwards;pointer-events:none}
+.btn-primary .ripple,.btn-gold .ripple,.btn-gold-w .ripple{background:#fff;opacity:.55}
+@keyframes cp-ripple{to{transform:scale(4);opacity:0}}
+
+/* Если в системе включено «уменьшить анимацию», эффекты отключаются */
+@media(prefers-reduced-motion:reduce){
+  .btn,.btn-gold,.btn-gold-w,.btn-outline,.btn-outline-s,.nav-btn,.catalog-link,.cal-nav,.cal-nav-btn,.btn::after,.btn-gold::after,.btn-gold-w::after{transition:none !important;animation:none !important}
+  .ripple{display:none}
+  .btn:hover,.btn-gold:hover,.btn-gold-w:hover,.btn-outline:hover,.btn-outline-s:hover,.nav-btn:hover,.catalog-link:hover,.cal-nav:hover,.cal-nav-btn:hover,.btn:active{transform:none !important}
+}
