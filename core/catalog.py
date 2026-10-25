@@ -31,6 +31,7 @@ COLOR_THEMES = ("gold", "emerald", "sapphire", "burgundy", "amethyst", "dusty_ro
 
 DEFAULT_BUTTON_LABEL = "Квартиры"   # название кнопки перехода в каталог на страницах сайта
 MAX_BUTTON_LABEL = 30
+DEFAULT_BUTTON_SCALE = 1.0   # размер шрифта кнопки перехода в каталог (масштаб)
 COLUMNS = ("auto", "1", "2", "3", "4")   # сетка карточек на компьютере: сколько в ряд
 
 # Шрифты каталога (все с поддержкой кириллицы). Ключи совпадают с ключами шрифтов сайта в «Настройках сайта»;
@@ -100,6 +101,14 @@ def _resolved_fonts(fonts: dict) -> dict:
     return resolved
 
 
+def _clean_button_scale(value) -> float:
+    try:
+        scale = float(value or DEFAULT_BUTTON_SCALE)
+    except (TypeError, ValueError):
+        return DEFAULT_BUTTON_SCALE
+    return round(scale, 2) if MIN_SCALE <= scale <= MAX_SCALE else DEFAULT_BUTTON_SCALE
+
+
 def load_catalog_settings() -> dict:
     data = {}
     if os.path.exists(CATALOG_FILE):
@@ -121,6 +130,7 @@ def load_catalog_settings() -> dict:
     columns = str(data.get("columns") or "auto")
     return {
         "button_label": str(data.get("button_label") or "").strip()[:MAX_BUTTON_LABEL],
+        "button_scale": _clean_button_scale(data.get("button_scale")),
         "columns": columns if columns in COLUMNS else "auto",
         "fonts": _clean_fonts(data.get("fonts")),
         "brand": str(data.get("brand") or "").strip()[:80],
@@ -139,7 +149,7 @@ def _check_site_url(url: str) -> None:
         raise CatalogError("Свой адрес сайта должен начинаться с http://, https:// или «/», без пробелов")
 
 
-def save_catalog_settings(brand, title, subtitle, background_theme, color_theme, items, button_label="", columns="auto", fonts=None) -> dict:
+def save_catalog_settings(brand, title, subtitle, background_theme, color_theme, items, button_label="", columns="auto", fonts=None, button_scale=1.0) -> dict:
     brand, title, subtitle = (brand or "").strip(), (title or "").strip(), (subtitle or "").strip()
     if len(brand) > 80:
         raise CatalogError("Название сети слишком длинное (макс. 80 символов)")
@@ -150,6 +160,12 @@ def save_catalog_settings(brand, title, subtitle, background_theme, color_theme,
     button_label = (button_label or "").strip()
     if len(button_label) > MAX_BUTTON_LABEL:
         raise CatalogError(f"Название кнопки слишком длинное (макс. {MAX_BUTTON_LABEL} символов)")
+    try:
+        button_scale = float(button_scale or DEFAULT_BUTTON_SCALE)
+    except (TypeError, ValueError):
+        raise CatalogError("Неверный размер шрифта кнопки")
+    if not MIN_SCALE <= button_scale <= MAX_SCALE:
+        raise CatalogError("Размер шрифта кнопки должен быть от 0,5 до 2,5")
     columns = str(columns or "auto")
     if columns not in COLUMNS:
         raise CatalogError("Неизвестный вариант сетки")
@@ -173,7 +189,7 @@ def save_catalog_settings(brand, title, subtitle, background_theme, color_theme,
         _check_site_url(row["site_url"])
         clean.append(row)
     data = {"brand": brand, "title": title, "subtitle": subtitle, "background_theme": background_theme or "",
-            "color_theme": color_theme or "", "button_label": button_label, "columns": columns, "fonts": clean_fonts, "items": clean}
+            "color_theme": color_theme or "", "button_label": button_label, "button_scale": round(button_scale, 2), "columns": columns, "fonts": clean_fonts, "items": clean}
     os.makedirs(os.path.dirname(CATALOG_FILE), exist_ok=True)
     tmp = CATALOG_FILE + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:
@@ -298,6 +314,7 @@ def build_public_catalog() -> dict:
         "background_theme": settings["background_theme"] or main_settings.get("background_theme") or "black",
         "color_theme": settings["color_theme"] or main_settings.get("color_theme") or "gold",
         "button_label": settings["button_label"] or DEFAULT_BUTTON_LABEL,
+        "button_scale": settings["button_scale"],
         "columns": settings["columns"],
         "fonts": _resolved_fonts(settings["fonts"]),
         "count": len(items),
@@ -323,7 +340,7 @@ def admin_catalog_state() -> dict:
             "url": object_url(prop, cfg),
         })
     return {
-        "settings": {k: settings[k] for k in ("brand", "title", "subtitle", "background_theme", "color_theme", "button_label", "columns", "fonts")},
+        "settings": {k: settings[k] for k in ("brand", "title", "subtitle", "background_theme", "color_theme", "button_label", "button_scale", "columns", "fonts")},
         "items": rows,
         "defaults": {"brand": landlord_brand(), "title": DEFAULT_TITLE, "subtitle": DEFAULT_SUBTITLE,
                      "button_label": DEFAULT_BUTTON_LABEL, "fonts": _resolved_fonts(_clean_fonts({}))},

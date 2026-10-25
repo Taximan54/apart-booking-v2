@@ -50,6 +50,11 @@ function renderCatalogAdmin() {
   document.getElementById('catButtonLabel').value = s.button_label || '';
   document.getElementById('catButtonLabel').placeholder = d.button_label;
   fillCatalogSelect('catColumns', CATALOG_COLUMNS, s.columns || 'auto');
+  const btnScale = Number(s.button_scale) || 1;
+  const btnScales = CATALOG_SCALES.some(([v]) => v === btnScale) ? CATALOG_SCALES : CATALOG_SCALES.concat([[btnScale, 'Свой размер (' + btnScale + ')']]);
+  const btnSel = document.getElementById('catButtonScale');
+  btnSel.innerHTML = btnScales.map(([v, l]) => `<option value="${v}">${catEsc(l)}</option>`).join('');
+  btnSel.value = String(btnScale);
   renderCatalogFonts();
   renderCatalogItems();
 }
@@ -109,6 +114,7 @@ function collectCatalogForm() {
   s.color_theme = document.getElementById('catColor').value;
   s.button_label = document.getElementById('catButtonLabel').value.trim();
   s.columns = document.getElementById('catColumns').value;
+  s.button_scale = parseFloat(document.getElementById('catButtonScale').value) || 1;
   s.fonts = s.fonts || {};
   CATALOG_FONT_GROUPS.forEach(([g, label, hasBold]) => {
     s.fonts[g + '_font'] = document.getElementById('catFont_' + g).value;
@@ -138,7 +144,7 @@ async function saveCatalog() {
   const payload = {
     brand: s.brand, title: s.title, subtitle: s.subtitle,
     background_theme: s.background_theme, color_theme: s.color_theme,
-    button_label: s.button_label, columns: s.columns, fonts: s.fonts,
+    button_label: s.button_label, button_scale: s.button_scale, columns: s.columns, fonts: s.fonts,
     items: catalogState.items.map(it => ({ id: it.id, visible: it.visible, title: it.title, caption: it.caption, site_url: it.site_url }))
   };
   try {

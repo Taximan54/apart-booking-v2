@@ -45,7 +45,7 @@ def test_public_catalog_shows_only_active_objects_with_card_data(cat):
     assert data["items"][1]["url"] == "/o/obj-2"
     assert data["brand"] == "Городская Пауза" and data["title"] == catalog.DEFAULT_TITLE and data["subtitle"] == catalog.DEFAULT_SUBTITLE
     assert (data["background_theme"], data["color_theme"]) == ("white", "emerald")      # как у основного сайта
-    assert data["button_label"] == "Квартиры" and data["columns"] == "auto"
+    assert data["button_label"] == "Квартиры" and data["columns"] == "auto" and data["button_scale"] == 1.0
     assert data["fonts"]["brand_font"] == "cormorant" and data["fonts"]["text_font"] == "montserrat" and data["fonts"]["card_scale"] == 1.0
 
 
@@ -86,7 +86,7 @@ def test_validation(cat):
     bad_calls = [
         dict(background_theme="neon"), dict(color_theme="rainbow"), dict(title="x" * 101), dict(subtitle="x" * 301), dict(brand="x" * 81),
         dict(items=[{"id": 1, "site_url": "javascript:alert(1)"}]), dict(items=[{"id": 1, "site_url": "https://a b.ru"}]),
-        dict(items=[{"id": 1, "title": "x" * 81}]), dict(items=[{"id": 1, "caption": "x" * 201}]), dict(button_label="x" * 31), dict(columns="7"),
+        dict(items=[{"id": 1, "title": "x" * 81}]), dict(items=[{"id": 1, "caption": "x" * 201}]), dict(button_label="x" * 31), dict(columns="7"), dict(button_scale=3), dict(button_scale=0.1), dict(button_scale="большая"),
         dict(fonts={"brand_font": "comic_sans"}), dict(fonts={"title_scale": 3}), dict(fonts={"card_scale": 0.1}), dict(items=[{"id": 1, "site_url": "https://a.ru/" + "x" * 300}]),
     ]
     for kwargs in bad_calls:
@@ -101,10 +101,10 @@ def test_validation(cat):
 
 def test_fonts_columns_and_button_label(cat):
     catalog, _ = cat
-    catalog.save_catalog_settings("", "", "", "", "", [], button_label=" Все квартиры ", columns="3", fonts={
+    catalog.save_catalog_settings("", "", "", "", "", [], button_label=" Все квартиры ", columns="3", button_scale=1.3, fonts={
         "brand_font": "pacifico", "brand_bold": True, "brand_scale": 1.5, "title_font": "poiret", "card_scale": 0.85, "text_font": "im_fell", "text_scale": 1.15})
     data = catalog.build_public_catalog()
-    assert data["button_label"] == "Все квартиры" and data["columns"] == "3"
+    assert data["button_label"] == "Все квартиры" and data["columns"] == "3" and data["button_scale"] == 1.3
     f = data["fonts"]
     assert (f["brand_font"], f["brand_bold"], f["brand_scale"]) == ("pacifico", True, 1.5)
     assert f["title_font"] == "poiret" and f["subtitle_font"] == "montserrat"             # не заданный шрифт — по умолчанию
@@ -117,9 +117,10 @@ def test_fonts_columns_and_button_label(cat):
     saved["fonts"]["brand_font"] = "great_vibes"
     saved["fonts"]["title_scale"] = 99
     saved["columns"] = "9"
+    saved["button_scale"] = 50
     json.dump(saved, open(catalog.CATALOG_FILE, "w", encoding="utf-8"))
     data = catalog.build_public_catalog()
-    assert data["fonts"]["brand_font"] == "cormorant" and data["fonts"]["title_scale"] == 1.0 and data["columns"] == "auto"
+    assert data["fonts"]["brand_font"] == "cormorant" and data["fonts"]["title_scale"] == 1.0 and data["columns"] == "auto" and data["button_scale"] == 1.0
 
 
 def test_caption_up_to_200_characters(cat):
@@ -167,11 +168,11 @@ def test_admin_catalog_api(cat):
     from core.models import CatalogFonts, CatalogSettings, CatalogItemSettings
     from routers import properties
     catalog, _ = cat
-    state = run(properties.set_catalog_admin(CatalogSettings(title="Наши квартиры", button_label="Все квартиры", columns="2",
+    state = run(properties.set_catalog_admin(CatalogSettings(title="Наши квартиры", button_label="Все квартиры", button_scale=1.5, columns="2",
                 fonts=CatalogFonts(title_font="poiret", title_scale=1.3, card_bold=True),
                 items=[CatalogItemSettings(id=2, caption="Центр"), CatalogItemSettings(id=1)]), True))
     assert state["settings"]["title"] == "Наши квартиры" and [r["id"] for r in state["items"]][:2] == [2, 1]
-    assert state["settings"]["button_label"] == "Все квартиры" and state["settings"]["columns"] == "2"
+    assert state["settings"]["button_label"] == "Все квартиры" and state["settings"]["columns"] == "2" and state["settings"]["button_scale"] == 1.5
     assert state["settings"]["fonts"]["title_font"] == "poiret" and state["settings"]["fonts"]["title_scale"] == 1.3 and state["settings"]["fonts"]["card_bold"] is True
     assert run(properties.get_catalog_admin(True))["items"][0]["caption"] == "Центр"
     with pytest.raises(HTTPException) as e:

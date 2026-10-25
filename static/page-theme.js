@@ -100,6 +100,7 @@
     .then(function(c) {
       if (!c || c.count < 2) return;
       function show() {
+        document.documentElement.style.setProperty('--catalog-btn-scale', c.button_scale || 1);
         document.querySelectorAll('.js-catalog-link').forEach(function(a) {
           a.textContent = c.button_label || 'Квартиры';
           a.style.display = '';

@@ -109,6 +109,7 @@ class CatalogSettings(BaseModel):
     background_theme: str = ""   # пусто — как у основного сайта
     color_theme: str = ""
     button_label: str = ""       # название кнопки перехода в каталог на страницах сайта (пусто — «Квартиры»)
+    button_scale: float = 1.0    # размер шрифта этой кнопки (масштаб 0,5–2,5)
     columns: str = "auto"        # сетка карточек: auto / 1 / 2 / 3 / 4 в ряд
     fonts: CatalogFonts = Field(default_factory=CatalogFonts)
     items: List[CatalogItemSettings] = Field(default_factory=list)   # порядок в списке = порядок в каталоге

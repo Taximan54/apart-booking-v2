@@ -41,7 +41,7 @@ header{position:fixed;top:0;left:0;right:0;z-index:1000;display:flex;align-items
 .logo{flex-shrink:0;font-family:var(--logo-font);font-size:calc(32px * var(--logo-scale));font-weight:var(--logo-weight);letter-spacing:.08em;text-decoration:none;background:var(--accent-gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;filter:drop-shadow(0 2px 8px rgba(80,40,0,.8))}
 .logo span{font-weight:inherit}
 .logo-box{flex-shrink:0;display:flex;flex-direction:column;align-items:flex-start;gap:4px}
-.catalog-link{display:inline-block;font-family:var(--logo-font);font-weight:var(--logo-weight);font-size:calc(13px * var(--nav-scale));letter-spacing:.14em;text-transform:uppercase;text-decoration:none;color:var(--gold);border:1px solid var(--gold);padding:2px 12px;transition:opacity .3s}
+.catalog-link{display:inline-block;font-family:var(--logo-font);font-weight:var(--logo-weight);font-size:calc(13px * var(--nav-scale) * var(--catalog-btn-scale,1));letter-spacing:.14em;text-transform:uppercase;text-decoration:none;color:var(--gold);border:1px solid var(--gold);padding:.15em .9em;transition:opacity .3s}
 .catalog-link:hover{opacity:.7}
 nav{flex:1;display:flex;flex-direction:column;align-items:center;row-gap:10px;min-width:0}
 .nav-row{display:flex;flex-wrap:nowrap;justify-content:center;column-gap:36px}
@@ -912,6 +912,7 @@ if (PROPERTY_SLUG) {
 fetch('/api/catalog').then(r => r.json()).then(c => {
   if (!c || c.count < 2) return;
   const label = c.button_label || 'Квартиры';
+  document.documentElement.style.setProperty('--catalog-btn-scale', c.button_scale || 1);
   document.querySelectorAll('.js-nav-apartments, .js-catalog-link').forEach(a => { a.textContent = label; a.style.display = ''; });
 }).catch(() => {});
 // Ссылки на «Правила проживания» ведут на правила этого же объекта (и в его теме оформления)

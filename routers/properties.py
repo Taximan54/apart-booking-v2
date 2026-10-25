@@ -85,7 +85,7 @@ async def get_catalog_admin(_: bool = Depends(require_admin)):
 async def set_catalog_admin(data: CatalogSettings, _: bool = Depends(require_admin)):
     try:
         save_catalog_settings(data.brand, data.title, data.subtitle, data.background_theme, data.color_theme, data.items,
-                              data.button_label, data.columns, data.fonts)
+                              data.button_label, data.columns, data.fonts, data.button_scale)
     except CatalogError as e:
         _bad_request(e)
     return admin_catalog_state()
