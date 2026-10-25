@@ -185,23 +185,31 @@ section{position:relative;z-index:1;scroll-margin-top:100px}
 .cal-nav:hover{border-color:var(--gold);color:var(--gold)}
 .cal-dow{display:grid;grid-template-columns:repeat(7,1fr);margin-bottom:12px}
 .cal-dow span{text-align:center;font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--text-muted);padding:8px 0}
-.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
-.cday{aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:16px;color:var(--text-secondary);cursor:pointer;position:relative;transition:all .2s;border:1px solid transparent;font-weight:400}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);column-gap:0;row-gap:3px}
+.cday{aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:16px;color:var(--text-secondary);cursor:pointer;position:relative;transition:all .2s;border:1px solid transparent;font-weight:400;border-radius:999px}
 .cday-price{font-size:11px;letter-spacing:.02em;color:var(--text-muted);line-height:1}
 .cday:hover:not(.disabled):not(.booked){background:rgba(201,168,76,.1);border-color:rgba(201,168,76,.3);color:var(--gold)}
 .cday:hover:not(.disabled):not(.booked) .cday-price{color:var(--gold)}
 .cday.today{color:var(--gold);font-weight:500}
-.cday.today::after{content:'';position:absolute;top:3px;right:3px;width:4px;height:4px;border-radius:50%;background:var(--gold)}
+.cday.today::after{content:'';position:absolute;top:5px;left:50%;margin-left:-2px;width:4px;height:4px;border-radius:50%;background:var(--gold)}
 .cday.booked{background:rgba(192,57,43,.08);color:var(--text-muted);cursor:not-allowed;text-decoration:line-through;opacity:.5}
 .cday.sel-start,.cday.sel-end{background:var(--gold);color:var(--black);font-weight:500;border-color:var(--gold)}
 .cday.sel-start .cday-price,.cday.sel-end .cday-price{color:var(--black);opacity:.7}
-.cday.in-range{background:rgba(201,168,76,.12);color:var(--gold-light)}
+/* Выбранный период — одна «капсула»: заезд закруглён слева, дни между — сплошная полоса, выезд закруглён справа.
+   В начале и конце недельной строки полоса закругляется, чтобы переносы по строкам тоже выглядели аккуратно. */
+.cday.in-range{background:color-mix(in srgb,var(--gold) 14%,transparent);color:var(--gold-light);border-radius:0}
+.cday.sel-start.range-start{border-radius:999px 0 0 999px}
+.cday.sel-end{border-radius:0 999px 999px 0}
+.cday.in-range.hover-end{border-radius:0 999px 999px 0}
+.cday.in-range:nth-child(7n+1){border-radius:999px 0 0 999px}
+.cday.in-range:nth-child(7n){border-radius:0 999px 999px 0}
+.cday.sel-end:nth-child(7n+1),.cday.sel-start.range-start:nth-child(7n),.cday.in-range.hover-end:nth-child(7n+1){border-radius:999px}
 .cday.in-range .cday-price{color:var(--gold-light);opacity:.8}
 .cday.disabled{color:rgba(90,74,48,.3);cursor:not-allowed}
 .cday.empty{pointer-events:none}
 .cal-legend{display:flex;gap:20px;margin-top:24px;padding-top:20px;border-top:1px solid var(--black-border)}
 .leg-item{display:flex;align-items:center;gap:6px;font-size:10px;letter-spacing:.1em;color:var(--text-muted);text-transform:uppercase}
-.leg-dot{width:10px;height:10px}
+.leg-dot{width:10px;height:10px;border-radius:50%}
 .leg-dot.a{background:rgba(201,168,76,.3)}.leg-dot.b{background:rgba(192,57,43,.4)}.leg-dot.s{background:var(--gold)}
 
 /* FORM ELEMENTS */
@@ -1619,7 +1627,7 @@ function renderCal(){
     // подсветка выбранного диапазона
     if(!past && !booked){
       if(selStart && selEnd){
-        if(dStr === selStart)                        el.classList.add('sel-start');
+        if(dStr === selStart)                        el.classList.add('sel-start', 'range-start');
         else if(dStr === selEnd)                     el.classList.add('sel-end');
         else if(dStr > selStart && dStr < selEnd)    el.classList.add('in-range');
       } else if(selStart && !selEnd){
@@ -1638,13 +1646,19 @@ function renderCal(){
     const hd = cell.dataset.date;
     grid.querySelectorAll('.cday[data-date]').forEach(c=>{
       const cd = c.dataset.date;
+      c.classList.toggle('hover-end', cd === hd && hd > selStart);   // будущий день выезда — правый край капсулы
       if(cd > selStart && cd <= hd) c.classList.add('in-range');
       else if(cd !== selStart)      c.classList.remove('in-range');
     });
+    const startCell = grid.querySelector('.cday.sel-start');
+    if(startCell) startCell.classList.toggle('range-start', hd > selStart);   // левый край капсулы, как только пошёл период
   };
   grid.onmouseleave = function(){
     if(!selStart || selEnd) return;
     grid.querySelectorAll('.cday.in-range').forEach(c=>c.classList.remove('in-range'));
+    grid.querySelectorAll('.cday.hover-end').forEach(c=>c.classList.remove('hover-end'));
+    const startCell = grid.querySelector('.cday.sel-start');
+    if(startCell) startCell.classList.remove('range-start');
   };
 }
 
