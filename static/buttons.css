@@ -17,9 +17,9 @@ html.theme-light{--danger:#b91c1c}
   outline:2px solid var(--gold);outline-offset:3px}
 .btn:active,.btn-gold:active,.btn-gold-w:active,.btn-outline:active,.btn-outline-s:active,.nav-btn:active{transform:translateY(0) scale(.96) !important;box-shadow:none}
 
-/* ---------- Главные кнопки: градиент темы + блик ---------- */
+/* ---------- Главные кнопки: мягкий градиент от цвета темы к светлому + блик ---------- */
 .btn-primary,.btn-gold,.btn-gold-w{
-  background:var(--accent-gradient,linear-gradient(135deg,var(--gold),var(--gold-light,var(--gold))));
+  background:linear-gradient(135deg,var(--gold),var(--gold-light,var(--gold)));
   color:var(--black);
   box-shadow:0 4px 14px -6px color-mix(in srgb,var(--gold) 70%,transparent);
 }
@@ -28,7 +28,7 @@ html.theme-light{--danger:#b91c1c}
   background:linear-gradient(100deg,transparent,rgba(255,255,255,.5),transparent);
   transform:skewX(-20deg);transition:left .65s ease}
 .btn-primary:hover,.btn-gold:hover,.btn-gold-w:hover{
-  background:var(--accent-gradient,linear-gradient(135deg,var(--gold),var(--gold-light,var(--gold))));
+  background:linear-gradient(135deg,var(--gold),var(--gold-light,var(--gold)));
   opacity:1;transform:translateY(-2px);
   box-shadow:0 12px 26px -8px color-mix(in srgb,var(--gold) 85%,transparent)}
 .btn-primary:hover::after,.btn-gold:hover::after,.btn-gold-w:hover::after{left:140%}

@@ -332,6 +332,40 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
   .footer-r{text-align:center}
 }
 
+/* ТЕЛЕФОНЫ И ПЛАНШЕТЫ: кнопки главного экрана не должны выходить за край экрана */
+.loc-map-btn{border-radius:999px}
+@media(max-width:380px){
+  .cday{font-size:16px}
+  .cday-price{font-size:10px}
+  .sec-inner{padding:0 16px}
+}
+@media(max-width:1024px){
+  .hero-cta{flex-wrap:wrap}
+}
+@media(max-width:600px){
+  /* главный экран: кнопки друг под другом, одной ширины */
+  .hero-cta{flex-direction:column;gap:12px;align-items:center;width:100%}
+  .hero-content.pos-left .hero-cta{align-items:flex-start}
+  .hero-content.pos-right .hero-cta{align-items:flex-end}
+  .hero-cta .btn-gold,.hero-cta .btn-outline{width:min(300px,100%);padding:14px 20px;letter-spacing:.2em;text-align:center}
+  .hero-sub{margin-bottom:36px}
+  /* полоса преимуществ: ничего не вылезает за край */
+  .features-strip{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .feature-item{padding:24px 16px}
+  .feature-title,.feature-desc{overflow-wrap:anywhere}
+  /* адрес на карте: адрес сверху, кнопка «На карте» под ним на всю ширину */
+  .loc-addr-row{flex-direction:column !important;align-items:stretch !important;gap:14px}
+  .loc-map-btn{text-align:center}
+  /* отзывы и бронирование: на узких экранах не шире экрана */
+  .reviews-grid{grid-template-columns:repeat(auto-fill,minmax(min(300px,100%),1fr))}
+  .booking-wrap{grid-template-columns:minmax(0,1fr)}
+  .cal-grid{grid-template-columns:repeat(7,minmax(0,1fr))}
+  .cal-panel,.form-panel{padding:28px 16px}
+  /* контакты: по две карточки в ряд и компактнее */
+  .contacts-grid{grid-template-columns:repeat(2,minmax(0,1fr)) !important;gap:12px !important}
+  .contacts-grid > *{padding:20px 12px !important;overflow-wrap:anywhere}
+}
+
 /* MOBILE NAV */
 .hamburger{display:none;flex-shrink:0;width:32px;height:24px;flex-direction:column;justify-content:space-between;background:none;border:none;cursor:pointer;padding:0;z-index:1100}
 .hamburger span{display:block;height:2px;width:100%;background:var(--gold);border-radius:1px;transition:transform .3s,opacity .3s}
@@ -495,13 +529,13 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
             <div style="font-family:'Cormorant Garamond',serif;font-size:12px;letter-spacing:.15em;color:#fff;background:rgba(0,0,0,.5);padding:6px 14px;backdrop-filter:blur(4px)">Открыть на карте →</div>
           </div>
         </a>
-        <div style="padding:20px 24px;background:var(--black-card);border:1px solid var(--black-border);border-top:none;display:flex;align-items:center;justify-content:space-between">
+        <div class="loc-addr-row" style="padding:20px 24px;background:var(--black-card);border:1px solid var(--black-border);border-top:none;display:flex;align-items:center;justify-content:space-between">
           <div>
             <div style="font-size:10px;letter-spacing:.2em;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px">Адрес</div>
             <div style="font-family:'Cormorant Garamond',serif;font-size:18px;color:var(--text-primary)">г. Новосибирск, ул. Дачная, д. 5</div>
             <div style="font-size:11px;color:var(--text-muted);margin-top:2px">22 этаж · Панорамный вид на город</div>
           </div>
-          <a href="https://yandex.ru/maps/?text=Новосибирск%2C+ул.+Дачная+5&z=16" target="_blank" style="font-family:'Cormorant Garamond',serif;font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);text-decoration:none;border:1px solid rgba(212,160,23,.4);padding:10px 20px;white-space:nowrap;transition:all .3s" onmouseover="this.style.borderColor='var(--gold)'" onmouseout="this.style.borderColor='rgba(212,160,23,.4)'">На карте →</a>
+          <a class="loc-map-btn" href="https://yandex.ru/maps/?text=Новосибирск%2C+ул.+Дачная+5&z=16" target="_blank" style="font-family:'Cormorant Garamond',serif;font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);text-decoration:none;border:1px solid rgba(212,160,23,.4);padding:10px 20px;white-space:nowrap;transition:all .3s" onmouseover="this.style.borderColor='var(--gold)'" onmouseout="this.style.borderColor='rgba(212,160,23,.4)'">На карте →</a>
         </div>
       </div>
       <div class="location-points" id="locationPointsGrid">
@@ -828,7 +862,7 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
       <div class="sec-eyebrow">Связаться с нами</div>
       <h2 class="sec-title">Контакты</h2>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:24px;max-width:900px;margin:0 auto">
+    <div class="contacts-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:24px;max-width:900px;margin:0 auto">
       <a id="contactPhone" href="#" style="display:none;flex-direction:column;align-items:center;padding:32px 24px;background:transparent;border:1px solid var(--black-border);text-decoration:none;transition:border-color .3s" onmouseover="this.style.borderColor='var(--gold)'" onmouseout="this.style.borderColor='var(--black-border)'">
         <div style="font-size:28px;margin-bottom:12px">📞</div>
         <div style="font-size:10px;color:var(--gold);letter-spacing:.2em;text-transform:uppercase;margin-bottom:8px">Телефон</div>
