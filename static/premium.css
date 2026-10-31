@@ -75,3 +75,49 @@ body.price-p3 .price-card.featured{background:linear-gradient(135deg,color-mix(i
   body.price-p3 .price-cards.two{border-radius:36px}
   body.price-p3 .price-card{padding:28px 24px}
 }
+
+/* ===== КАЛЕНДАРЬ (шаг 3): body.cal-k1 / cal-k2 / cal-k3; без класса — как раньше ===== */
+body[class*="cal-k"] .booking-wrap{position:relative;max-width:1040px;margin-left:auto;margin-right:auto;gap:0;padding:54px;grid-template-columns:1.12fr 1fr;background:var(--card-bg,var(--black-card));backdrop-filter:var(--card-filter,none);-webkit-backdrop-filter:var(--card-filter,none)}
+body[class*="cal-k"] :is(.cal-panel,.form-panel){background:transparent;border-radius:0;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none}
+body[class*="cal-k"] :is(.cal-panel,.form-panel)::before{display:none}
+body[class*="cal-k"] .cal-panel{padding:0 48px 0 0}
+body[class*="cal-k"] .form-panel{padding:0 0 0 48px;border-left:1px solid color-mix(in srgb,var(--gold) 38%,transparent)}
+/* общие мелочи календаря */
+body[class*="cal-k"] .cal-month-label{display:flex;align-items:center;gap:14px;font-size:28px;font-weight:400}
+body[class*="cal-k"] .cal-month-label::before,body[class*="cal-k"] .cal-month-label::after{content:'';width:22px;height:1px;background:var(--gold)}
+body[class*="cal-k"] .cal-nav{border-radius:50%;width:38px;height:38px;border-color:color-mix(in srgb,var(--gold) 45%,transparent);color:var(--gold)}
+body[class*="cal-k"] .cal-nav:hover{background:color-mix(in srgb,var(--gold) 14%,transparent)}
+body[class*="cal-k"] .cal-dow{padding-bottom:6px;border-bottom:1px solid transparent;border-image:linear-gradient(90deg,transparent,color-mix(in srgb,var(--gold) 55%,transparent),transparent) 1}
+body[class*="cal-k"] .cday:not(.in-range):not(.sel-start):not(.sel-end){border-radius:999px}
+body[class*="cal-k"] .cday.sel-start:not(.range-start){border-radius:999px}
+body[class*="cal-k"] :is(.cday.sel-start,.cday.sel-end){background:linear-gradient(135deg,var(--gold),var(--gold-light));box-shadow:0 8px 22px -8px color-mix(in srgb,var(--gold) 80%,transparent)}
+body[class*="cal-k"] .cal-legend{border-top-color:color-mix(in srgb,var(--gold) 16%,transparent)}
+/* К1: ювелирная рамка — двойная линия и уголки */
+body.cal-k1 .booking-wrap{border-radius:0;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--gold) 45%,transparent),var(--glow,none)}
+body.cal-k1 .booking-wrap::before{content:'';position:absolute;inset:11px;border:1px solid color-mix(in srgb,var(--gold) 20%,transparent);pointer-events:none}
+body.cal-k1 .booking-wrap::after{content:'';position:absolute;inset:-2px;pointer-events:none;
+  background:
+   linear-gradient(var(--gold),var(--gold)) top left/26px 2px no-repeat,linear-gradient(var(--gold),var(--gold)) top left/2px 26px no-repeat,
+   linear-gradient(var(--gold),var(--gold)) top right/26px 2px no-repeat,linear-gradient(var(--gold),var(--gold)) top right/2px 26px no-repeat,
+   linear-gradient(var(--gold),var(--gold)) bottom left/26px 2px no-repeat,linear-gradient(var(--gold),var(--gold)) bottom left/2px 26px no-repeat,
+   linear-gradient(var(--gold),var(--gold)) bottom right/26px 2px no-repeat,linear-gradient(var(--gold),var(--gold)) bottom right/2px 26px no-repeat}
+/* К2: стекло с живой золотой каймой */
+body.cal-k2 .booking-wrap{padding:46px;border-radius:26px;background:color-mix(in srgb,var(--black-card) 55%,transparent);backdrop-filter:blur(18px) saturate(1.3);-webkit-backdrop-filter:blur(18px) saturate(1.3);box-shadow:0 0 70px -40px var(--gold)}
+body.cal-k2 .booking-wrap::before{content:'';position:absolute;inset:-1px;border-radius:inherit;padding:1.5px;pointer-events:none;background:linear-gradient(110deg,var(--gold),transparent 28%,var(--gold-light) 52%,transparent 76%,var(--gold));background-size:300% 300%;animation:cpflow 9s linear infinite;
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
+@keyframes cpflow{to{background-position:300% 0}}
+/* К3: светлая карточка на тёмном фоне */
+body.cal-k3 .booking-wrap{padding:46px;border-radius:26px;background:#F7F1E3;backdrop-filter:none;-webkit-backdrop-filter:none;box-shadow:0 50px 90px -40px rgba(0,0,0,.75);
+  --gold:#B28A2C;--gold-light:#D9B964;--gold-dark:#8A6516;--black:#2A2418;--black-card:#FFFFFF;--black-border:#DCCFB0;--white:#2A2418;--text-primary:#2A2418;--text-secondary:#6B5B38;--text-muted:#8F7F5A;color:#2A2418}
+body.cal-k3 .cday.sel-start,body.cal-k3 .cday.sel-end{color:#fff}
+body.cal-k3 .cday.sel-start .cday-price,body.cal-k3 .cday.sel-end .cday-price{color:#fff}
+body.cal-k3 .cday.in-range,body.cal-k3 .cday.in-range .cday-price{color:#6B4F0E}
+body.cal-k3 .cday.disabled{color:rgba(107,91,56,.35)}
+@media(max-width:900px){
+  body[class*="cal-k"] .booking-wrap{grid-template-columns:minmax(0,1fr);padding:30px 18px}
+  body[class*="cal-k"] .cal-panel{padding:0 0 28px}
+  body[class*="cal-k"] .form-panel{padding:28px 0 0;border-left:0;border-top:1px solid color-mix(in srgb,var(--gold) 38%,transparent)}
+  body[class*="cal-k"] .cal-month-label{font-size:22px;gap:8px;white-space:nowrap}
+  body[class*="cal-k"] .cal-month-label::before,body[class*="cal-k"] .cal-month-label::after{width:10px}
+}
+@media(prefers-reduced-motion:reduce){body.cal-k2 .booking-wrap::before{animation:none}}
