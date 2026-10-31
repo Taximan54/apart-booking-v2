@@ -379,8 +379,9 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
 .mobile-nav .nav-btn{display:inline-block !important;font-size:16px !important;padding:14px 36px !important;margin-top:12px}
 </style>
 <link rel="stylesheet" href="/static/buttons.css?v=20261025a">
-<link rel="stylesheet" href="/static/premium.css?v=20261031c">
+<link rel="stylesheet" href="/static/premium.css?v=20261031d">
 <script src="/static/buttons.js?v=20261025a" defer></script>
+<script src="/static/premium.js?v=20261031d" defer></script>
 </head>
 <body>
 
@@ -1126,6 +1127,12 @@ async function applySiteSettings() {
       const qc = new URLSearchParams(location.search).get('cstyle');
       const cs = ['k1','k2','k3'].includes(qc) ? qc : (['k1','k2','k3'].includes(settings.calendar_style) ? settings.calendar_style : '');
       if (cs) document.body.classList.add('cal-' + cs);
+      // Удобства / галерея / отзывы / фото-полосы. Пробный просмотр: ?am=ring &gal=mosaic &rev=quote &bands=1
+      const qs2 = new URLSearchParams(location.search);
+      if ((qs2.get('am') || settings.amenities_style) === 'ring') document.body.classList.add('am-ring');
+      if ((qs2.get('gal') || settings.gallery_style) === 'mosaic') document.body.classList.add('gal-mosaic');
+      if ((qs2.get('rev') || settings.reviews_style) === 'quote') document.body.classList.add('rev-quote');
+      if (qs2.get('bands') === '1' || settings.photo_bands === true) document.body.classList.add('fx-bands');
       if (settings.hero_photo) document.documentElement.style.setProperty('--glass-photo', `url(/data/photos/${settings.hero_photo})`);
     } catch(e) {}
 

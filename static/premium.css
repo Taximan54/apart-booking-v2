@@ -121,3 +121,39 @@ body.cal-k3 .cday.disabled{color:rgba(107,91,56,.35)}
   body[class*="cal-k"] .cal-month-label::before,body[class*="cal-k"] .cal-month-label::after{width:10px}
 }
 @media(prefers-reduced-motion:reduce){body.cal-k2 .booking-wrap::before{animation:none}}
+
+/* ===== ШАГ 4: удобства, галерея, отзывы, фото-полосы, контраст ===== */
+/* контраст бледных подписей (только в режимах mag и glass) */
+body.mode-mag :is(.feature-desc,.review-author,.review-date,.cday-price,.dbox-label,.flabel,.stat-label,.gallery-counter,.pbrow .lbl),
+body.mode-glass :is(.feature-desc,.review-author,.review-date,.cday-price,.dbox-label,.flabel,.stat-label,.gallery-counter,.pbrow .lbl){color:color-mix(in srgb,var(--text-muted) 55%,var(--text-secondary))}
+/* удобства: значки в золотых кольцах (body.am-ring) */
+body.am-ring .amenity-item{align-items:center;text-align:center;padding:34px 20px 30px}
+body.am-ring .amenity-icon{width:72px;height:72px;border-radius:50%;display:grid;place-items:center;font-size:28px;margin-bottom:6px;
+  background:radial-gradient(circle at 30% 25%,color-mix(in srgb,var(--gold) 22%,transparent),transparent 70%);
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--gold) 45%,transparent),0 0 0 7px color-mix(in srgb,var(--gold) 7%,transparent);transition:box-shadow .35s,transform .35s}
+body.am-ring .amenity-item:hover .amenity-icon{transform:scale(1.06);box-shadow:inset 0 0 0 1px var(--gold),0 0 0 9px color-mix(in srgb,var(--gold) 12%,transparent),0 0 30px color-mix(in srgb,var(--gold) 35%,transparent)}
+/* галерея-мозаика (body.gal-mosaic): в каждом ряду одно большое фото и четыре малых; второй ряд зеркальный */
+body.gal-mosaic .gallery-main-grid{grid-template-columns:repeat(4,minmax(0,1fr));grid-auto-rows:190px;gap:14px}
+body.gal-mosaic .gallery-main-grid .gitem{height:auto !important;border-radius:var(--r,14px)}
+body.gal-mosaic .gallery-main-grid .gitem:first-child{grid-column:1/3;grid-row:1/3}
+body.gal-mosaic #galleryGrid2 .gitem:first-child{grid-column:3/5}
+@media(max-width:600px){
+  body.gal-mosaic .gallery-main-grid{grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:140px;gap:10px}
+  body.gal-mosaic .gallery-main-grid .gitem:first-child,body.gal-mosaic #galleryGrid2 .gitem:first-child{grid-column:1/3;grid-row:span 2}
+}
+/* отзывы с декоративной кавычкой (body.rev-quote) */
+body.rev-quote .review-card{position:relative;padding-top:48px}
+body.rev-quote .review-card::after{content:'\201C';position:absolute;top:6px;left:22px;font-family:'Cormorant Garamond',serif;font-size:110px;line-height:1;color:var(--gold);opacity:.22;pointer-events:none}
+body.rev-quote .review-text{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:19px;line-height:1.55;font-weight:400;color:var(--text-primary)}
+/* фото-полосы (body.fx-bands): фото за блоком «О квартире» и цитата отзыва перед бронированием */
+body.fx-bands #about{overflow:hidden;border-color:transparent}
+body.fx-bands #about>*:not(.cp-band-bg){position:relative;z-index:1}
+body.fx-bands #about :is(.about-desc,.stat-label){color:var(--text-primary)}
+body.fx-bands #about .stat-num{text-shadow:0 4px 30px rgba(0,0,0,.45)}
+.cp-band-bg{position:absolute;inset:-14% 0;background-size:cover;background-position:center;will-change:transform;z-index:0}
+.cp-band-bg::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,var(--black),color-mix(in srgb,var(--black) 62%,transparent) 26%,color-mix(in srgb,var(--black) 62%,transparent) 74%,var(--black))}
+.cp-quote-band{position:relative;z-index:1;min-height:380px;display:flex;align-items:center;justify-content:center;overflow:hidden;text-align:center}
+.cp-quote-in{position:relative;z-index:1;padding:80px 24px;max-width:860px}
+.cp-quote{font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:400;font-size:clamp(24px,3.6vw,42px);line-height:1.3;color:var(--text-primary);text-shadow:0 4px 30px rgba(0,0,0,.4)}
+.cp-quote-by{display:block;margin-top:18px;font-size:11px;letter-spacing:.26em;text-transform:uppercase;color:var(--gold)}
+@media(max-width:600px){.cp-quote-band{min-height:300px}.cp-quote-in{padding:56px 20px}}
