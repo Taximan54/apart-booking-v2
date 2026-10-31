@@ -379,7 +379,7 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
 .mobile-nav .nav-btn{display:inline-block !important;font-size:16px !important;padding:14px 36px !important;margin-top:12px}
 </style>
 <link rel="stylesheet" href="/static/buttons.css?v=20261025a">
-<link rel="stylesheet" href="/static/premium.css?v=20261031a">
+<link rel="stylesheet" href="/static/premium.css?v=20261031b">
 <script src="/static/buttons.js?v=20261025a" defer></script>
 </head>
 <body>
@@ -1118,6 +1118,10 @@ async function applySiteSettings() {
       const qs = new URLSearchParams(location.search).get('style');
       const mode = ['mag','glass'].includes(qs) ? qs : (['mag','glass'].includes(settings.style_mode) ? settings.style_mode : 'classic');
       document.body.classList.add('mode-' + mode);
+      // Стиль цен: classic / p1 / p2 / p3. ?pstyle=… — пробный просмотр
+      const qp = new URLSearchParams(location.search).get('pstyle');
+      const ps = ['p1','p2','p3'].includes(qp) ? qp : (['p1','p2','p3'].includes(settings.price_style) ? settings.price_style : '');
+      if (ps) document.body.classList.add('price-' + ps);
       if (settings.hero_photo) document.documentElement.style.setProperty('--glass-photo', `url(/data/photos/${settings.hero_photo})`);
     } catch(e) {}
 
