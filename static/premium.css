@@ -1,0 +1,37 @@
+/* Премиум-оформление (шаг 1: режимы фона и карточек). Подключается ПОСЛЕ стилей страницы.
+   Режим задаёт класс на <body>: mode-mag (журнальный) / mode-glass (стекло на фото).
+   Без класса («Классика») этот файл ничего не меняет. Пробный просмотр: ?style=mag или ?style=glass */
+body.mode-mag,body.mode-glass{--r:16px;--card-bg:color-mix(in srgb,var(--black-card) 84%,transparent);--card-filter:none;--glow:0 26px 50px -38px color-mix(in srgb,var(--gold) 34%,transparent)}
+body.mode-mag{background:
+  radial-gradient(900px 520px at 12% 4%,color-mix(in srgb,var(--gold) 11%,transparent),transparent 62%),
+  radial-gradient(800px 480px at 92% 38%,color-mix(in srgb,var(--gold) 8%,transparent),transparent 60%),
+  radial-gradient(900px 520px at 20% 78%,color-mix(in srgb,var(--gold) 8%,transparent),transparent 62%),var(--black)}
+body.mode-glass{--r:20px;--card-bg:color-mix(in srgb,var(--black-card) 46%,transparent);--card-filter:blur(16px) saturate(1.25);--glow:0 30px 60px -40px color-mix(in srgb,var(--gold) 40%,transparent)}
+body.mode-glass::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:linear-gradient(color-mix(in srgb,var(--black) 74%,transparent),color-mix(in srgb,var(--black) 86%,transparent)),var(--glass-photo,none) center/cover no-repeat}
+
+/* карточки: скругление, стекло, тонкая золотая кайма */
+body.mode-mag :is(.price-card,.amenity-item,.review-card,.cal-panel,.form-panel),
+body.mode-glass :is(.price-card,.amenity-item,.review-card,.cal-panel,.form-panel){
+  position:relative;border-radius:var(--r);background:var(--card-bg);border:0;box-shadow:var(--glow);
+  backdrop-filter:var(--card-filter);-webkit-backdrop-filter:var(--card-filter)}
+body.mode-mag :is(.price-card,.amenity-item,.review-card,.cal-panel,.form-panel)::before,
+body.mode-glass :is(.price-card,.amenity-item,.review-card,.cal-panel,.form-panel)::before{
+  content:'';position:absolute;inset:0;border-radius:inherit;padding:1px;pointer-events:none;
+  background:linear-gradient(135deg,color-mix(in srgb,var(--gold) 75%,transparent),transparent 34%,transparent 66%,color-mix(in srgb,var(--gold) 55%,transparent));
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
+/* сетки: вместо линий 1px — зазоры между карточками */
+body.mode-mag :is(.price-cards,.booking-wrap),body.mode-glass :is(.price-cards,.booking-wrap){gap:24px;background:transparent}
+body.mode-mag .amenities-grid,body.mode-glass .amenities-grid{gap:18px;border:0}
+body.mode-mag .amenity-item,body.mode-glass .amenity-item{overflow:hidden}
+body.mode-mag .amenity-item:hover,body.mode-glass .amenity-item:hover{background:var(--card-bg)}
+body.mode-mag .price-card.featured,body.mode-glass .price-card.featured{box-shadow:var(--glow),0 0 0 1px color-mix(in srgb,var(--gold) 22%,transparent)}
+body.mode-mag .gallery-main-grid,body.mode-glass .gallery-main-grid{gap:12px}
+body.mode-mag .gitem,body.mode-glass .gitem{border:0;border-radius:var(--r)}
+body.mode-mag :is(#prices,#about),body.mode-glass :is(#prices,#about){border-color:transparent}
+body.mode-mag .features-strip,body.mode-glass .features-strip{border-color:color-mix(in srgb,var(--gold) 18%,transparent)}
+@media(max-width:600px){
+  body.mode-glass{--card-filter:blur(8px)}
+  body.mode-mag :is(.price-cards,.booking-wrap),body.mode-glass :is(.price-cards,.booking-wrap){gap:16px}
+  body.mode-mag .amenities-grid,body.mode-glass .amenities-grid{gap:12px}
+}

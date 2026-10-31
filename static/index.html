@@ -379,6 +379,7 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
 .mobile-nav .nav-btn{display:inline-block !important;font-size:16px !important;padding:14px 36px !important;margin-top:12px}
 </style>
 <link rel="stylesheet" href="/static/buttons.css?v=20261025a">
+<link rel="stylesheet" href="/static/premium.css?v=20261031a">
 <script src="/static/buttons.js?v=20261025a" defer></script>
 </head>
 <body>
@@ -592,8 +593,6 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
           <span class="price-value" id="priceWeekday">—</span>
           <span class="price-period">/ ночь</span>
         </div>
-        <div class="price-divider"></div>
-        <div class="price-includes">Включены постельное бельё и полотенца</div>
       </div>
       <div class="price-card featured">
         <div class="price-badge">Популярно</div>
@@ -604,8 +603,6 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
           <span class="price-value" id="priceWeekend">—</span>
           <span class="price-period">/ ночь</span>
         </div>
-        <div class="price-divider"></div>
-        <div class="price-includes">Включены постельное бельё и полотенца</div>
       </div>
     </div>
     <div style="text-align:center;margin-top:32px">
@@ -1115,6 +1112,14 @@ async function applySiteSettings() {
   const fontWaits = [];
   try {
     const settings = await fetch(`${API.BASE}/api/site-settings`).then(r=>r.json());
+
+    // Режим фона и карточек (шаг оформления): classic / mag / glass. ?style=… — пробный просмотр
+    try {
+      const qs = new URLSearchParams(location.search).get('style');
+      const mode = ['mag','glass'].includes(qs) ? qs : (['mag','glass'].includes(settings.style_mode) ? settings.style_mode : 'classic');
+      document.body.classList.add('mode-' + mode);
+      if (settings.hero_photo) document.documentElement.style.setProperty('--glass-photo', `url(/data/photos/${settings.hero_photo})`);
+    } catch(e) {}
 
     const FONT_MAP = {
       cormorant:  {family:"'Cormorant Garamond',serif", weight:400},
