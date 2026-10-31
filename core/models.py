@@ -174,6 +174,14 @@ class SiteSettings(BaseModel):
     hero_carousel_seconds: int = 6  # 3..15 — сколько секунд держится каждый слайд hero-карусели (обложка/акции) перед сменой
     header_opacity_level: int = 3   # 1..10 — прозрачность шапки навигации (1 = 10% непрозрачности, 10 = полностью непрозрачная)
     header_blur_level: int = 2      # 1..10 — размытие фона под шапкой (1 = 2px, 10 = 20px)
+    # Стиль сайта (premium.css). "classic" / пусто = прежний вид; значения по умолчанию = текущий вид
+    style_mode: str = "classic"       # classic / mag / glass — фон и карточки
+    price_style: str = "classic"      # classic / p1 / p2 / p3 — блок цен
+    calendar_style: str = "classic"   # classic / k1 / k2 / k3 — рамка календаря
+    amenities_style: str = "classic"  # classic / ring — значки удобств в золотых кольцах
+    gallery_style: str = "classic"    # classic / mosaic — галерея-мозаика
+    reviews_style: str = "classic"    # classic / quote — отзывы с декоративной кавычкой
+    photo_bands: bool = False         # фото-полосы и «набор» цифр
     hero_eyebrow: str = "Апартаменты в городе"  # надпись над заголовком (с чёрточками); пусто = скрыть строку целиком
     nav_extra_label: str = ""       # 8-й (опциональный) пункт меню — если пусто, не отображается
     nav_extra_url: str = ""         # ссылка для 8-го пункта меню

@@ -5,15 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Панель управления — Городская Пауза</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Montserrat:wght@300;400;500;600&family=PT+Serif:wght@400;700&family=IM+Fell+English&family=Yeseva+One&family=Marck+Script&family=Pacifico&family=Poiret+One&family=Great+Vibes&family=Bad+Script&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/static/admin.css?v=20261025a">
+<link rel="stylesheet" href="/static/admin.css?v=20261031a">
 <script>window.CP_THEME_NO_AUTO = true;</script>
 <script src="/static/page-theme.js?v=20261018c"></script>
 <script>
 // Тема выбранного объекта из прошлого захода — применяем сразу, чтобы админка не мигала цветами по умолчанию
 (function(){try{var id=localStorage.getItem('adminPropertyId')||'1';var c=JSON.parse(localStorage.getItem('adminTheme:'+id)||'null');if(c&&window.CityPauseTheme)window.CityPauseTheme.apply(c.bg,c.color);}catch(e){}})();
 </script>
-<link rel="stylesheet" href="/static/buttons.css?v=20261025a">
-<script src="/static/buttons.js?v=20261025a" defer></script>
+<link rel="stylesheet" href="/static/buttons.css?v=20261031a">
+<script src="/static/buttons.js?v=20261031a" defer></script>
 </head>
 <body>
 
@@ -1176,6 +1176,11 @@
               <div style="font-size:9px;color:var(--text-muted);margin-top:4px">1 = лёгкое размытие (2px), 10 = сильное (20px)</div>
             </div>
           </div>
+          <div style="margin-bottom:24px">
+            <div class="info-label" style="margin-bottom:10px">Стиль сайта (для выбранного объекта)</div>
+            <div id="siteStylePicker"></div>
+            <div style="font-size:10px;color:var(--text-muted);margin-top:8px">«Как сейчас» — прежний вид. Изменения появятся на сайте после кнопки «Сохранить оформление».</div>
+          </div>
           </div>
 
           <button class="btn btn-primary" onclick="saveDesignSettings()">Сохранить оформление</button>
@@ -1565,17 +1570,17 @@
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
-<script src="/static/admin-js/core.js?v=20261025a"></script>
-<script src="/static/admin-js/theme.js?v=20261025a"></script>
-<script src="/static/admin-js/prices-promo.js?v=20261025a"></script>
-<script src="/static/admin-js/bookings-dashboard.js?v=20261025a"></script>
-<script src="/static/admin-js/ui-contract.js?v=20261025a"></script>
-<script src="/static/admin-js/archive-photos.js?v=20261025a"></script>
-<script src="/static/admin-js/content.js?v=20261025a"></script>
-<script src="/static/admin-js/site-settings.js?v=20261025a"></script>
-<script src="/static/admin-js/properties.js?v=20261025a"></script>
-<script src="/static/admin-js/catalog.js?v=20261025a"></script>
-<script src="/static/admin-js/integrations.js?v=20261025a"></script>
-<script src="/static/admin-js/init.js?v=20261025a"></script>
+<script src="/static/admin-js/core.js?v=20261031a"></script>
+<script src="/static/admin-js/theme.js?v=20261031a"></script>
+<script src="/static/admin-js/prices-promo.js?v=20261031a"></script>
+<script src="/static/admin-js/bookings-dashboard.js?v=20261031a"></script>
+<script src="/static/admin-js/ui-contract.js?v=20261031a"></script>
+<script src="/static/admin-js/archive-photos.js?v=20261031a"></script>
+<script src="/static/admin-js/content.js?v=20261031a"></script>
+<script src="/static/admin-js/site-settings.js?v=20261031a"></script>
+<script src="/static/admin-js/properties.js?v=20261031a"></script>
+<script src="/static/admin-js/catalog.js?v=20261031a"></script>
+<script src="/static/admin-js/integrations.js?v=20261031a"></script>
+<script src="/static/admin-js/init.js?v=20261031a"></script>
 </body>
 </html>

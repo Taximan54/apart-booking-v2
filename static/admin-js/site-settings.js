@@ -473,6 +473,7 @@ async function loadSiteSettings() {
     renderHeroSubtitleScalePicker();
     renderHeroPositionPicker();
     renderHeroCarouselSpeedPicker();
+    loadSiteStyles(s);
     renderDesignPreview();
     if(s.hero_photo) {
       const img = document.getElementById('heroPhotoImg');
@@ -583,6 +584,7 @@ async function saveDesignSettings() {
     hero_carousel_enabled: selectedHeroCarouselEnabled,
     header_opacity_level: selectedHeaderOpacityLevel,
     header_blur_level: selectedHeaderBlurLevel,
+    ...collectSiteStyles(),
   };
   try {
     const current = await apiGet('/api/site-settings');
@@ -612,3 +614,48 @@ async function saveCheckinMemo() {
   }
 }
 
+
+
+// ============================================================
+// СТИЛЬ САЙТА (premium.css): каждый пункт можно включить или вернуть «Как сейчас»
+// ============================================================
+const SITE_STYLE_GROUPS = [
+  {key: 'style_mode',      title: 'Фон и карточки',   opts: [['classic','Как сейчас'],['mag','Журнальный'],['glass','Стекло на фото']]},
+  {key: 'price_style',     title: 'Блок цен',         opts: [['classic','Как сейчас'],['p1','Две карточки'],['p2','Одна плашка'],['p3','Капсула']]},
+  {key: 'calendar_style',  title: 'Рамка календаря',  opts: [['classic','Как сейчас'],['k1','Ювелирная'],['k2','Стекло'],['k3','Светлая']]},
+  {key: 'amenities_style', title: 'Значки удобств',   opts: [['classic','Как сейчас'],['ring','В золотых кольцах']]},
+  {key: 'gallery_style',   title: 'Галерея',          opts: [['classic','Как сейчас'],['mosaic','Мозаика']]},
+  {key: 'reviews_style',   title: 'Отзывы',           opts: [['classic','Как сейчас'],['quote','С кавычкой']]},
+];
+let selectedSiteStyles = {};
+let selectedPhotoBands = false;
+
+function loadSiteStyles(s) {
+  SITE_STYLE_GROUPS.forEach(g => {
+    const v = (s || {})[g.key];
+    selectedSiteStyles[g.key] = g.opts.some(o => o[0] === v) ? v : 'classic';
+  });
+  selectedPhotoBands = !!(s && s.photo_bands);
+  renderSiteStylePicker();
+}
+
+function renderSiteStylePicker() {
+  const el = document.getElementById('siteStylePicker');
+  if (!el) return;
+  const btn = (on, onclick, label) => `<button type="button" onclick="${onclick}" class="btn ${on ? 'btn-primary' : 'btn-ghost'} btn-sm">${label}</button>`;
+  const row = (title, inner) => `<div style="margin-bottom:12px"><div class="info-label" style="font-size:9px;margin-bottom:6px">${title}</div><div style="display:flex;gap:8px;flex-wrap:wrap">${inner}</div></div>`;
+  el.innerHTML = SITE_STYLE_GROUPS.map(g =>
+    row(g.title, g.opts.map(o => btn(selectedSiteStyles[g.key] === o[0], `selectSiteStyle('${g.key}','${o[0]}')`, o[1])).join(''))
+  ).join('') + row('Фото-полосы и «набор» цифр',
+    btn(!selectedPhotoBands, 'selectPhotoBands(false)', 'Выкл') + btn(selectedPhotoBands, 'selectPhotoBands(true)', 'Вкл'));
+}
+
+function selectSiteStyle(key, v) { selectedSiteStyles[key] = v; renderSiteStylePicker(); }
+function selectPhotoBands(v) { selectedPhotoBands = !!v; renderSiteStylePicker(); }
+
+function collectSiteStyles() {
+  const out = {};
+  SITE_STYLE_GROUPS.forEach(g => { out[g.key] = selectedSiteStyles[g.key] || 'classic'; });
+  out.photo_bands = !!selectedPhotoBands;
+  return out;
+}

@@ -151,9 +151,25 @@ async def set_house_rules(r: HouseRulesText, _: bool = Depends(require_admin), p
         f.write(r.text)
     return {"ok": True}
 
+# Стиль сайта (premium.css): значения по умолчанию = прежний вид сайта
+SITE_STYLE_DEFAULTS = {
+    "style_mode": "classic", "price_style": "classic", "calendar_style": "classic",
+    "amenities_style": "classic", "gallery_style": "classic", "reviews_style": "classic",
+    "photo_bands": False,
+}
+
 @router.get("/api/site-settings")
 async def get_site_settings(property_id: int = Depends(request_property_id)):
-    return get_site_settings_dict(property_id)
+    data = dict(get_site_settings_dict(property_id))
+    raw = {}
+    try:
+        with open(property_file(SETTINGS_FILE, property_id), "r", encoding="utf-8") as f:
+            raw = json.load(f)
+    except Exception:
+        pass
+    for key, default in SITE_STYLE_DEFAULTS.items():
+        data[key] = raw.get(key, data.get(key, default))
+    return data
 
 @router.post("/api/site-settings")
 async def set_site_settings(s: SiteSettings, _: bool = Depends(require_admin), property_id: int = Depends(admin_property_id)):
