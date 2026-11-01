@@ -1,4 +1,5 @@
 """API: подписание договора гостем и донаполнение данных ручной брони."""
+import json
 import os
 from fastapi import APIRouter, Request, UploadFile, Form, File, HTTPException
 from fastapi.responses import HTMLResponse
@@ -11,10 +12,27 @@ from core.runtime import now_nsk
 from core.emails import email_contract_signed
 from core.validators import _phone_digits_ok, _passport_digits_ok
 from core.logger import get_logger
+from core.constants import PROPERTIES_FILE
 
 logger = get_logger(__name__)
 
 router = APIRouter()
+
+
+def _property_slug(booking: dict) -> str:
+    """Адрес объекта (slug) брони — чтобы страницы подписания были в оформлении именно этого объекта.
+    Если узнать не удалось — пусто, и страница берёт оформление основного объекта."""
+    try:
+        pid = int(booking.get("property_id") or 0)
+        with open(PROPERTIES_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        items = data.get("properties", []) if isinstance(data, dict) else data
+        for item in items:
+            if isinstance(item, dict) and int(item.get("id") or 0) == pid:
+                return str(item.get("slug") or "")
+    except Exception:
+        pass
+    return ""
 
 
 # =====================================================
@@ -40,13 +58,14 @@ async def get_sign_info(token: str):
     if not booking:
         raise HTTPException(status_code=404, detail="Ссылка недействительна")
     if booking.get("signed_at"):
-        return {"already_signed": True, "signed_at": booking["signed_at"]}
+        return {"already_signed": True, "signed_at": booking["signed_at"], "property_slug": _property_slug(booking)}
 
     booking_ref = str(booking.get("username") or booking.get("id", ""))
     pm = load_passport_map()
     entry = pm.get(booking_ref, {}) if isinstance(pm.get(booking_ref), dict) else {}
     return {
         "already_signed": False,
+        "property_slug": _property_slug(booking),
         "booking_ref": booking_ref,
         "guest_name": booking.get("guest_name"),
         "guest_phone": booking.get("guest_phone"),
@@ -106,13 +125,14 @@ async def get_complete_info(token: str):
     if not booking:
         raise HTTPException(status_code=404, detail="Ссылка недействительна")
     if booking.get("signed_at"):
-        return {"already_signed": True, "signed_at": booking["signed_at"]}
+        return {"already_signed": True, "signed_at": booking["signed_at"], "property_slug": _property_slug(booking)}
 
     booking_ref = str(booking.get("username") or booking.get("id", ""))
     pm = load_passport_map()
     entry = pm.get(booking_ref, {}) if isinstance(pm.get(booking_ref), dict) else {}
     return {
         "already_signed": False,
+        "property_slug": _property_slug(booking),
         "booking_ref": booking_ref,
         "guest_name": booking.get("guest_name"),
         "name_needed": not bool((booking.get("guest_name") or "").strip()),

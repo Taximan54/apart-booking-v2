@@ -86,7 +86,16 @@
   }
 
   // Для админки: тему применяет сама админка (по выбранному объекту), автозагрузка ниже не нужна
-  window.CityPauseTheme = { apply: apply, applyStyle: applyStyle };
+  // Для страниц, которые узнают объект только после запроса (подписание договора): применить тему и стиль нужного объекта
+  function useProperty(sl) {
+    if (!sl) return;
+    fetch('/api/site-settings?property=' + encodeURIComponent(sl))
+      .then(function(r) { return r.json(); })
+      .then(function(s) { apply(s.background_theme, s.color_theme); setName(s.site_name); applyStyle(s); })
+      .catch(function() {});
+  }
+
+  window.CityPauseTheme = { apply: apply, applyStyle: applyStyle, useProperty: useProperty };
   if (window.CP_THEME_NO_AUTO) return;
 
   // Сначала — запомненная тема (чтобы страница не мигала чёрным), потом — свежая с сервера

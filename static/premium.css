@@ -157,3 +157,44 @@ body.fx-bands #about .stat-num{text-shadow:0 4px 30px rgba(0,0,0,.45)}
 .cp-quote{font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:400;font-size:clamp(24px,3.6vw,42px);line-height:1.3;color:var(--text-primary);text-shadow:0 4px 30px rgba(0,0,0,.4)}
 .cp-quote-by{display:block;margin-top:18px;font-size:11px;letter-spacing:.26em;text-transform:uppercase;color:var(--gold)}
 @media(max-width:600px){.cp-quote-band{min-height:300px}.cp-quote-in{padding:56px 20px}}
+
+/* ===== РАСПОЛОЖЕНИЕ И КОНТАКТЫ (режимы «Журнальный» и «Стекло») ===== */
+/* значки мест рядом и контактов — в золотых кольцах */
+body:is(.mode-mag,.mode-glass,.am-ring) .loc-icon{width:56px;height:56px;border-radius:50%;border:0;font-size:24px;
+  background:radial-gradient(circle at 30% 25%,color-mix(in srgb,var(--gold) 22%,transparent),transparent 70%);
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--gold) 45%,transparent),0 0 0 6px color-mix(in srgb,var(--gold) 7%,transparent)}
+body:is(.mode-mag,.mode-glass,.am-ring) .loc-point:hover .loc-icon{box-shadow:inset 0 0 0 1px var(--gold),0 0 0 8px color-mix(in srgb,var(--gold) 12%,transparent),0 0 26px color-mix(in srgb,var(--gold) 35%,transparent)}
+body:is(.mode-mag,.mode-glass,.am-ring) .contacts-grid>a>div:first-child{width:64px;height:64px;border-radius:50%;display:grid;place-items:center;margin-bottom:14px !important;font-size:26px !important;
+  background:radial-gradient(circle at 30% 25%,color-mix(in srgb,var(--gold) 22%,transparent),transparent 70%);
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--gold) 45%,transparent),0 0 0 6px color-mix(in srgb,var(--gold) 7%,transparent)}
+body:is(.mode-mag,.mode-glass) .loc-desc{color:color-mix(in srgb,var(--text-muted) 55%,var(--text-secondary))}
+/* места рядом — карточки */
+body:is(.mode-mag,.mode-glass) .location-points{gap:16px}
+body:is(.mode-mag,.mode-glass) .loc-point{position:relative;align-items:center;padding:18px 22px;border-radius:var(--r);background:var(--card-bg);box-shadow:var(--glow);backdrop-filter:var(--card-filter);-webkit-backdrop-filter:var(--card-filter)}
+body:is(.mode-mag,.mode-glass) .loc-point::before{content:'';position:absolute;inset:0;border-radius:inherit;padding:1px;pointer-events:none;
+  background:linear-gradient(135deg,color-mix(in srgb,var(--gold) 75%,transparent),transparent 34%,transparent 66%,color-mix(in srgb,var(--gold) 55%,transparent));
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
+/* карта в ювелирной рамке: двойная линия и золотые уголки */
+body:is(.mode-mag,.mode-glass) .location-map{position:relative;padding:16px;border:0;border-radius:4px;background:var(--card-bg);backdrop-filter:var(--card-filter);-webkit-backdrop-filter:var(--card-filter);
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--gold) 45%,transparent),var(--glow)}
+body:is(.mode-mag,.mode-glass) .location-map::before{content:'';position:absolute;inset:7px;border:1px solid color-mix(in srgb,var(--gold) 20%,transparent);pointer-events:none}
+body:is(.mode-mag,.mode-glass) .location-map::after{content:'';position:absolute;inset:-2px;pointer-events:none;
+  background:
+   linear-gradient(var(--gold),var(--gold)) top left/26px 2px no-repeat,linear-gradient(var(--gold),var(--gold)) top left/2px 26px no-repeat,
+   linear-gradient(var(--gold),var(--gold)) top right/26px 2px no-repeat,linear-gradient(var(--gold),var(--gold)) top right/2px 26px no-repeat,
+   linear-gradient(var(--gold),var(--gold)) bottom left/26px 2px no-repeat,linear-gradient(var(--gold),var(--gold)) bottom left/2px 26px no-repeat,
+   linear-gradient(var(--gold),var(--gold)) bottom right/26px 2px no-repeat,linear-gradient(var(--gold),var(--gold)) bottom right/2px 26px no-repeat}
+body:is(.mode-mag,.mode-glass) #locationMapLink{border-radius:2px}
+body:is(.mode-mag,.mode-glass) #locationMapLink>div>div{border-radius:999px}
+body:is(.mode-mag,.mode-glass) .loc-addr-row{background:transparent !important;border:0 !important;padding:18px 8px 4px !important}
+/* контакты — карточки как в остальных блоках */
+body:is(.mode-mag,.mode-glass) .contacts-grid>a{position:relative;border-color:transparent !important;border-radius:var(--r);background:var(--card-bg) !important;box-shadow:var(--glow);
+  backdrop-filter:var(--card-filter);-webkit-backdrop-filter:var(--card-filter);transition:transform .35s ease,box-shadow .35s ease !important}
+body:is(.mode-mag,.mode-glass) .contacts-grid>a:hover{transform:translateY(-6px)}
+body:is(.mode-mag,.mode-glass) .contacts-grid>a::before{content:'';position:absolute;inset:0;border-radius:inherit;padding:1px;pointer-events:none;
+  background:linear-gradient(135deg,color-mix(in srgb,var(--gold) 75%,transparent),transparent 34%,transparent 66%,color-mix(in srgb,var(--gold) 55%,transparent));
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
+@media(max-width:600px){
+  body:is(.mode-mag,.mode-glass) .loc-point{padding:14px 16px}
+  body:is(.mode-mag,.mode-glass) .location-map{padding:10px}
+}
