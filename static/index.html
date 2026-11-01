@@ -379,7 +379,7 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
 .mobile-nav .nav-btn{display:inline-block !important;font-size:16px !important;padding:14px 36px !important;margin-top:12px}
 </style>
 <link rel="stylesheet" href="/static/buttons.css?v=20261025a">
-<link rel="stylesheet" href="/static/premium.css?v=20261101a">
+<link rel="stylesheet" href="/static/premium.css?v=20261101b">
 <script src="/static/buttons.js?v=20261025a" defer></script>
 <script src="/static/premium.js?v=20261031d" defer></script>
 </head>
@@ -1133,6 +1133,11 @@ async function applySiteSettings() {
       if ((qs2.get('gal') || settings.gallery_style) === 'mosaic') document.body.classList.add('gal-mosaic');
       if ((qs2.get('rev') || settings.reviews_style) === 'quote') document.body.classList.add('rev-quote');
       if (qs2.get('bands') === '1' || settings.photo_bands === true) document.body.classList.add('fx-bands');
+      // Окно карты / места рядом / контакты. Пробный просмотр: ?map=jewel|glass|light &points=cards|plate|compact &contacts=cards|plate
+      [['map','map_style',['jewel','glass','light']],['points','points_style',['cards','plate','compact']],['contacts','contacts_style',['cards','plate']]].forEach(([q, key, allowed]) => {
+        const v = qs2.get(q) || settings[key];
+        if (allowed.includes(v)) document.body.classList.add(q + '-' + v);
+      });
       if (settings.hero_photo) document.documentElement.style.setProperty('--glass-photo', `url(/data/photos/${settings.hero_photo})`);
     } catch(e) {}
 

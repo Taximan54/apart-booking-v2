@@ -626,6 +626,9 @@ const SITE_STYLE_GROUPS = [
   {key: 'amenities_style', title: 'Значки удобств',   opts: [['classic','Как сейчас'],['ring','В золотых кольцах']]},
   {key: 'gallery_style',   title: 'Галерея',          opts: [['classic','Как сейчас'],['mosaic','Мозаика']]},
   {key: 'reviews_style',   title: 'Отзывы',           opts: [['classic','Как сейчас'],['quote','С кавычкой']]},
+  {key: 'map_style',       title: 'Окно карты',       opts: [['classic','Как сейчас'],['jewel','Ювелирная'],['glass','Стекло'],['light','Светлая']]},
+  {key: 'points_style',    title: 'Места рядом',      opts: [['classic','Как сейчас'],['cards','Карточки'],['plate','Одна плашка'],['compact','Компактный список']]},
+  {key: 'contacts_style',  title: 'Контакты',         opts: [['classic','Как сейчас'],['cards','Карточки'],['plate','Одна плашка']]},
 ];
 let selectedSiteStyles = {};
 let selectedPhotoBands = false;

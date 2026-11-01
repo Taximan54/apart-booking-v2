@@ -156,6 +156,7 @@ SITE_STYLE_DEFAULTS = {
     "style_mode": "classic", "price_style": "classic", "calendar_style": "classic",
     "amenities_style": "classic", "gallery_style": "classic", "reviews_style": "classic",
     "photo_bands": False,
+    "map_style": "classic", "points_style": "classic", "contacts_style": "classic",
 }
 
 @router.get("/api/site-settings")
