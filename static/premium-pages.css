@@ -1,0 +1,40 @@
+/* Единое оформление внутренних страниц (правила, акции, каталог, «Куда сходить», подписание).
+   Стиль берётся из тех же настроек, что и главная («Настройки сайта → Оформление»):
+   page-theme.js ставит на <html> класс mode-mag или mode-glass. Без класса («Как сейчас») карточки не меняются.
+   Подключается ПОСЛЕ стилей страницы. На sign/complete у <html> класс pg-plain: там без стекла и размытия. */
+.back,.cat-btn{border-radius:999px}
+.btn,.fill-btn{border-radius:999px}
+
+html.mode-mag,html.mode-glass{--r:16px;--card-bg:color-mix(in srgb,var(--black-card) 84%,transparent);--card-filter:none;--glow:0 26px 50px -38px color-mix(in srgb,var(--gold) 34%,transparent)}
+html.mode-glass{--r:20px;--card-bg:color-mix(in srgb,var(--black-card) 46%,transparent);--card-filter:blur(16px) saturate(1.25);--glow:0 30px 60px -40px color-mix(in srgb,var(--gold) 40%,transparent)}
+html.mode-mag body{background:
+  radial-gradient(900px 520px at 12% 4%,color-mix(in srgb,var(--gold) 11%,transparent),transparent 62%),
+  radial-gradient(800px 480px at 92% 38%,color-mix(in srgb,var(--gold) 8%,transparent),transparent 60%),
+  radial-gradient(900px 520px at 20% 78%,color-mix(in srgb,var(--gold) 8%,transparent),transparent 62%),var(--black)}
+/* стекло на фото: слой с фото позади всего содержимого */
+html.mode-glass{background:var(--black)}
+html.mode-glass body{background:transparent}
+html.mode-glass::before{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:linear-gradient(color-mix(in srgb,var(--black) 74%,transparent),color-mix(in srgb,var(--black) 86%,transparent)),var(--glass-photo,none) center/cover no-repeat}
+
+/* шапка и подпись */
+:is(html.mode-mag,html.mode-glass):not(.pg-plain) header{background:color-mix(in srgb,var(--black) 70%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom-color:color-mix(in srgb,var(--gold) 18%,transparent)}
+:is(html.mode-mag,html.mode-glass) :is(.subtitle,.back,.place-distance){color:color-mix(in srgb,var(--text-muted) 55%,var(--text-secondary))}
+
+/* карточки: скругление, стекло, тонкая золотая кайма */
+:is(html.mode-mag,html.mode-glass):not(.pg-plain) :is(.card,.place-item,.rules-text){
+  position:relative;border:0;border-radius:var(--r);background:var(--card-bg);box-shadow:var(--glow);overflow:hidden;
+  backdrop-filter:var(--card-filter);-webkit-backdrop-filter:var(--card-filter)}
+:is(html.mode-mag,html.mode-glass):not(.pg-plain) :is(.card,.place-item,.rules-text)::before{
+  content:'';position:absolute;inset:0;border-radius:inherit;padding:1px;pointer-events:none;z-index:2;
+  background:linear-gradient(135deg,color-mix(in srgb,var(--gold) 75%,transparent),transparent 34%,transparent 66%,color-mix(in srgb,var(--gold) 55%,transparent));
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
+:is(html.mode-mag,html.mode-glass):not(.pg-plain) .place-item{margin-bottom:24px}
+:is(html.mode-mag,html.mode-glass):not(.pg-plain) .rules-text{padding:44px 48px}
+:is(html.mode-mag,html.mode-glass):not(.pg-plain) .amen span{border-radius:999px;border-color:color-mix(in srgb,var(--gold) 30%,transparent)}
+/* подписание и страница после него: только цвет границы и скругление, без размытия */
+:is(html.mode-mag,html.mode-glass).pg-plain .card{border-radius:var(--r);border-color:color-mix(in srgb,var(--gold) 30%,transparent);background:var(--card-bg)}
+@media(max-width:600px){
+  html.mode-glass{--card-filter:blur(8px)}
+  :is(html.mode-mag,html.mode-glass):not(.pg-plain) .rules-text{padding:28px 22px}
+}

@@ -65,12 +65,13 @@ document.documentElement.classList.add('cp-wait');
 setTimeout(function(){document.documentElement.classList.remove('cp-wait')},2000);
 window.CP_THEME_NO_AUTO = true;
 </script>
-<script src="/static/page-theme.js?v=20261018c"></script>
+<script src="/static/page-theme.js?v=20261101a"></script>
 <script>
 // Оформление из прошлого захода применяем сразу
-(function(){try{var c=JSON.parse(localStorage.getItem('cpCatalogTheme')||'null');if(c&&window.CityPauseTheme)window.CityPauseTheme.apply(c.bg,c.color);}catch(e){}})();
+(function(){try{var c=JSON.parse(localStorage.getItem('cpCatalogTheme')||'null');if(c&&window.CityPauseTheme)window.CityPauseTheme.apply(c.bg,c.color);var st=JSON.parse(localStorage.getItem('cpCatalogStyle')||'null');if(st&&window.CityPauseTheme)window.CityPauseTheme.applyStyle({style_mode:st.mode,hero_photo:st.hero});}catch(e){}})();
 </script>
 <link rel="stylesheet" href="/static/buttons.css?v=20261025a">
+<link rel="stylesheet" href="/static/premium-pages.css?v=20261101a">
 <script src="/static/buttons.js?v=20261025a" defer></script>
 </head>
 <body>
@@ -212,6 +213,11 @@ function buildCard(item) {
 
 async function loadCatalog() {
   const cards = document.getElementById('cards');
+  // стиль сайта (режим фона и карточек) берём из настроек основного объекта
+  const stylePromise = fetch('/api/site-settings').then(r => r.json()).then(s => {
+    if (window.CityPauseTheme) window.CityPauseTheme.applyStyle(s);
+    try { localStorage.setItem('cpCatalogStyle', JSON.stringify({mode: s.style_mode || '', hero: s.hero_photo || ''})); } catch (e) {}
+  }).catch(() => {});
   try {
     const r = await fetch('/api/catalog');
     if (!r.ok) throw new Error(r.status);
@@ -235,7 +241,7 @@ async function loadCatalog() {
       data.items.forEach(item => cards.appendChild(buildCard(item)));
     }
     // показываем страницу, когда нужные шрифты загружены (но не дольше 1,5 сек)
-    await Promise.race([Promise.all(fontLoads), new Promise(r => setTimeout(r, 1500))]);
+    await Promise.race([Promise.all([...fontLoads, stylePromise]), new Promise(r => setTimeout(r, 1500))]);
   } catch (e) {
     cards.innerHTML = '';
     cards.appendChild(el('div', 'msg', 'Не удалось загрузить каталог. Попробуйте обновить страницу.'));

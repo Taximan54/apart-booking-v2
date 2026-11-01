@@ -75,14 +75,24 @@
     root.classList.toggle('theme-light', isLight(bg.bg));
   }
 
+  // Стиль сайта из «Настройки сайта → Оформление»: режим фона и карточек (mag / glass). Класс ставится на <html>; ?style=… — пробный просмотр
+  function applyStyle(s) {
+    var root = document.documentElement;
+    var q = new URLSearchParams(location.search).get('style');
+    var m = ['mag', 'glass'].indexOf(q) >= 0 ? q : ((s && ['mag', 'glass'].indexOf(s.style_mode) >= 0) ? s.style_mode : '');
+    root.classList.remove('mode-mag', 'mode-glass');
+    if (m) root.classList.add('mode-' + m);
+    if (s && s.hero_photo) root.style.setProperty('--glass-photo', 'url("/data/photos/' + encodeURI(s.hero_photo) + '")');
+  }
+
   // Для админки: тему применяет сама админка (по выбранному объекту), автозагрузка ниже не нужна
-  window.CityPauseTheme = { apply: apply };
+  window.CityPauseTheme = { apply: apply, applyStyle: applyStyle };
   if (window.CP_THEME_NO_AUTO) return;
 
   // Сначала — запомненная тема (чтобы страница не мигала чёрным), потом — свежая с сервера
   try {
     var cached = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
-    if (cached) { apply(cached.bg, cached.color); setName(cached.name); }
+    if (cached) { apply(cached.bg, cached.color); setName(cached.name); applyStyle({ style_mode: cached.mode, hero_photo: cached.hero }); }
   } catch (e) {}
 
   fetch('/api/site-settings' + (slug ? '?property=' + encodeURIComponent(slug) : ''))
@@ -90,7 +100,8 @@
     .then(function(s) {
       apply(s.background_theme, s.color_theme);
       setName(s.site_name);
-      try { localStorage.setItem(CACHE_KEY, JSON.stringify({ bg: s.background_theme, color: s.color_theme, name: s.site_name || '' })); } catch (e) {}
+      applyStyle(s);
+      try { localStorage.setItem(CACHE_KEY, JSON.stringify({ bg: s.background_theme, color: s.color_theme, name: s.site_name || '', mode: s.style_mode || '', hero: s.hero_photo || '' })); } catch (e) {}
     })
     .catch(function() {});
 
