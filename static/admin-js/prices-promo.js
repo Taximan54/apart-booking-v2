@@ -34,18 +34,29 @@ function renderAlerts() {
 
   const alerts = [];
 
+  // Порог предупреждения привязан к времени подтверждения оплаты из настроек («Оплата (СБП)»):
+  // если автоотмена включена, предупреждаем, когда прошла половина этого времени; если выключена (0) или настройка ещё не загрузилась, как раньше: через 2 часа
+  const confirmHours = Number.isInteger(window.cpPayConfirmHours) ? window.cpPayConfirmHours : 0;
+  const autoCancel = confirmHours > 0;
+  const warnAfterHours = autoCancel ? confirmHours / 2 : 2;
+  const fmtLeft = min => min >= 60 ? `${Math.floor(min / 60)} ч ${min % 60} мин` : `${min} мин`;
+
   (allBookings || []).forEach(b => {
     if (b.status === 'cancelled') return;
 
-    // 1. Оплата не подтверждена больше 2 часов
+    // 1. Оплата долго не подтверждена
     if (['waiting_payment', 'payment_pending'].includes(b.status) && b.created_at) {
       const created = parseDbUtc(b.created_at);
-      if (!isNaN(created) && (now - created) > 2 * msHour) {
+      if (!isNaN(created) && (now - created) > warnAfterHours * msHour) {
         const hoursAgo = Math.floor((now - created) / msHour);
-        alerts.push({
-          type: 'payment', booking: b, severity: 'high',
-          text: `Оплата не подтверждена уже ${hoursAgo} ч — бронь ${b.username || b.id}`,
-        });
+        let text = `Оплата не подтверждена уже ${hoursAgo} ч — бронь ${b.username || b.id}`;
+        if (autoCancel) {
+          const leftMin = Math.round((confirmHours * msHour - (now - created)) / 60000);
+          text = leftMin > 0
+            ? `Оплата не подтверждена — бронь ${b.username || b.id} отменится автоматически через ${fmtLeft(leftMin)}`
+            : `Оплата не подтверждена — бронь ${b.username || b.id} вот-вот отменится автоматически`;
+        }
+        alerts.push({ type: 'payment', booking: b, severity: 'high', text });
       }
     }
 

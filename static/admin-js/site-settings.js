@@ -674,6 +674,7 @@ async function loadPaymentConfirm() {
   try {
     const d = await apiGet('/api/admin/payment-confirm');
     el.value = d.hours;
+    window.cpPayConfirmHours = d.hours;
   } catch (e) {}
 }
 
@@ -683,6 +684,7 @@ async function savePaymentConfirm() {
   if (isNaN(h) || h < 0 || h > 72) { showToast('Введите целое число часов от 0 до 72', 'err'); return; }
   try {
     await apiPost('/api/admin/payment-confirm', {hours: h});
+    window.cpPayConfirmHours = h;
     showToast(h ? `Сохранено: бронь отменится, если оплата не подтверждена за ${h} ч` : 'Автоотмена выключена', 'gold');
   } catch (e) {
     showToast('Ошибка: ' + e.message, 'err');
