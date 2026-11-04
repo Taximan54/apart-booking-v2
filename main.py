@@ -8,6 +8,7 @@ from fastapi.staticfiles import StaticFiles
 from core.runtime import bot, dp
 from core.ical_sync import ical_sync_loop
 from core.scheduler import send_notifications
+from core.payment_timeout import expire_unpaid_loop
 from routers import pages, admin_auth, pricing, content, photos, contracts, bookings, signing_api, ical, properties
 from services.booking_service import init_db
 from core.logger import get_logger
@@ -63,6 +64,7 @@ async def startup():
     asyncio.create_task(safe_polling())
     asyncio.create_task(send_notifications())
     asyncio.create_task(ical_sync_loop())
+    asyncio.create_task(expire_unpaid_loop())   # автоотмена броней, за которые не подтверждена оплата
     logger.info("SCHEDULER STARTED")
 
 @app.on_event("shutdown")
