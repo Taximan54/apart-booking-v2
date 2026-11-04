@@ -39,7 +39,7 @@ function renderAlerts() {
 
     // 1. Оплата не подтверждена больше 2 часов
     if (['waiting_payment', 'payment_pending'].includes(b.status) && b.created_at) {
-      const created = new Date(b.created_at);
+      const created = parseDbUtc(b.created_at);
       if (!isNaN(created) && (now - created) > 2 * msHour) {
         const hoursAgo = Math.floor((now - created) / msHour);
         alerts.push({
@@ -638,4 +638,13 @@ async function sendPromoToGuest() {
   } finally {
     btn.disabled = false;
   }
+}
+
+
+// Время из базы приходит как «2026-11-04 05:10:00» без часового пояса, это UTC.
+// Без пояса браузер считает такую строку местным временем и добавляет лишние часы (в Новосибирске +7).
+function parseDbUtc(value) {
+  const s = String(value == null ? '' : value).trim();
+  if (!s) return new Date(NaN);
+  return new Date(/[zZ]$|[+-]\d\d:?\d\d$/.test(s) ? s : s.replace(' ', 'T') + 'Z');
 }
