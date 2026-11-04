@@ -30,10 +30,12 @@ from core.constants import (
 from core.data_store import get_site_settings_dict, load_places, load_discounts
 from core.bookings_repo import exists_by_ref, mark_deposit_returned as _mark_deposit_returned
 from core.landlord import clean_domain, get_landlord
+from core.payment_timeout import MAX_CONFIRM_HOURS, get_confirm_hours, set_confirm_hours
 from core.models import (
     Review,
     HouseRulesText,
     SiteSettings,
+    PaymentConfirm,
     Place,
     Discount,
     Contacts,
@@ -347,6 +349,17 @@ async def set_payment_settings(p: PaymentSettings, _: bool = Depends(require_adm
     with open(PAYMENT_FILE, "w", encoding="utf-8") as f:
         json.dump(p.dict(), f, ensure_ascii=False)
     return {"ok": True}
+
+@router.get("/api/admin/payment-confirm")
+async def get_payment_confirm(_: bool = Depends(require_admin)):
+    """Сколько часов даётся на подтверждение оплаты брони с сайта (0 — автоотмена выключена)."""
+    return {"hours": get_confirm_hours()}
+
+@router.post("/api/admin/payment-confirm")
+async def set_payment_confirm(p: PaymentConfirm, _: bool = Depends(require_admin)):
+    if p.hours < 0 or p.hours > MAX_CONFIRM_HOURS:
+        raise HTTPException(status_code=400, detail=f"Укажите целое число часов от 0 до {MAX_CONFIRM_HOURS}")
+    return {"hours": set_confirm_hours(p.hours)}
 
 @router.post("/api/payment-qr")
 async def upload_payment_qr(file: UploadFile = File(...), _: bool = Depends(require_admin)):

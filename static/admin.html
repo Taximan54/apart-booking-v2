@@ -5,15 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Панель управления — Городская Пауза</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Montserrat:wght@300;400;500;600&family=PT+Serif:wght@400;700&family=IM+Fell+English&family=Yeseva+One&family=Marck+Script&family=Pacifico&family=Poiret+One&family=Great+Vibes&family=Bad+Script&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/static/admin.css?v=20261101a">
+<link rel="stylesheet" href="/static/admin.css?v=20261101c">
 <script>window.CP_THEME_NO_AUTO = true;</script>
 <script src="/static/page-theme.js?v=20261101b"></script>
 <script>
 // Тема выбранного объекта из прошлого захода — применяем сразу, чтобы админка не мигала цветами по умолчанию
 (function(){try{var id=localStorage.getItem('adminPropertyId')||'1';var c=JSON.parse(localStorage.getItem('adminTheme:'+id)||'null');if(c&&window.CityPauseTheme)window.CityPauseTheme.apply(c.bg,c.color);}catch(e){}})();
 </script>
-<link rel="stylesheet" href="/static/buttons.css?v=20261101a">
-<script src="/static/buttons.js?v=20261101a" defer></script>
+<link rel="stylesheet" href="/static/buttons.css?v=20261101c">
+<script src="/static/buttons.js?v=20261101c" defer></script>
 </head>
 <body>
 
@@ -822,6 +822,18 @@
           <input type="text" class="info-input" id="paySbpPhone" placeholder="+7 900 000-00-00">
         </div>
 
+        <div class="info-field" style="margin-bottom:24px">
+          <div class="info-label">Время на подтверждение оплаты, часов (0 — не отменять автоматически)</div>
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+            <input type="number" class="info-input" id="payConfirmHours" min="0" max="72" step="1" value="2" style="width:100px">
+            <button class="btn btn-ghost btn-sm" onclick="savePaymentConfirm()">Сохранить время</button>
+          </div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:8px;line-height:1.6">
+            Если после создания брони на сайте оплата не подтверждена вами за это время, бронь отменится сама, а даты освободятся.
+            Касается броней с сайта в статусах «Ждут оплаты» и «Оплата проверяется». Вам придёт письмо об отмене.
+          </div>
+        </div>
+
         <div class="info-field" style="margin-bottom:16px">
           <div class="info-label">Свой QR-код (картинка из банковского приложения)</div>
           <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
@@ -1570,17 +1582,17 @@
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
-<script src="/static/admin-js/core.js?v=20261101a"></script>
-<script src="/static/admin-js/theme.js?v=20261101a"></script>
-<script src="/static/admin-js/prices-promo.js?v=20261101a"></script>
-<script src="/static/admin-js/bookings-dashboard.js?v=20261101a"></script>
-<script src="/static/admin-js/ui-contract.js?v=20261101a"></script>
-<script src="/static/admin-js/archive-photos.js?v=20261101a"></script>
-<script src="/static/admin-js/content.js?v=20261101a"></script>
-<script src="/static/admin-js/site-settings.js?v=20261101a"></script>
-<script src="/static/admin-js/properties.js?v=20261101a"></script>
-<script src="/static/admin-js/catalog.js?v=20261101a"></script>
-<script src="/static/admin-js/integrations.js?v=20261101a"></script>
-<script src="/static/admin-js/init.js?v=20261101a"></script>
+<script src="/static/admin-js/core.js?v=20261101c"></script>
+<script src="/static/admin-js/theme.js?v=20261101c"></script>
+<script src="/static/admin-js/prices-promo.js?v=20261101c"></script>
+<script src="/static/admin-js/bookings-dashboard.js?v=20261101c"></script>
+<script src="/static/admin-js/ui-contract.js?v=20261101c"></script>
+<script src="/static/admin-js/archive-photos.js?v=20261101c"></script>
+<script src="/static/admin-js/content.js?v=20261101c"></script>
+<script src="/static/admin-js/site-settings.js?v=20261101c"></script>
+<script src="/static/admin-js/properties.js?v=20261101c"></script>
+<script src="/static/admin-js/catalog.js?v=20261101c"></script>
+<script src="/static/admin-js/integrations.js?v=20261101c"></script>
+<script src="/static/admin-js/init.js?v=20261101c"></script>
 </body>
 </html>

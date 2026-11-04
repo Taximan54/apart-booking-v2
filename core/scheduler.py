@@ -25,6 +25,7 @@ from core.emails import (
 )
 from services.booking_service import get_bookings_checkout_today, get_bookings_checkout_yesterday
 from core.logger import get_logger
+from core.payment_timeout import expire_unpaid_loop
 from core.properties import list_properties
 from core.review_promo import get_review_settings, issue_promo_code, load_review_decisions
 
@@ -44,7 +45,12 @@ def _for_all_properties(fetch):
     return result
 
 
+_background_tasks = []
+
+
 async def send_notifications():
+    # автоотмена неоплаченных броней проверяется отдельно, раз в 5 минут
+    _background_tasks.append(asyncio.create_task(expire_unpaid_loop()))
     while True:
         now    = now_nsk()
         hour   = now.hour

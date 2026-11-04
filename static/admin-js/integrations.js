@@ -54,6 +54,7 @@ function renderCalendars() {
           <button class="btn btn-danger btn-sm" onclick="deleteCalPlatform('${s}')">Удалить площадку</button>
         </div>
         <div style="font-size:11px;color:${failed ? '#f87171' : 'var(--text-muted)'};line-height:1.7" id="calStatus_${s}">${calEsc(calSyncText(p.last_sync, !!p.url))}</div>
+        ${p.source === 'yandex' ? '<div style="font-size:11px;color:var(--text-secondary);line-height:1.7;margin-top:8px;padding:8px 12px;border-left:2px solid var(--gold)">Яндекс Путешествия передают в календарь только бронирования гостей. Даты, закрытые вручную в их кабинете, не передаются, поэтому закрывайте такие даты ещё и здесь, на сайте.</div>' : ''}
       </div>`;
     }).join('');
   }

@@ -5,6 +5,7 @@
 вызывают эти функции. Каждая функция сама открывает соединение, выполняет запрос
 (для записи — сохраняет изменения) и закрывает соединение.
 """
+from datetime import datetime, timezone
 from typing import Optional
 
 from core.db import find_booking_row, get_db
@@ -121,24 +122,60 @@ def find_blocked_ids(property_id, start: str, end_exclusive: str) -> list:
 # Создание
 # ---------------------------------------------------------------------------
 
+def _ensure_waiting_since() -> None:
+    """Колонка со временем создания брони с сайта (для автоотмены неоплаченных); добавляется один раз."""
+    conn = get_db()
+    try:
+        cols = [row[1] for row in conn.execute("PRAGMA table_info(bookings)").fetchall()]
+        if "waiting_since" not in cols:
+            conn.execute("ALTER TABLE bookings ADD COLUMN waiting_since TEXT")
+            conn.commit()
+    finally:
+        conn.close()
+
+
 def insert_website_booking(property_id, ref, check_in, check_out, guests_count, guest_name, guest_phone,
                            guest_email, notes, passport, payment_method, total_price, nights,
                            promo_code, discount_percent) -> None:
     """Бронь, созданная гостем на сайте (статус waiting_payment)."""
+    _ensure_waiting_since()
     _write("""
             INSERT INTO bookings (
                 property_id, user_id, username, check_in, check_out, guests, status,
                 guest_name, guest_phone, guest_email, guests_count,
                 notes, passport, payment_method, total_price, nights, source,
-                promo_code, discount_percent
-            ) VALUES (?, 0, ?, ?, ?, ?, 'waiting_payment', ?, ?, ?, ?, ?, ?, ?, ?, ?, 'website', ?, ?)
+                promo_code, discount_percent, waiting_since
+            ) VALUES (?, 0, ?, ?, ?, ?, 'waiting_payment', ?, ?, ?, ?, ?, ?, ?, ?, ?, 'website', ?, ?, ?)
         """, (
         property_id,
         ref, check_in, check_out, guests_count,
         guest_name, guest_phone, guest_email, guests_count,
         notes, passport, payment_method, total_price, nights,
         promo_code, discount_percent,
+        datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
     ))
+
+
+def list_expired_unpaid(cutoff: str) -> list:
+    """Брони с сайта, которые ждут оплаты или проверки оплаты и созданы не позже cutoff (время UTC, ГГГГ-ММ-ДД ЧЧ:ММ:СС)."""
+    _ensure_waiting_since()
+    conn = get_db()
+    try:
+        rows = conn.execute(
+            "SELECT * FROM bookings WHERE source = 'website' AND status IN ('waiting_payment', 'payment_pending') "
+            "AND waiting_since IS NOT NULL AND waiting_since <= ?", (cutoff,)
+        ).fetchall()
+        return [dict(row) for row in rows]
+    finally:
+        conn.close()
+
+
+def cancel_unpaid_by_id(booking_id) -> bool:
+    """Отменяет бронь, только если она всё ещё не подтверждена (на случай, если админ успел подтвердить)."""
+    return _write(
+        "UPDATE bookings SET status='cancelled' WHERE id = ? AND status IN ('waiting_payment', 'payment_pending')",
+        (booking_id,)
+    ) > 0
 
 
 def insert_manual_booking(property_id, ref, check_in, check_out, guests_count, guest_name, guest_phone,

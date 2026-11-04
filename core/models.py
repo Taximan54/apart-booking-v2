@@ -149,6 +149,9 @@ class PaymentSettings(BaseModel):
     sbp_link: str = ""    # ссылка на приём оплаты по СБП (из банковского приложения)
     sbp_phone: str = ""   # номер телефона для перевода по СБП (может отличаться от контактного)
 
+class PaymentConfirm(BaseModel):
+    hours: int = 2   # время на подтверждение оплаты, часов (0 — автоотмена выключена)
+
 class SiteSettings(BaseModel):
     hero_photo: str = ""        # имя файла из /data/photos/
     hero_photo_mobile: str = ""  # отдельное фото hero для мобильных экранов (если пусто — используется hero_photo)

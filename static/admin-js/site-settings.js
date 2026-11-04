@@ -474,6 +474,7 @@ async function loadSiteSettings() {
     renderHeroPositionPicker();
     renderHeroCarouselSpeedPicker();
     loadSiteStyles(s);
+    loadPaymentConfirm();
     renderDesignPreview();
     if(s.hero_photo) {
       const img = document.getElementById('heroPhotoImg');
@@ -661,4 +662,29 @@ function collectSiteStyles() {
   SITE_STYLE_GROUPS.forEach(g => { out[g.key] = selectedSiteStyles[g.key] || 'classic'; });
   out.photo_bands = !!selectedPhotoBands;
   return out;
+}
+
+
+// ============================================================
+// ВРЕМЯ НА ПОДТВЕРЖДЕНИЕ ОПЛАТЫ (автоотмена неоплаченных броней с сайта)
+// ============================================================
+async function loadPaymentConfirm() {
+  const el = document.getElementById('payConfirmHours');
+  if (!el) return;
+  try {
+    const d = await apiGet('/api/admin/payment-confirm');
+    el.value = d.hours;
+  } catch (e) {}
+}
+
+async function savePaymentConfirm() {
+  const el = document.getElementById('payConfirmHours');
+  const h = parseInt(el.value, 10);
+  if (isNaN(h) || h < 0 || h > 72) { showToast('Введите целое число часов от 0 до 72', 'err'); return; }
+  try {
+    await apiPost('/api/admin/payment-confirm', {hours: h});
+    showToast(h ? `Сохранено: бронь отменится, если оплата не подтверждена за ${h} ч` : 'Автоотмена выключена', 'gold');
+  } catch (e) {
+    showToast('Ошибка: ' + e.message, 'err');
+  }
 }
