@@ -350,6 +350,11 @@ async def set_payment_settings(p: PaymentSettings, _: bool = Depends(require_adm
         json.dump(p.dict(), f, ensure_ascii=False)
     return {"ok": True}
 
+@router.get("/api/payment-confirm")
+async def get_public_payment_confirm():
+    """Публично: за сколько часов нужно подтвердить оплату (0 — автоотмены нет); сайт показывает это гостю при бронировании."""
+    return {"hours": get_confirm_hours()}
+
 @router.get("/api/admin/payment-confirm")
 async def get_payment_confirm(_: bool = Depends(require_admin)):
     """Сколько часов даётся на подтверждение оплаты брони с сайта (0 — автоотмена выключена)."""

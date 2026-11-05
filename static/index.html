@@ -836,6 +836,7 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
             2. Оплатите предоплату 20% — в комментарии укажите номер брони<br>
             3. Вернитесь сюда и нажмите «Я оплатил»<br>
             4. Администратор подтвердит — вы получите код замка на email
+            <div id="payTimeoutNote" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid rgba(201,168,76,.15);color:var(--gold)"></div>
           </div>
 
           <!-- Статус -->
@@ -1474,6 +1475,31 @@ function showContactBox(id, textId, value, hrefFn) {
   }
 }
 
+// «1 час», «2 часа», «5 часов»
+function ruHours(n) {
+  const m10 = n % 10, m100 = n % 100;
+  if (m10 === 1 && m100 !== 11) return 'час';
+  if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return 'часа';
+  return 'часов';
+}
+
+// Напоминание гостю: за сколько часов нужно оплатить, иначе бронь отменится (значение берётся из админки)
+function payTimeoutText(kind) {
+  const h = CONFIG.confirmHours || 0;
+  if (h <= 0) return '';
+  return kind === 'status'
+    ? `Оплатите в течение ${h} ${ruHours(h)}: если оплата не будет подтверждена, бронь автоматически отменится.`
+    : `Если оплата не будет подтверждена в течение ${h} ${ruHours(h)} после нажатия «Забронировать», бронь автоматически отменится.`;
+}
+
+function renderPayTimeoutNote() {
+  const el = document.getElementById('payTimeoutNote');
+  if (!el) return;
+  const text = payTimeoutText('note');
+  el.style.display = text ? 'block' : 'none';
+  el.textContent = text ? '⏱ ' + text : '';
+}
+
 async function loadPaymentSettings() {
   try {
     const r = await fetch(`${API.BASE}/api/payment-settings`);
@@ -1484,6 +1510,13 @@ async function loadPaymentSettings() {
   } catch(e) {
     console.warn('Payment settings unavailable');
   }
+  // за сколько часов нужно подтвердить оплату (0 — без автоотмены)
+  try {
+    const rc = await fetch(`${API.BASE}/api/payment-confirm`);
+    const pc = await rc.json();
+    CONFIG.confirmHours = parseInt(pc.hours, 10) || 0;
+  } catch(e) {}
+  renderPayTimeoutNote();
 }
 
 async function loadContacts() {
@@ -2154,6 +2187,7 @@ function goS3fromContract(){
   safeDot('sd3','remove','active'); safeDot('sd3','add','done');
   safeDot('sd4','add','active');
   fillStep3Breakdown();
+  renderPayTimeoutNote();
   document.getElementById('payStatusBox').style.display='none';
   document.getElementById('payBtns').innerHTML=`
     <button class="btn-outline-s" onclick="goBackToContract()">Назад</button>
@@ -2323,6 +2357,7 @@ function showPaymentStep(bookingRef, prepay){
     <div style="font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);margin-bottom:10px">Бронь создана</div>
     <div style="font-family:'Cormorant Garamond',serif;font-size:22px;color:var(--gold);letter-spacing:.15em;margin-bottom:8px">${bookingRef}</div>
     <div style="margin-bottom:12px">Укажите этот номер в комментарии к платежу</div>
+    ${payTimeoutText('status') ? `<div style="margin-bottom:12px;color:var(--gold)">⏱ ${payTimeoutText('status')}</div>` : ''}
     <button onclick="clientPaid('${bookingRef}')" class="btn-gold-w" style="margin-top:8px">
       ✓ Я оплатил — жду подтверждения
     </button>

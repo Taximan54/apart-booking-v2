@@ -135,3 +135,12 @@ def test_cancel_unpaid_does_not_override_confirmed(db):
     conn.commit()
     conn.close()
     assert repo.cancel_unpaid_by_id(1) is False
+
+
+def test_public_endpoint_returns_hours_for_site(db):
+    import asyncio
+    from routers import content
+    pt.set_confirm_hours(4)
+    assert asyncio.run(content.get_public_payment_confirm()) == {"hours": 4}
+    pt.set_confirm_hours(0)
+    assert asyncio.run(content.get_public_payment_confirm()) == {"hours": 0}
