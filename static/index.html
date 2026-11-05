@@ -1990,6 +1990,33 @@ function fillTemplate(template, data) {
   return result;
 }
 
+// Показ договора на сайте: метки [[CENTER]], [[RIGHT]], [[LEFT]] превращаются в выравнивание строк, **текст** в жирный шрифт;
+// остальные служебные метки вида [[...]] скрываются. Текст вставляется безопасно (не как HTML).
+function renderContractText(el, text) {
+  el.textContent = '';
+  let current = '';
+  String(text).replace(/г\.\s+г\./g, 'г.').split('\n').forEach(line => {
+    const open = line.match(/\[\[(CENTER|RIGHT|LEFT)\]\]/i);
+    if (open) current = open[1].toLowerCase();
+    const align = current;
+    if (/\[\[\/(CENTER|RIGHT|LEFT)\]\]/i.test(line)) current = '';
+    line = line.replace(/\[\[\/?[A-Za-z_]+\]\]/g, '');
+    const row = document.createElement('div');
+    row.style.whiteSpace = 'pre-wrap';
+    if (align) row.style.textAlign = align;
+    if (!line.trim()) {
+      row.textContent = '\u00a0';
+    } else {
+      line.split('**').forEach((part, i) => {
+        if (!part) return;
+        if (i % 2) { const b = document.createElement('strong'); b.textContent = part; row.appendChild(b); }
+        else row.appendChild(document.createTextNode(part));
+      });
+    }
+    el.appendChild(row);
+  });
+}
+
 async function buildContract() {
   const surname     = document.getElementById('gSurname').value.trim();
   const firstName   = document.getElementById('gName').value.trim();
@@ -2161,7 +2188,7 @@ async function goToContract(){
   safeDot('sd3','add','active');
   document.getElementById('contractText').innerText = 'Загрузка договора...';
   const text = await buildContract();
-  document.getElementById('contractText').innerText = text;
+  renderContractText(document.getElementById('contractText'), text);
   const cc = document.getElementById('contractCheck');
   if(cc) cc.checked = true;
 }
