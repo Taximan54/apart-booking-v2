@@ -674,19 +674,42 @@ async function loadPaymentConfirm() {
   try {
     const d = await apiGet('/api/admin/payment-confirm');
     el.value = d.hours;
+    el.dataset.loaded = '1';
+    el.dataset.dirty = '';
     window.cpPayConfirmHours = d.hours;
   } catch (e) {}
 }
 
 async function savePaymentConfirm() {
   const el = document.getElementById('payConfirmHours');
+  // пока число не загрузилось с сервера и не менялось вручную, не сохраняем: иначе значение по умолчанию затрёт настроенное
+  if (el.dataset.loaded !== '1' && el.dataset.dirty !== '1') return;
   const h = parseInt(el.value, 10);
   if (isNaN(h) || h < 0 || h > 72) { showToast('Введите целое число часов от 0 до 72', 'err'); return; }
   try {
     await apiPost('/api/admin/payment-confirm', {hours: h});
     window.cpPayConfirmHours = h;
+    el.dataset.loaded = '1';
+    el.dataset.dirty = '';
     showToast(h ? `Сохранено: бронь отменится, если оплата не подтверждена за ${h} ч` : 'Автоотмена выключена', 'gold');
   } catch (e) {
     showToast('Ошибка: ' + e.message, 'err');
   }
 }
+
+
+// Поле загружается само, когда карточка «Оплата (СБП)» становится видна (она в другом разделе, чем «Настройки сайта»)
+function initPaymentConfirmField() {
+  const el = document.getElementById('payConfirmHours');
+  if (!el || el.dataset.bound) return;
+  el.dataset.bound = '1';
+  el.addEventListener('input', () => { el.dataset.dirty = '1'; });
+  const reload = () => { if (el.dataset.dirty !== '1') loadPaymentConfirm(); };
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver(entries => { if (entries.some(e => e.isIntersecting)) reload(); }).observe(el);
+  } else {
+    reload();
+  }
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initPaymentConfirmField);
+else initPaymentConfirmField();
