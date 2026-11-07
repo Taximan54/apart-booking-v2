@@ -86,6 +86,18 @@ nav a:hover{color:var(--gold)}
 .btn-outline:hover{border-color:var(--gold);color:var(--gold)}
 .hero-scroll{position:absolute;bottom:40px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:8px;color:var(--text-muted);font-size:10px;letter-spacing:.2em;text-transform:uppercase;animation:scrollB 2s infinite}
 .hero-scroll-line{width:1px;height:40px;background:linear-gradient(to bottom,var(--gold),transparent)}
+/* Ручные стрелки переключения hero ↔ акции (создаются из initHeroCarousel, только если есть акции) */
+.hero-arrow{position:absolute;top:50%;transform:translateY(-50%);z-index:20;width:52px;height:52px;border-radius:50%;border:1px solid rgba(201,168,76,.45);background:rgba(0,0,0,.35);color:var(--gold);display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;opacity:.75;transition:opacity .25s,background .25s,border-color .25s}
+.hero-arrow:hover,.hero-arrow:focus-visible{opacity:1;background:rgba(0,0,0,.6);border-color:var(--gold)}
+.hero-arrow svg{width:22px;height:22px;display:block}
+.hero-arrow-prev{left:28px}
+.hero-arrow-next{right:28px}
+@media(max-width:600px){
+  .hero-arrow{top:auto;bottom:24px;transform:none;width:40px;height:40px}
+  .hero-arrow svg{width:18px;height:18px}
+  .hero-arrow-prev{left:14px}
+  .hero-arrow-next{right:14px}
+}
 @keyframes scrollB{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(6px)}}
 
 /* FEATURES STRIP */
@@ -1101,11 +1113,50 @@ async function initHeroCarousel() {
     }
   });
 
-  setInterval(() => {
-    if (document.hidden) return; // не крутим на неактивной вкладке
-    current++;
-    track.style.transform = `translateX(-${current * 100}%)`;
-  }, slideSeconds * 1000);
+  const moveTo = n => { current = n; track.style.transform = `translateX(-${current * 100}%)`; };
+  let timer = null;
+  const startTimer = () => {
+    clearInterval(timer);
+    timer = setInterval(() => {
+      if (document.hidden || busy) return; // не крутим на неактивной вкладке
+      moveTo(current + 1);
+    }, slideSeconds * 1000);
+  };
+
+  // Ручные стрелки. busy — защита от частых нажатий, пока едет анимация (1,1 с).
+  let busy = false;
+  const step = dir => {
+    if (busy) return;
+    busy = true;
+    setTimeout(() => { busy = false; }, 1150);
+    if (dir > 0) {
+      moveTo(current + 1);
+    } else if (current === 0) {
+      // С главной «назад»: мгновенно встаём на дубль главной в конце и едем к последней акции
+      track.style.transition = 'none';
+      moveTo(totalSlides - 1);
+      void track.offsetWidth;
+      track.style.transition = '';
+      moveTo(totalSlides - 2);
+    } else {
+      moveTo(current - 1);
+    }
+    startTimer(); // после ручного переключения отсчёт автосмены начинается заново
+  };
+  const heroSection = document.getElementById('heroSection');
+  if (heroSection) {
+    [['prev', -1, 'Предыдущий слайд', '15 5l-7 7 7 7'], ['next', 1, 'Следующий слайд', '9 5l7 7-7 7']].forEach(([name, dir, label, path]) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'hero-arrow hero-arrow-' + name;
+      b.setAttribute('aria-label', label);
+      b.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M${path}"/></svg>`;
+      b.addEventListener('click', () => step(dir));
+      heroSection.appendChild(b);
+    });
+  }
+
+  startTimer();
 }
 
 // Настройки сайта (название, тексты, шрифты, цвета, обложка, карта) применяются сразу при открытии страницы.
