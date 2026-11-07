@@ -324,6 +324,10 @@ def _strip_alignment_marker(line):
         return m.group(1), "right"
     return line, None
 
+def _plain_marked(line):
+    """Строка без ручной жирной разметки (**) и авто-маркеров, чтобы «**Приложение N 1**» распознавалось как приложение."""
+    return line.replace("**", "").replace(_AUTO_BOLD_OPEN, "").replace(_AUTO_BOLD_CLOSE, "").strip()
+
 def _is_heading_line(line, in_appendix=False):
     """
     Заголовок раздела — если это "Приложение N ...", подзаголовок вида
@@ -408,7 +412,7 @@ def contract_text_to_html(text, flat_numbering=False):
             parts.append('<div class="doc-gap"></div>')
             continue
         line, align = _strip_alignment_marker(line)
-        if _HEADING_APPENDIX_RE.match(line):
+        if _HEADING_APPENDIX_RE.match(_plain_marked(line)):
             in_appendix = True
         is_heading = _is_heading_line(line, in_appendix)
         classes = []
@@ -550,9 +554,9 @@ def generate_contract_pdf(contract_text, booking_ref, extra_blocks=None, header_
                 story.append(Spacer(1, 8))
                 continue
             line, align = _strip_alignment_marker(line)
-            if break_before_appendix and line.startswith("Приложение N 1"):
+            if break_before_appendix and _plain_marked(line).startswith("Приложение N 1"):
                 story.append(PageBreak())
-            if _HEADING_APPENDIX_RE.match(line):
+            if _HEADING_APPENDIX_RE.match(_plain_marked(line)):
                 in_appendix = True
             is_heading = _is_heading_line(line, in_appendix)
             if is_heading:
