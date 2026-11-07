@@ -299,6 +299,7 @@ def _get_cyrillic_ttf_path():
 
 _HEADING_MAIN_RE     = re.compile(r"^\d+\.\s+\S")            # "1. Предмет Договора"
 _HEADING_APPENDIX_RE = re.compile(r"^Приложение\b", re.IGNORECASE)
+_APPENDIX_NUM_RE = re.compile(r"^Приложение\s*(?:N|№)\s*(\d+)", re.IGNORECASE)
 _HEADING_SUB_RE       = re.compile(r"^\d+\.\d+\.\s+.*:\s*$")  # "3.1. Права и обязанности Арендодателя:"
 
 # Маркеры автоматического жирного текста для подставленных плейсхолдеров
@@ -522,6 +523,7 @@ def generate_contract_pdf(contract_text, booking_ref, extra_blocks=None, header_
         in_box = False
         box_lines = []
         in_appendix = flat_numbering
+        last_appendix_num = None
         for raw_line in text.split("\n"):
             line = raw_line.strip()
             if line == "[[SIGNATURE_BOX_START]]":
@@ -554,8 +556,12 @@ def generate_contract_pdf(contract_text, booking_ref, extra_blocks=None, header_
                 story.append(Spacer(1, 8))
                 continue
             line, align = _strip_alignment_marker(line)
-            if break_before_appendix and _plain_marked(line).startswith("Приложение N 1"):
-                story.append(PageBreak())
+            if break_before_appendix:
+                _m = _APPENDIX_NUM_RE.match(_plain_marked(line))
+                if _m and _m.group(1) != last_appendix_num:
+                    last_appendix_num = _m.group(1)
+                    if story and not isinstance(story[-1], PageBreak):
+                        story.append(PageBreak())
             if _HEADING_APPENDIX_RE.match(_plain_marked(line)):
                 in_appendix = True
             is_heading = _is_heading_line(line, in_appendix)
