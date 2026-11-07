@@ -1982,6 +1982,19 @@ async function loadContractTemplate() {
   }
 }
 
+// Данные объекта для договора (арендодатель, адрес, вид объекта, имущество): у каждого объекта свои, берутся с сервера
+let contractInfo = null;
+async function loadContractInfo() {
+  if (contractInfo) return contractInfo;
+  try {
+    const r = await fetch(API.BASE + '/api/contract-info');
+    contractInfo = await r.json();
+  } catch(e) {
+    contractInfo = {};
+  }
+  return contractInfo;
+}
+
 function fillTemplate(template, data) {
   let result = template;
   for(const [key, val] of Object.entries(data)){
@@ -2032,21 +2045,24 @@ async function buildContract() {
   const today    = new Date().toLocaleDateString('ru-RU',{day:'numeric',month:'long',year:'numeric'});
   const fmt      = d => new Date(d+'T00:00:00').toLocaleDateString('ru-RU',{day:'numeric',month:'long',year:'numeric'});
 
+  const info = await loadContractInfo();
   const data = {
     'ДАТА_ДОГОВОРА':  today,
-    'АРЕНДОДАТЕЛЬ':   'Городская Пауза',
+    'АРЕНДОДАТЕЛЬ':   info.landlord || 'Городская Пауза',
     'ФИО':            name,
     'ПАСПОРТ':        passport,
-    'АДРЕС':          'г. Новосибирск, ул. Дачная, д. 5, квартира 286, 22 этаж',
+    'АДРЕС':          info.address || 'г. Новосибирск, ул. Дачная, д. 5, квартира 286, 22 этаж',
+    'ВИД_ОБЪЕКТА':    info.object_kind || 'помещение',
+    'ИМУЩЕСТВО':      info.inventory || '',
     'НОЧЕЙ':          String(nights),
     'ДАТА_ЗАЕЗДА':    fmt(bookingData.start),
     'ДАТА_ВЫЕЗДА':    fmt(bookingData.end),
     'ГОСТЕЙ':         String(guests),
     'ЦЕНА_В_СУТКИ':   perNight.toLocaleString('ru'),
     'ИТОГО':          total.toLocaleString('ru'),
-    'ДЕПОЗИТ':        '6 000',
-    'EMAIL':          'citypause@mail.ru',
-    'САЙТ':           'citypause.ru',
+    'ДЕПОЗИТ':        info.deposit ? Number(info.deposit).toLocaleString('ru-RU') : '6 000',
+    'EMAIL':          info.email || 'citypause@mail.ru',
+    'САЙТ':           info.domain || 'citypause.ru',
     'НОМЕР_БРОНИ':    'будет присвоен после оплаты',
   };
 

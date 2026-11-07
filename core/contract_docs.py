@@ -29,6 +29,7 @@ from core.runtime import now_nsk
 from core.properties import get_property
 from services.booking_service import DEFAULT_PROPERTY_ID
 from core.landlord import landlord_address, landlord_brand, landlord_domain, get_landlord_email
+from core.contract_settings import load_contract_settings
 from core.logger import get_logger
 
 logger = get_logger(__name__)
@@ -157,13 +158,16 @@ def _contract_placeholders(booking):
     pre_discount_total = round(total / (1 - discount_pct / 100)) if discount_pct else total
     per_night    = round(pre_discount_total / nights) if nights else pre_discount_total
     deposit      = booking.get("deposit") or get_default_deposit(booking.get("property_id") or DEFAULT_PROPERTY_ID)
+    # данные объекта для договора (арендодатель, вид объекта, адрес); пусто — как раньше
+    settings     = load_contract_settings(booking.get("property_id") or DEFAULT_PROPERTY_ID)
 
     return {
         "ДАТА_ДОГОВОРА":  today,
-        "АРЕНДОДАТЕЛЬ":   landlord_brand(),
+        "АРЕНДОДАТЕЛЬ":   settings["landlord_name"] or landlord_brand(),
         "ФИО":            booking.get("guest_name", ""),
         "ПАСПОРТ":        booking.get("passport", "____________"),
-        "АДРЕС":          _property_address(booking),
+        "АДРЕС":          settings["address"] or _property_address(booking),
+        "ВИД_ОБЪЕКТА":    settings["object_kind"] or "помещение",
         "НОЧЕЙ":          str(nights),
         "ДАТА_ЗАЕЗДА":    checkin_fmt,
         "ДАТА_ВЫЕЗДА":    checkout_fmt,
@@ -178,7 +182,7 @@ def _contract_placeholders(booking):
         "DATA_DOGOVORA":  today,
         "FIO":            booking.get("guest_name", ""),
         "PASPORT":        booking.get("passport", "____________"),
-        "ADRES":          ("g. Novosibirsk, ul. Dachnaya, d. 5, kv. 286, 22 etazh" if landlord_address() == DEFAULT_LANDLORD["address"] else landlord_address()),
+        "ADRES":          (settings["address"] or ("g. Novosibirsk, ul. Dachnaya, d. 5, kv. 286, 22 etazh" if landlord_address() == DEFAULT_LANDLORD["address"] else landlord_address())),
         "NOCHEY":         str(nights),
         "DATA_ZAEZDA":    checkin_fmt,
         "DATA_VYEZDA":    checkout_fmt,
@@ -189,12 +193,33 @@ def _contract_placeholders(booking):
         "NOMER_BRONI":    str(booking.get("username") or booking.get("id", "")),
     }
 
+def fill_contract_for_booking(template, booking):
+    """Подставляет в шаблон данные брони и объекта. Перечень имущества ({{ИМУЩЕСТВО}}) вставляется как есть, по строкам, без жирного шрифта."""
+    inventory = load_contract_settings(booking.get("property_id") or DEFAULT_PROPERTY_ID)["inventory"]
+    template = template.replace("{{ИМУЩЕСТВО}}", inventory)
+    return fill_contract(template, _contract_placeholders(booking))
+
+
+def contract_public_values(property_id):
+    """Данные объекта для показа договора на сайте до оплаты (арендодатель, адрес, вид объекта, имущество, сайт, почта, залог)."""
+    settings = load_contract_settings(property_id)
+    return {
+        "landlord":    settings["landlord_name"] or landlord_brand(),
+        "address":     settings["address"] or _property_address({"property_id": property_id}),
+        "object_kind": settings["object_kind"] or "помещение",
+        "inventory":   settings["inventory"],
+        "domain":      landlord_domain(),
+        "email":       get_landlord_email(),
+        "deposit":     get_default_deposit(property_id),
+    }
+
+
 def generate_contract(booking):
     """Генерирует текст договора из шаблона и данных брони."""
     template = load_contract_template()
     if not template:
         return "Shablon dogovora ne nayden."
-    return fill_contract(template, _contract_placeholders(booking))
+    return fill_contract_for_booking(template, booking)
 
 def save_contract(booking_ref, contract_text):
     """Сохраняет договор в файл (.txt — для архива в админке)."""

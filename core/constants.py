@@ -87,6 +87,7 @@ CONTRACT_PREVIEW_DIR = f"{DATA_DIR}/contract_preview"  # временный PDF-
 AUTH_FILE        = f"{DATA_DIR}/admin_auth.json"
 PASSPORT_DIR         = f"{DATA_DIR}/passports"           # ЗАЩИЩЁННАЯ папка — НЕ должна раздаваться nginx как статика!
 PASSPORT_MAP_FILE    = f"{DATA_DIR}/passport_photos.json"  # {booking_ref: {"main":.., "reg1":..}}
+CONTRACT_SETTINGS_FILE = f"{DATA_DIR}/contract_settings.json"   # данные объекта для договора: арендодатель, вид объекта, адрес, имущество (у каждого объекта свои)
 PROPERTIES_FILE      = f"{DATA_DIR}/properties.json"       # реестр квартир (задел на white-label с несколькими объектами)
 DEFAULT_PRICES   = {
     "weekday": 3500, "weekend": 4500, "cleaning": 1500,

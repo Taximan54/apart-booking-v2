@@ -69,6 +69,7 @@ function showToast(msg, type='gold') {
 // ============================================================
 // ── ДОГОВОР ──────────────────────────────────────
 async function loadContractForEditor() {
+  if (typeof loadContractSettings === 'function') loadContractSettings();
   try {
     const r = await fetch(`${API_BASE}/api/contract-template`);
     const text = await r.text();
@@ -197,3 +198,29 @@ async function downloadContract(ref, guestName) {
   }
 }
 
+
+
+// ── ДАННЫЕ ОБЪЕКТА ДЛЯ ДОГОВОРА (арендодатель, вид объекта, адрес, имущество; у каждого объекта свои) ──
+async function loadContractSettings() {
+  try {
+    const d = await apiGet('/api/admin/contract-settings');
+    document.getElementById('csLandlord').value = d.landlord_name || '';
+    document.getElementById('csKind').value = d.object_kind || '';
+    document.getElementById('csAddress').value = d.address || '';
+    document.getElementById('csInventory').value = d.inventory || '';
+  } catch(e) {}
+}
+
+async function saveContractSettings() {
+  try {
+    await apiPost('/api/admin/contract-settings', {
+      landlord_name: document.getElementById('csLandlord').value.trim(),
+      object_kind: document.getElementById('csKind').value.trim(),
+      address: document.getElementById('csAddress').value.trim(),
+      inventory: document.getElementById('csInventory').value.trim()
+    });
+    showToast('Данные объекта для договора сохранены', 'gold');
+  } catch(e) {
+    showToast('Ошибка: ' + e.message, 'err');
+  }
+}

@@ -5,15 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Панель управления — Городская Пауза</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Montserrat:wght@300;400;500;600&family=PT+Serif:wght@400;700&family=IM+Fell+English&family=Yeseva+One&family=Marck+Script&family=Pacifico&family=Poiret+One&family=Great+Vibes&family=Bad+Script&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/static/admin.css?v=20261105a">
+<link rel="stylesheet" href="/static/admin.css?v=20261105b">
 <script>window.CP_THEME_NO_AUTO = true;</script>
 <script src="/static/page-theme.js?v=20261101b"></script>
 <script>
 // Тема выбранного объекта из прошлого захода — применяем сразу, чтобы админка не мигала цветами по умолчанию
 (function(){try{var id=localStorage.getItem('adminPropertyId')||'1';var c=JSON.parse(localStorage.getItem('adminTheme:'+id)||'null');if(c&&window.CityPauseTheme)window.CityPauseTheme.apply(c.bg,c.color);}catch(e){}})();
 </script>
-<link rel="stylesheet" href="/static/buttons.css?v=20261105a">
-<script src="/static/buttons.js?v=20261105a" defer></script>
+<link rel="stylesheet" href="/static/buttons.css?v=20261105b">
+<script src="/static/buttons.js?v=20261105b" defer></script>
 </head>
 <body>
 
@@ -589,6 +589,32 @@
 
     <!-- CONTRACT -->
     <div class="panel" id="panel-contract">
+      <div class="card" style="max-width:900px;margin-bottom:20px">
+        <div class="card-header"><span class="card-title">Данные объекта для договора</span></div>
+        <div class="card-body">
+          <div class="info-field" style="margin-bottom:14px">
+            <div class="info-label">Арендодатель (юрлицо или собственник)</div>
+            <input type="text" class="info-input" id="csLandlord" maxlength="200" placeholder="Например: ООО «Ромашка» или ИП Иванов И. И.">
+          </div>
+          <div class="info-field" style="margin-bottom:14px">
+            <div class="info-label">Вид объекта</div>
+            <input type="text" class="info-input" id="csKind" maxlength="100" placeholder="Например: квартира-студия, квартира, дом, загородный дом">
+          </div>
+          <div class="info-field" style="margin-bottom:14px">
+            <div class="info-label">Адрес объекта (подставляется в договор и в акт приёма-передачи)</div>
+            <input type="text" class="info-input" id="csAddress" maxlength="300" placeholder="г. Город, ул. Улица, д. 1, кв. 1">
+          </div>
+          <div class="info-field" style="margin-bottom:14px">
+            <div class="info-label">Перечень имущества (Приложение N 1), по одной позиции в строке</div>
+            <textarea class="info-input" id="csInventory" rows="8" maxlength="8000" style="resize:vertical;line-height:1.6;font-size:12px"></textarea>
+          </div>
+          <button class="btn btn-primary" onclick="saveContractSettings()">Сохранить данные объекта</button>
+          <div style="font-size:11px;color:var(--text-muted);line-height:1.7;margin-top:12px">
+            Данные относятся к выбранному объекту (меню слева) и подставляются через <code style="color:var(--gold)">{{АРЕНДОДАТЕЛЬ}}</code>, <code style="color:var(--gold)">{{ВИД_ОБЪЕКТА}}</code>, <code style="color:var(--gold)">{{АДРЕС}}</code> и <code style="color:var(--gold)">{{ИМУЩЕСТВО}}</code> в тексте договора ниже.
+            Пока в тексте нет этих подстановок, поля ни на что не влияют. Пустое поле — значение по умолчанию. Уже подписанные договоры не меняются.
+          </div>
+        </div>
+      </div>
       <div class="card" style="max-width:900px">
         <div class="card-header">
           <span class="card-title">Шаблон договора аренды</span>
@@ -605,11 +631,13 @@
               <code style="color:var(--gold);font-size:11px">{{ДАТА_ВЫЕЗДА}}</code>
               <code style="color:var(--gold);font-size:11px">{{НОЧЕЙ}}</code>
               <code style="color:var(--gold);font-size:11px">{{ГОСТЕЙ}}</code>
-              <code style="color:var(--gold);font-size:11px">{{ЦЕНА_СУТКИ}}</code>
-              <code style="color:var(--gold);font-size:11px">{{СУММА}}</code>
+              <code style="color:var(--gold);font-size:11px">{{ЦЕНА_В_СУТКИ}}</code>
+              <code style="color:var(--gold);font-size:11px">{{ИТОГО}}</code>
               <code style="color:var(--gold);font-size:11px">{{ДЕПОЗИТ}}</code>
               <code style="color:var(--gold);font-size:11px">{{АДРЕС}}</code>
               <code style="color:var(--gold);font-size:11px">{{АРЕНДОДАТЕЛЬ}}</code>
+              <code style="color:var(--gold);font-size:11px">{{ВИД_ОБЪЕКТА}}</code>
+              <code style="color:var(--gold);font-size:11px">{{ИМУЩЕСТВО}}</code>
               <code style="color:var(--gold);font-size:11px">{{EMAIL}}</code>
               <code style="color:var(--gold);font-size:11px">{{САЙТ}}</code>
               <code style="color:var(--gold);font-size:11px">{{НОМЕР_БРОНИ}}</code>
@@ -1581,17 +1609,17 @@
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
-<script src="/static/admin-js/core.js?v=20261105a"></script>
-<script src="/static/admin-js/theme.js?v=20261105a"></script>
-<script src="/static/admin-js/prices-promo.js?v=20261105a"></script>
-<script src="/static/admin-js/bookings-dashboard.js?v=20261105a"></script>
-<script src="/static/admin-js/ui-contract.js?v=20261105a"></script>
-<script src="/static/admin-js/archive-photos.js?v=20261105a"></script>
-<script src="/static/admin-js/content.js?v=20261105a"></script>
-<script src="/static/admin-js/site-settings.js?v=20261105a"></script>
-<script src="/static/admin-js/properties.js?v=20261105a"></script>
-<script src="/static/admin-js/catalog.js?v=20261105a"></script>
-<script src="/static/admin-js/integrations.js?v=20261105a"></script>
-<script src="/static/admin-js/init.js?v=20261105a"></script>
+<script src="/static/admin-js/core.js?v=20261105b"></script>
+<script src="/static/admin-js/theme.js?v=20261105b"></script>
+<script src="/static/admin-js/prices-promo.js?v=20261105b"></script>
+<script src="/static/admin-js/bookings-dashboard.js?v=20261105b"></script>
+<script src="/static/admin-js/ui-contract.js?v=20261105b"></script>
+<script src="/static/admin-js/archive-photos.js?v=20261105b"></script>
+<script src="/static/admin-js/content.js?v=20261105b"></script>
+<script src="/static/admin-js/site-settings.js?v=20261105b"></script>
+<script src="/static/admin-js/properties.js?v=20261105b"></script>
+<script src="/static/admin-js/catalog.js?v=20261105b"></script>
+<script src="/static/admin-js/integrations.js?v=20261105b"></script>
+<script src="/static/admin-js/init.js?v=20261105b"></script>
 </body>
 </html>

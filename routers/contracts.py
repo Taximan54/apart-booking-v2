@@ -22,15 +22,18 @@ from core.contract_docs import (
     generate_contract,
     fill_contract,
     _contract_placeholders,
+    contract_public_values,
+    fill_contract_for_booking,
     generate_contract_pdf,
 )
+from core.contract_settings import load_contract_settings, save_contract_settings
 from core.data_store import get_default_deposit
 from core.bookings_repo import get_by_ref_alt
 from core.db import booking_ref_alt, find_booking_row, get_db
-from core.models import ContractTemplate, CheckinMemo
+from core.models import ContractSettings, ContractTemplate, CheckinMemo
 from core.passports import load_passport_map
 from core.runtime import now_nsk
-from core.properties import admin_property_id, property_file
+from core.properties import admin_property_id, property_file, request_property_id
 
 router = APIRouter()
 
@@ -54,6 +57,22 @@ async def set_contract_template(c: ContractTemplate, _: bool = Depends(require_a
     with open(CONTRACT_FILE, "w", encoding="utf-8") as f:
         f.write(c.text)
     return {"ok": True}
+
+@router.get("/api/contract-info")
+async def get_contract_info(property_id: int = Depends(request_property_id)):
+    """Публично: данные объекта для показа договора на сайте до оплаты."""
+    return contract_public_values(property_id)
+
+@router.get("/api/admin/contract-settings")
+async def get_contract_settings(_: bool = Depends(require_admin), property_id: int = Depends(admin_property_id)):
+    """Данные объекта для договора (арендодатель, вид объекта, адрес, перечень имущества)."""
+    return load_contract_settings(property_id)
+
+@router.post("/api/admin/contract-settings")
+async def set_contract_settings(s: ContractSettings, _: bool = Depends(require_admin), property_id: int = Depends(admin_property_id)):
+    if len(s.landlord_name) > 200 or len(s.object_kind) > 100 or len(s.address) > 300 or len(s.inventory) > 8000:
+        raise HTTPException(status_code=400, detail="Слишком длинный текст в одном из полей")
+    return save_contract_settings(property_id, s.dict())
 
 @router.get("/api/checkin-memo")
 async def get_checkin_memo(property_id: int = Depends(admin_property_id)):
@@ -220,7 +239,8 @@ async def contract_preview(body: ContractPreviewRequest, _: bool = Depends(requi
         "discount_percent": 0,
         "deposit":        get_default_deposit(property_id),
         "username":       "PREVIEW",
+        "property_id":    property_id,
     }
-    filled_text = fill_contract(body.text, _contract_placeholders(dummy_booking))
+    filled_text = fill_contract_for_booking(body.text, dummy_booking)
     path = generate_contract_pdf(filled_text, "preview", output_dir=CONTRACT_PREVIEW_DIR)
     return FileResponse(path, media_type="application/pdf", filename="dogovor_predprosmotr.pdf")
