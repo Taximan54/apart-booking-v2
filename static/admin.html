@@ -3,6 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>
+// Предпросмотр скруглённого оформления: ?ui=round включить (запоминается), ?ui=classic вернуть как было
+(function(){try{var q=new URLSearchParams(location.search).get('ui');if(q==='round'||q==='classic')localStorage.setItem('adminUi',q);if(localStorage.getItem('adminUi')==='round')document.documentElement.classList.add('ui-round');}catch(e){}})();
+</script>
 <title>Панель управления — Городская Пауза</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Montserrat:wght@300;400;500;600&family=PT+Serif:wght@400;700&family=IM+Fell+English&family=Yeseva+One&family=Marck+Script&family=Pacifico&family=Poiret+One&family=Great+Vibes&family=Bad+Script&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/admin.css?v=20261105b">
@@ -13,6 +17,7 @@
 (function(){try{var id=localStorage.getItem('adminPropertyId')||'1';var c=JSON.parse(localStorage.getItem('adminTheme:'+id)||'null');if(c&&window.CityPauseTheme)window.CityPauseTheme.apply(c.bg,c.color);}catch(e){}})();
 </script>
 <link rel="stylesheet" href="/static/buttons.css?v=20261105b">
+<link rel="stylesheet" href="/static/admin-round.css?v=20261108a">
 <script src="/static/buttons.js?v=20261105b" defer></script>
 </head>
 <body>

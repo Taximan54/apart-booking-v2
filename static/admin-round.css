@@ -1,0 +1,91 @@
+/* Скруглённое оформление админки (предпросмотр: ?ui=round, сброс: ?ui=classic).
+   Включается классом ui-round на <html>; без него файл ничего не меняет.
+   Цвета не трогаем — они приходят из темы сайта (theme.js), поэтому всё на var(--…). */
+html.ui-round{
+  --r-xl:24px;--r-lg:20px;--r-md:14px;--r-sm:10px;
+  --sh-sm:0 4px 16px rgba(0,0,0,.28);
+  --sh-lg:0 24px 60px rgba(0,0,0,.55);
+  --ring:rgba(201,168,76,.2);
+}
+html.ui-round.theme-light{--sh-sm:0 4px 16px rgba(0,0,0,.08);--sh-lg:0 24px 60px rgba(0,0,0,.22)}
+@supports (color:color-mix(in srgb,red 50%,transparent)){
+  html.ui-round{--ring:color-mix(in srgb,var(--gold) 22%,transparent)}
+}
+
+/* Меню слева */
+html.ui-round .sidebar{border-radius:0 var(--r-xl) var(--r-xl) 0;box-shadow:var(--sh-sm)}
+html.ui-round .sb-item{border-radius:12px;border:1px solid transparent;margin:2px 0}
+html.ui-round .sb-item.active{border-color:rgba(201,168,76,.28);border-left-color:rgba(201,168,76,.28)}
+html.ui-round .sb-badge{border-radius:999px;padding:2px 9px}
+html.ui-round .topbar{border-radius:0 0 var(--r-lg) var(--r-lg);box-shadow:var(--sh-sm)}
+
+/* Карточки и блоки */
+html.ui-round .card{border-radius:var(--r-lg);box-shadow:var(--sh-sm)}
+html.ui-round .card-header{border-radius:var(--r-lg) var(--r-lg) 0 0}
+html.ui-round .stats-row{gap:16px;background:transparent}
+html.ui-round .stat-card{border:1px solid var(--black-border);border-radius:var(--r-lg);box-shadow:var(--sh-sm)}
+html.ui-round .price-grid{gap:12px;background:transparent}
+html.ui-round .price-input-box{border:1px solid var(--black-border);border-radius:var(--r-md)}
+html.ui-round .admin-cal-box,
+html.ui-round .admin-cal-info{border-radius:var(--r-lg);box-shadow:var(--sh-sm)}
+html.ui-round .door-code-display{border-radius:var(--r-md)}
+/* Вложенные рамки, заданные прямо в разметке (карточки внутри настроек, зоны загрузки) */
+html.ui-round div[style*="border:1px solid"],
+html.ui-round div[style*="border: 1px solid"],
+html.ui-round div[style*="border:1px dashed"],
+html.ui-round div[style*="border: 1px dashed"]{border-radius:var(--r-md)}
+
+/* Поля ввода */
+html.ui-round .info-input,
+html.ui-round .pib-input,
+html.ui-round select,
+html.ui-round textarea,
+html.ui-round input[type=text],
+html.ui-round input[type=password],
+html.ui-round input[type=email],
+html.ui-round input[type=number],
+html.ui-round input[type=date],
+html.ui-round input[type=time]{border-radius:12px}
+html.ui-round .info-input:focus,
+html.ui-round .pib-input:focus{box-shadow:0 0 0 3px var(--ring)}
+
+/* Таблицы, значки */
+html.ui-round .badge{border-radius:999px;padding:3px 12px}
+html.ui-round .tbl tr:hover td:first-child{border-radius:10px 0 0 10px}
+html.ui-round .tbl tr:hover td:last-child{border-radius:0 10px 10px 0}
+
+/* Календарь брони */
+html.ui-round .cal-nav-btn{border-radius:50%}
+html.ui-round .aday{border-radius:10px}
+html.ui-round .cal-legend-admin .dot{border-radius:4px}
+
+/* Вкладки «Настройки сайта» — «таблетки» */
+html.ui-round .ss-tabs{gap:6px;border-bottom:none;padding-bottom:4px}
+html.ui-round .ss-tab{border:1px solid transparent;border-radius:999px;padding:9px 18px}
+html.ui-round .ss-tab:hover{background:rgba(201,168,76,.06)}
+html.ui-round .ss-tab.active{background:rgba(201,168,76,.12);border-color:rgba(201,168,76,.35)}
+
+/* Окно брони и другие модальные окна */
+html.ui-round .modal-ov{background:rgba(0,0,0,.72);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+html.ui-round .modal-box{border-radius:var(--r-xl);box-shadow:var(--sh-lg)}
+html.ui-round .modal-close{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;line-height:1;transition:background .25s,color .25s}
+html.ui-round .modal-close:hover{background:rgba(201,168,76,.12)}
+html.ui-round .modal-booking-detail{gap:8px;background:transparent}
+html.ui-round .mbd-box{border:1px solid var(--black-border);border-radius:12px}
+
+/* Уведомление и вход */
+html.ui-round .toast{border-radius:var(--r-md);box-shadow:var(--sh-sm)}
+html.ui-round .login-box{border-radius:var(--r-xl);box-shadow:var(--sh-lg)}
+
+/* Полоса прокрутки */
+html.ui-round ::-webkit-scrollbar{width:8px;height:8px}
+html.ui-round ::-webkit-scrollbar-thumb{border-radius:999px}
+
+/* Телефон: таблицы-карточки и меню */
+@media(max-width:768px){
+  html.ui-round .tbl tr{border-radius:var(--r-md)}
+  html.ui-round .stats-row{gap:10px}
+  html.ui-round .sidebar{border-radius:0 var(--r-lg) var(--r-lg) 0}
+  html.ui-round .modal-box{border-radius:var(--r-lg)}
+  html.ui-round .topbar{border-radius:0 0 var(--r-md) var(--r-md)}
+}
