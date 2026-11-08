@@ -299,6 +299,34 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
 .loc-name{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:400;color:var(--text-primary);margin-bottom:4px}
 .loc-dist{font-size:11px;letter-spacing:.15em;color:var(--gold);text-transform:uppercase;margin-bottom:6px}
 .loc-desc{font-size:12px;color:var(--text-muted);line-height:1.6;font-weight:300}
+/* «Места рядом» вровень с картой: высоту строки задаёт карта (contain:size — список свою высоту не навязывает),
+   список растягивается/уплотняется под неё; при очень большом числе мест прокручивается внутри. Только для двух колонок. */
+@media(min-width:1025px){
+  .location-grid{align-items:stretch}
+  .location-points{contain:size;overflow-x:hidden;overflow-y:auto;justify-content:space-between;scrollbar-width:thin;scrollbar-color:color-mix(in srgb,var(--gold) 50%,transparent) transparent}
+  body:is(.points-cards,.points-plate,.points-compact) .loc-point{flex:1 1 auto}
+  body.points-cards .loc-point{max-height:200px}
+  /* 5 мест и больше: плотнее */
+  .location-points:has(.loc-point:nth-child(5)){gap:22px}
+  body.points-cards .location-points:has(.loc-point:nth-child(5)){gap:12px}
+  body.points-cards .location-points:has(.loc-point:nth-child(5)) .loc-point{padding:12px 20px}
+  body.points-plate .location-points:has(.loc-point:nth-child(5)) .loc-point{padding:14px 0}
+  .location-points:has(.loc-point:nth-child(5)) .loc-desc{display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}   /* описание в одну строку */
+  /* 6 мест и больше: без описаний и с меньшими значками */
+  .location-points:has(.loc-point:nth-child(6)){gap:16px}
+  body.points-cards .location-points:has(.loc-point:nth-child(6)){gap:10px}
+  .location-points:has(.loc-point:nth-child(6)) .loc-desc{display:none}
+  .location-points:has(.loc-point:nth-child(6)) .loc-name{margin-bottom:2px}
+  .location-points:has(.loc-point:nth-child(6)) .loc-icon{width:44px;height:44px;font-size:22px}
+  body.points-cards .location-points:has(.loc-point:nth-child(6)) .loc-point{padding:10px 18px}
+  body.points-plate .location-points:has(.loc-point:nth-child(6)) .loc-point{padding:10px 0}
+  /* 8 мест и больше: совсем плотно */
+  .location-points:has(.loc-point:nth-child(8)){gap:10px}
+  body.points-cards .location-points:has(.loc-point:nth-child(8)){gap:8px}
+  body.points-cards .location-points:has(.loc-point:nth-child(8)) .loc-point{padding:6px 16px}
+  body:is(.points-plate,.points-compact) .location-points:has(.loc-point:nth-child(8)) .loc-point{padding:6px 0}
+  body:is(.points-plate,.points-compact) .location-points:has(.loc-point:nth-child(5)){gap:0}   /* у «Пластины» и «Компактного» отступов между местами нет */
+}
 @media(max-width:1024px){
   .location-grid{grid-template-columns:1fr}
   .location-map iframe{height:280px}
