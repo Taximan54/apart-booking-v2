@@ -630,10 +630,17 @@ def generate_consent(booking):
     template = load_consent_template()
     if not template:
         return "Shablon soglasiya ne nayden."
+    # данные арендодателя и объекта — из тех же настроек, что и в договоре
+    # ({{EMAIL}} в согласии — почта ГОСТЯ, поэтому для арендодателя отдельная подстановка)
+    settings = load_contract_settings(booking.get("property_id") or DEFAULT_PROPERTY_ID)
     return fill_contract(template, {
         "ДАТА_ДОГОВОРА": today,
         "ФИО":           booking.get("guest_name", ""),
         "ПАСПОРТ":       booking.get("passport", "не указано"),
         "EMAIL":         booking.get("guest_email", ""),
         "НОМЕР_БРОНИ":   str(booking.get("username") or booking.get("id", "")),
+        "АРЕНДОДАТЕЛЬ":  settings["landlord_name"] or landlord_brand(),
+        "АДРЕС":         settings["address"] or _property_address(booking),
+        "САЙТ":          landlord_domain(),
+        "EMAIL_АРЕНДОДАТЕЛЯ": get_landlord_email(),
     })
