@@ -4,21 +4,24 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script>
-// Предпросмотр скруглённого оформления: ?ui=round включить (запоминается), ?ui=classic вернуть как было
-(function(){try{var q=new URLSearchParams(location.search).get('ui');if(q==='round'||q==='classic')localStorage.setItem('adminUi',q);if(localStorage.getItem('adminUi')==='round')document.documentElement.classList.add('ui-round');}catch(e){}})();
+// Оформление админки одно на все объекты: «Настройки сайта → Оформление → Стиль сайта → Оформление админки» (запоминается в браузере, чтобы не мигало).
+// Пробный просмотр без сохранения: ?ui=round или ?ui=classic в адресе (главнее настройки).
+(function(){try{var q=new URLSearchParams(location.search).get('ui'),h=document.documentElement;
+if(q==='round'||q==='classic'){window.CP_UI_FORCE=q;if(q==='round')h.classList.add('ui-round');return;}
+if(localStorage.getItem('adminUiGlobal')==='round')h.classList.add('ui-round');}catch(e){}})();
 </script>
 <title>Панель управления — Городская Пауза</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Montserrat:wght@300;400;500;600&family=PT+Serif:wght@400;700&family=IM+Fell+English&family=Yeseva+One&family=Marck+Script&family=Pacifico&family=Poiret+One&family=Great+Vibes&family=Bad+Script&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/static/admin.css?v=20261105b">
+<link rel="stylesheet" href="/static/admin.css?v=20261108b">
 <script>window.CP_THEME_NO_AUTO = true;</script>
 <script src="/static/page-theme.js?v=20261101b"></script>
 <script>
 // Тема выбранного объекта из прошлого захода — применяем сразу, чтобы админка не мигала цветами по умолчанию
 (function(){try{var id=localStorage.getItem('adminPropertyId')||'1';var c=JSON.parse(localStorage.getItem('adminTheme:'+id)||'null');if(c&&window.CityPauseTheme)window.CityPauseTheme.apply(c.bg,c.color);}catch(e){}})();
 </script>
-<link rel="stylesheet" href="/static/buttons.css?v=20261105b">
-<link rel="stylesheet" href="/static/admin-round.css?v=20261108a">
-<script src="/static/buttons.js?v=20261105b" defer></script>
+<link rel="stylesheet" href="/static/buttons.css?v=20261108b">
+<link rel="stylesheet" href="/static/admin-round.css?v=20261108b">
+<script src="/static/buttons.js?v=20261108b" defer></script>
 </head>
 <body>
 
@@ -1614,17 +1617,17 @@
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
-<script src="/static/admin-js/core.js?v=20261105b"></script>
-<script src="/static/admin-js/theme.js?v=20261105b"></script>
-<script src="/static/admin-js/prices-promo.js?v=20261105b"></script>
-<script src="/static/admin-js/bookings-dashboard.js?v=20261105b"></script>
-<script src="/static/admin-js/ui-contract.js?v=20261105b"></script>
-<script src="/static/admin-js/archive-photos.js?v=20261105b"></script>
-<script src="/static/admin-js/content.js?v=20261105b"></script>
-<script src="/static/admin-js/site-settings.js?v=20261105b"></script>
-<script src="/static/admin-js/properties.js?v=20261105b"></script>
-<script src="/static/admin-js/catalog.js?v=20261105b"></script>
-<script src="/static/admin-js/integrations.js?v=20261105b"></script>
-<script src="/static/admin-js/init.js?v=20261105b"></script>
+<script src="/static/admin-js/core.js?v=20261108b"></script>
+<script src="/static/admin-js/theme.js?v=20261108b"></script>
+<script src="/static/admin-js/prices-promo.js?v=20261108b"></script>
+<script src="/static/admin-js/bookings-dashboard.js?v=20261108b"></script>
+<script src="/static/admin-js/ui-contract.js?v=20261108b"></script>
+<script src="/static/admin-js/archive-photos.js?v=20261108b"></script>
+<script src="/static/admin-js/content.js?v=20261108b"></script>
+<script src="/static/admin-js/site-settings.js?v=20261108b"></script>
+<script src="/static/admin-js/properties.js?v=20261108b"></script>
+<script src="/static/admin-js/catalog.js?v=20261108b"></script>
+<script src="/static/admin-js/integrations.js?v=20261108b"></script>
+<script src="/static/admin-js/init.js?v=20261108b"></script>
 </body>
 </html>

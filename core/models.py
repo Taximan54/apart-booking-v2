@@ -194,6 +194,7 @@ class SiteSettings(BaseModel):
     map_style: str = "classic"        # classic / jewel / glass / light — окно карты
     points_style: str = "classic"     # classic / cards / plate / compact — места рядом
     contacts_style: str = "classic"   # classic / cards / plate — контакты
+    admin_ui: str = "classic"         # classic / round — оформление админки (скруглённое)
     hero_eyebrow: str = "Апартаменты в городе"  # надпись над заголовком (с чёрточками); пусто = скрыть строку целиком
     nav_extra_label: str = ""       # 8-й (опциональный) пункт меню — если пусто, не отображается
     nav_extra_url: str = ""         # ссылка для 8-го пункта меню

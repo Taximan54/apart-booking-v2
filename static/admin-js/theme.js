@@ -2,6 +2,25 @@
 // У каждого объекта своя тема, поэтому при переключении объекта цвет админки меняется, и сразу видно, в каком объекте вы работаете.
 // Подключается сразу после core.js (нужны ADMIN_PROPERTY_ID, API_BASE, ADMIN_TOKEN).
 
+// Оформление админки (classic / round) одно на все объекты: хранится в настройках основного объекта (№1).
+// ?ui=round или ?ui=classic в адресе главнее сохранённой настройки.
+function applyAdminUi(v) {
+  const ui = v === 'round' ? 'round' : 'classic';
+  window.CP_ADMIN_UI = ui;
+  try { localStorage.setItem('adminUiGlobal', ui); } catch(e) {}   // чтобы при следующем заходе вид применился без мигания
+  if (window.CP_UI_FORCE) return;
+  document.documentElement.classList.toggle('ui-round', ui === 'round');
+}
+
+async function loadAdminUi() {
+  try {
+    const r = await fetch(`${API_BASE}/api/site-settings`, { headers: {'X-Property-Id': '1'} });
+    if (!r.ok) return;
+    const s = await r.json();
+    applyAdminUi(s.admin_ui);
+  } catch(e) {}
+}
+
 async function loadAdminTheme() {
   if (!window.CityPauseTheme) return;
   try {
@@ -35,3 +54,4 @@ async function loadAdminTheme() {
 })();
 
 loadAdminTheme();
+loadAdminUi();

@@ -633,6 +633,7 @@ const SITE_STYLE_GROUPS = [
 ];
 let selectedSiteStyles = {};
 let selectedPhotoBands = false;
+let selectedAdminUi = 'classic';   // запасное значение, если общее ещё не успело загрузиться (см. theme.js)
 
 function loadSiteStyles(s) {
   SITE_STYLE_GROUPS.forEach(g => {
@@ -640,6 +641,7 @@ function loadSiteStyles(s) {
     selectedSiteStyles[g.key] = g.opts.some(o => o[0] === v) ? v : 'classic';
   });
   selectedPhotoBands = !!(s && s.photo_bands);
+  selectedAdminUi = (s && s.admin_ui === 'round') ? 'round' : 'classic';
   renderSiteStylePicker();
 }
 
@@ -651,16 +653,35 @@ function renderSiteStylePicker() {
   el.innerHTML = SITE_STYLE_GROUPS.map(g =>
     row(g.title, g.opts.map(o => btn(selectedSiteStyles[g.key] === o[0], `selectSiteStyle('${g.key}','${o[0]}')`, o[1])).join(''))
   ).join('') + row('Фото-полосы и «набор» цифр',
-    btn(!selectedPhotoBands, 'selectPhotoBands(false)', 'Выкл') + btn(selectedPhotoBands, 'selectPhotoBands(true)', 'Вкл'));
+    btn(!selectedPhotoBands, 'selectPhotoBands(false)', 'Выкл') + btn(selectedPhotoBands, 'selectPhotoBands(true)', 'Вкл'))
+    + row('Оформление админки (общее для всех объектов, сохраняется сразу)',
+    btn(currentAdminUi() === 'classic', "setAdminUi('classic')", 'Как сейчас') + btn(currentAdminUi() === 'round', "setAdminUi('round')", 'Скруглённое'));
 }
 
 function selectSiteStyle(key, v) { selectedSiteStyles[key] = v; renderSiteStylePicker(); }
 function selectPhotoBands(v) { selectedPhotoBands = !!v; renderSiteStylePicker(); }
 
+// Оформление админки одно на все объекты и лежит в настройках основного объекта (№1), поэтому читаем и пишем их с X-Property-Id: 1.
+function currentAdminUi() { return window.CP_ADMIN_UI || selectedAdminUi; }
+async function setAdminUi(v) {
+  try {
+    const cur = await apiGet('/api/site-settings', {'X-Property-Id': '1'});   // свежие настройки основного объекта, меняем только одно поле
+    cur.admin_ui = v;
+    await apiPost('/api/site-settings', cur, {'X-Property-Id': '1'});
+    selectedAdminUi = v;
+    applyAdminUi(v);
+    renderSiteStylePicker();
+    showToast(v === 'round' ? 'Скруглённое оформление админки включено' : 'Оформление админки: как раньше', 'gold');
+  } catch (e) {
+    showToast('Ошибка: ' + e.message, 'err');
+  }
+}
+
 function collectSiteStyles() {
   const out = {};
   SITE_STYLE_GROUPS.forEach(g => { out[g.key] = selectedSiteStyles[g.key] || 'classic'; });
   out.photo_bands = !!selectedPhotoBands;
+  out.admin_ui = currentAdminUi();   // чтобы обычное сохранение настроек основного объекта не сбрасывало оформление админки
   return out;
 }
 

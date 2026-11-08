@@ -159,6 +159,7 @@ DEFAULT_SETTINGS = {
     "map_style": "classic",
     "points_style": "classic",
     "contacts_style": "classic",
+    "admin_ui": "classic",
     "hero_eyebrow": "Апартаменты в городе",
     "nav_extra_label": "",
     "nav_extra_url": "",
