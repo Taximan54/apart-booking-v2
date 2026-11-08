@@ -32,10 +32,10 @@ header{padding:24px 60px;border-bottom:1px solid var(--black-border);display:fle
 .places-list{max-width:1100px;margin:0 auto;padding:0 60px 100px}
 .place-item{display:grid;grid-template-columns:400px 1fr;gap:0;margin-bottom:2px;border-bottom:1px solid var(--black-border);opacity:0;transform:translateY(20px);transition:opacity .5s,transform .5s}
 .place-item.visible{opacity:1;transform:none}
-.place-photo{position:relative;overflow:hidden;aspect-ratio:4/3;height:300px}
-.place-photo img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .6s}
+.place-photo{position:relative;overflow:hidden;min-height:300px}   /* высота = высота карточки, фото заполняет её целиком */
+.place-photo img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;transition:transform .6s}
 .place-item:hover .place-photo img{transform:scale(1.03)}
-.place-photo-empty{width:100%;height:100%;background:transparent;display:flex;align-items:center;justify-content:center;font-size:48px;color:var(--black-border)}
+.place-photo-empty{position:absolute;inset:0;background:transparent;display:flex;align-items:center;justify-content:center;font-size:48px;color:var(--black-border)}
 .place-info{padding:48px 64px;display:flex;flex-direction:column;justify-content:center;background:transparent}
 .place-category{font-size:10px;letter-spacing:.25em;color:var(--gold);text-transform:uppercase;margin-bottom:12px}
 .place-name{font-family:'Cormorant Garamond',serif;font-size:32px;font-weight:400;color:var(--text-primary);margin-bottom:8px;line-height:1.2}
@@ -58,7 +58,7 @@ footer a{color:var(--gold);text-decoration:none}
   .categories{padding:0 24px 32px}
   .places-list{padding:0 24px 60px}
   .place-item{grid-template-columns:1fr}
-  .place-photo{height:220px}
+  .place-photo{height:220px;min-height:0}
   .place-info{padding:28px 24px}
   .place-name{font-size:24px}
   footer{padding:24px}
