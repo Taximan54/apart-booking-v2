@@ -31,6 +31,7 @@ from core.data_store import get_default_deposit
 from core.bookings_repo import get_by_ref_alt
 from core.db import booking_ref_alt, find_booking_row, get_db
 from core.models import ContractSettings, ContractTemplate, CheckinMemo
+from core import retention
 from core.passports import load_passport_map
 from core.runtime import now_nsk
 from core.properties import admin_property_id, property_file, request_property_id
@@ -181,9 +182,73 @@ async def list_contracts(_: bool = Depends(require_admin)):
                 "status":      row["status"] or "—",
             })
         result.append(entry)
+
+    # Упакованные брони (файлы лежат в архиве с паролем, см. core/retention.py)
+    delete_days = retention.load_settings()["delete_days"]
+    by_ref = {e["ref"]: e for e in result}
+    for ref, info in retention.list_archived().items():
+        until = retention.archive_delete_date(info, delete_days)
+        entry = by_ref.get(ref)
+        if entry is None:
+            row = find_booking_row(conn, ref, "guest_name, guest_email, check_in, check_out, total_price, status")
+            try:
+                created = datetime.strptime(info.get("packed_at", ""), "%Y-%m-%d").strftime("%d.%m.%Y")
+            except ValueError:
+                created = "—"
+            entry = {
+                "ref": ref, "passport_ref": ref, "has_draft": False, "has_contract_pdf": False,
+                "has_consent_pdf": False, "has_passport_photo": False, "passport_photo_slots": [],
+                "created": created,
+            }
+            if row:
+                entry.update({
+                    "guest_name":  row["guest_name"] or "—",
+                    "guest_email": row["guest_email"] or "—",
+                    "check_in":    row["check_in"] or "—",
+                    "check_out":   row["check_out"] or "—",
+                    "total_price": row["total_price"] or 0,
+                    "status":      row["status"] or "—",
+                })
+            result.append(entry)
+        entry["archived"] = True
+        entry["archived_until"] = until
     conn.close()
     result.sort(key=lambda e: e["created"], reverse=True)
     return result
+
+# =====================================================
+# API — СРОКИ ХРАНЕНИЯ ДАННЫХ БРОНИ
+# =====================================================
+
+class RetentionSettings(BaseModel):
+    pack_days: int = 0
+    delete_days: int = 0
+    purge_cancelled: bool = False
+
+def _retention_payload():
+    s = retention.load_settings()
+    return {"settings": s, "preview": retention.preview(**s), "password_set": retention.password_is_set()}
+
+@router.get("/api/admin/retention")
+async def get_retention(_: bool = Depends(require_admin)):
+    """Сроки хранения (упаковка в архив, удаление архива, очистка отменённых броней) и сколько броней под них попадает."""
+    return _retention_payload()
+
+@router.post("/api/admin/retention")
+async def set_retention(body: RetentionSettings, _: bool = Depends(require_admin)):
+    try:
+        retention.save_settings(body.pack_days, body.delete_days, body.purge_cancelled)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return _retention_payload()
+
+@router.get("/api/admin/retention/preview")
+async def preview_retention(pack_days: int = 0, delete_days: int = 0, purge_cancelled: bool = False, _: bool = Depends(require_admin)):
+    """Сколько броней попадёт под правила при указанных значениях. Ничего не сохраняет и не удаляет."""
+    try:
+        return retention.preview(pack_days, delete_days, purge_cancelled)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 @router.get("/api/contracts/{booking_ref}")
 async def get_contract(booking_ref: str, _: bool = Depends(require_admin)):

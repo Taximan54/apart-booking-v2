@@ -3,7 +3,77 @@
 // CONTRACTS ARCHIVE
 const PASSPORT_SLOT_LABELS = {main: '📄 Паспорт (главная)', reg1: '🏠 Паспорт (прописка)'};
 
+// RETENTION (сроки хранения данных брони)
+let _retDirty = false, _retPreviewTimer = null;
+
+function retentionForm() {
+  return {
+    pack_days: parseInt(document.getElementById('retPackDays').value) || 0,
+    delete_days: parseInt(document.getElementById('retDeleteDays').value) || 0,
+    purge_cancelled: document.getElementById('retPurgeCancelled').checked,
+  };
+}
+
+function showRetentionPreview(p) {
+  const el = document.getElementById('retPreview');
+  if (!el || !p) return;
+  el.innerHTML =
+    `При этих значениях: под упаковку попадёт броней — <b>${p.to_pack}</b>; ` +
+    `под удаление архивов — <b>${p.archives_to_delete}</b>; ` +
+    `отменённых броней с файлами сейчас — <b>${p.cancelled_with_files}</b>.`;
+}
+
+async function loadRetentionSettings() {
+  if (_retDirty) return;   // не затираем то, что вы уже ввели, но ещё не сохранили
+  try {
+    const d = await apiGet('/api/admin/retention');
+    document.getElementById('retPackDays').value = d.settings.pack_days;
+    document.getElementById('retDeleteDays').value = d.settings.delete_days;
+    document.getElementById('retPurgeCancelled').checked = !!d.settings.purge_cancelled;
+    document.getElementById('retNoPassword').style.display = d.password_set ? 'none' : 'block';
+    showRetentionPreview(d.preview);
+  } catch(e) {
+    const el = document.getElementById('retPreview');
+    if (el) el.textContent = 'Не удалось загрузить сроки хранения: ' + e.message;
+  }
+}
+
+function retentionFormChanged() {
+  _retDirty = true;
+  clearTimeout(_retPreviewTimer);
+  _retPreviewTimer = setTimeout(async () => {
+    const f = retentionForm();
+    try {
+      const p = await apiGet(`/api/admin/retention/preview?pack_days=${f.pack_days}&delete_days=${f.delete_days}&purge_cancelled=${f.purge_cancelled}`);
+      showRetentionPreview(p);
+    } catch(e) {
+      const el = document.getElementById('retPreview');
+      if (el) el.textContent = e.message;
+    }
+  }, 400);
+}
+
+async function saveRetentionSettings() {
+  const f = retentionForm();
+  try {
+    const p = await apiGet(`/api/admin/retention/preview?pack_days=${f.pack_days}&delete_days=${f.delete_days}&purge_cancelled=${f.purge_cancelled}`);
+    const parts = [];
+    if (p.to_pack > 0) parts.push(`упаковка в архив и удаление обычных файлов у ${p.to_pack} броней`);
+    if (p.archives_to_delete > 0) parts.push(`окончательное удаление ${p.archives_to_delete} архивов`);
+    if (f.purge_cancelled && p.cancelled_with_files > 0) parts.push(`удаление файлов у ${p.cancelled_with_files} отменённых броней`);
+    if (parts.length && !confirm('После сохранения в течение часа будет выполнено:\n— ' + parts.join('\n— ') + '\n\nУдаление необратимо. Продолжить?')) return;
+    const d = await apiPost('/api/admin/retention', f);
+    _retDirty = false;
+    document.getElementById('retNoPassword').style.display = d.password_set ? 'none' : 'block';
+    showRetentionPreview(d.preview);
+    showToast('Сроки хранения сохранены', 'gold');
+  } catch(e) {
+    showToast('Ошибка: ' + e.message, 'err');
+  }
+}
+
 async function loadContractsArchive() {
+  loadRetentionSettings();
   const container = document.getElementById('contractsArchiveContent');
   container.innerHTML = '<div style="color:var(--text-muted);padding:20px;text-align:center">Загрузка...</div>';
   try {
@@ -29,11 +99,12 @@ async function loadContractsArchive() {
               <td data-label="Сумма" style="font-size:12px">${c.total_price ? '₽' + Number(c.total_price).toLocaleString('ru') : '—'}</td>
               <td data-label="Создан" style="font-size:11px;color:var(--text-muted)">${c.created}</td>
               <td data-label="Документы" style="display:flex;flex-wrap:wrap;gap:6px">
+                ${c.archived ? `<span style="font-size:11px;color:var(--gold)">🔒 В архиве с паролем${c.archived_until ? ' до ' + c.archived_until : ''}</span>` : ''}
                 ${c.has_contract_pdf ? `<button class="btn btn-outline btn-sm" onclick="downloadArchivePdf('${c.ref}','contract')">📄 Договор (PDF)</button>` : ''}
                 ${c.has_consent_pdf ? `<button class="btn btn-outline btn-sm" onclick="downloadArchivePdf('${c.ref}','consent')">📄 Согласие (PDF)</button>` : ''}
                 ${!c.has_contract_pdf && c.has_draft ? `<button class="btn btn-ghost btn-sm" onclick="downloadContract('${c.ref}', '${(c.guest_name || c.ref).replace(/'/g,"\\'")}')">Черновик (.txt)</button>` : ''}
                 ${(c.passport_photo_slots||[]).map(slot => `<button class="btn btn-ghost btn-sm" onclick="viewArchivePassportPhoto('${c.passport_ref}','${slot}')">${PASSPORT_SLOT_LABELS[slot]}</button>`).join('')}
-                ${!c.has_contract_pdf && !c.has_draft && !c.has_passport_photo ? '—' : ''}
+                ${!c.has_contract_pdf && !c.has_draft && !c.has_passport_photo && !c.archived ? '—' : ''}
               </td>
               <td data-label=""><button class="btn btn-ghost btn-icon" title="Удалить из архива" onclick="deleteArchiveContract('${c.ref}','${(c.guest_name || c.ref).replace(/'/g,"\\'")}')">🗑</button></td>
             </tr>
@@ -75,7 +146,7 @@ async function viewArchivePassportPhoto(ref, slot) {
 }
 
 async function deleteArchiveContract(ref, guestName) {
-  if (!confirm(`Удалить договор «${guestName}» (${ref}) из архива безвозвратно?\n\nБудут удалены черновик, подписанный PDF, согласие на ПД и фото паспорта. Если по этой брони есть запись в списке броней — она тоже будет удалена.`)) return;
+  if (!confirm(`Удалить договор «${guestName}» (${ref}) из архива безвозвратно?\n\nБудут удалены черновик, подписанный PDF, согласие на ПД, фото паспорта и упакованный архив (если есть). Если по этой брони есть запись в списке броней — она тоже будет удалена.`)) return;
   try {
     await apiDelete(`/api/contracts/${ref}`);
     showToast('Договор удалён из архива', 'gold');

@@ -1,6 +1,7 @@
 """Общая настройка тестов: тесты не должны читать настоящие данные сервера.
 Данные объекта для договора (/data/contract_settings.json) на время каждого теста подменяются пустым временным файлом.
-Настоящая отправка писем (smtplib) на время всех тестов заблокирована."""
+Настоящая отправка писем (smtplib) на время всех тестов заблокирована.
+Архивы и сроки хранения данных брони (core/retention.py) на время каждого теста подменяются временными."""
 import smtplib
 
 import pytest
@@ -33,6 +34,14 @@ def _block_real_email():
     mp.setattr(smtplib, "SMTP", _BlockedSMTP)
     yield
     mp.undo()
+
+
+@pytest.fixture(autouse=True)
+def _isolate_retention(tmp_path, monkeypatch):
+    # Тесты не должны видеть настоящие архивы и сроки хранения на сервере (/data/contracts_archive, /data/retention.json)
+    from core import retention
+    monkeypatch.setattr(retention, "ARCHIVE_DIR", str(tmp_path / "retention_archive"))
+    monkeypatch.setattr(retention, "RETENTION_FILE", str(tmp_path / "retention.json"))
 
 
 @pytest.fixture(autouse=True)

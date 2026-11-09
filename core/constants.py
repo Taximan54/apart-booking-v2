@@ -89,6 +89,8 @@ PASSPORT_DIR         = f"{DATA_DIR}/passports"           # ЗАЩИЩЁННАЯ 
 PASSPORT_MAP_FILE    = f"{DATA_DIR}/passport_photos.json"  # {booking_ref: {"main":.., "reg1":..}}
 CONTRACT_SETTINGS_FILE = f"{DATA_DIR}/contract_settings.json"   # данные объекта для договора: арендодатель, вид объекта, адрес, имущество (у каждого объекта свои)
 PROPERTIES_FILE      = f"{DATA_DIR}/properties.json"       # реестр квартир (задел на white-label с несколькими объектами)
+ARCHIVE_DIR          = f"{DATA_DIR}/contracts_archive"     # упакованные (архив с паролем) договоры и фото паспортов старых броней
+RETENTION_FILE       = f"{DATA_DIR}/retention.json"        # сроки хранения: упаковка, удаление архива, очистка отменённых броней
 DEFAULT_PRICES   = {
     "weekday": 3500, "weekend": 4500, "cleaning": 1500,
     "included_guests": 1, "extra_guest_price": 100, "deposit": 6000,

@@ -12,16 +12,16 @@ if(localStorage.getItem('adminUiGlobal')==='round')h.classList.add('ui-round');}
 </script>
 <title>Панель управления — Городская Пауза</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Montserrat:wght@300;400;500;600&family=PT+Serif:wght@400;700&family=IM+Fell+English&family=Yeseva+One&family=Marck+Script&family=Pacifico&family=Poiret+One&family=Great+Vibes&family=Bad+Script&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/static/admin.css?v=20261108b">
+<link rel="stylesheet" href="/static/admin.css?v=20261108c">
 <script>window.CP_THEME_NO_AUTO = true;</script>
 <script src="/static/page-theme.js?v=20261101b"></script>
 <script>
 // Тема выбранного объекта из прошлого захода — применяем сразу, чтобы админка не мигала цветами по умолчанию
 (function(){try{var id=localStorage.getItem('adminPropertyId')||'1';var c=JSON.parse(localStorage.getItem('adminTheme:'+id)||'null');if(c&&window.CityPauseTheme)window.CityPauseTheme.apply(c.bg,c.color);}catch(e){}})();
 </script>
-<link rel="stylesheet" href="/static/buttons.css?v=20261108b">
-<link rel="stylesheet" href="/static/admin-round.css?v=20261108b">
-<script src="/static/buttons.js?v=20261108b" defer></script>
+<link rel="stylesheet" href="/static/buttons.css?v=20261108c">
+<link rel="stylesheet" href="/static/admin-round.css?v=20261108c">
+<script src="/static/buttons.js?v=20261108c" defer></script>
 </head>
 <body>
 
@@ -582,6 +582,36 @@ if(localStorage.getItem('adminUiGlobal')==='round')h.classList.add('ui-round');}
 
     <!-- CONTRACTS ARCHIVE -->
     <div class="panel" id="panel-contracts">
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-header">
+          <span class="card-title">Хранение данных брони</span>
+        </div>
+        <div class="card-body">
+          <div id="retNoPassword" style="display:none;margin-bottom:16px;padding:12px 14px;border:1px solid var(--gold);color:var(--gold);font-size:12px;line-height:1.6">
+            ⚠ Пароль резервных копий не задан — упаковка в архив не запустится, пока он не будет задан на сервере.
+          </div>
+          <div style="font-size:12px;color:var(--text-muted);line-height:1.7;margin-bottom:18px">
+            Когда залог отмечен возвращённым, договоры и фото паспорта брони через указанный срок упаковываются в архив с паролем
+            (тот же пароль, что у резервных копий), а обычные файлы удаляются с сервера. Сроки считаются от даты выезда. Число 0 — выключено.
+          </div>
+          <div class="info-field" style="margin-bottom:18px">
+            <div class="info-label">Упаковать в архив через, дней после выезда (0 — не упаковывать)</div>
+            <input type="number" class="info-input" id="retPackDays" min="0" max="3650" step="1" value="0" style="width:120px" oninput="retentionFormChanged()">
+          </div>
+          <div class="info-field" style="margin-bottom:18px">
+            <div class="info-label">Удалить архив через, дней после выезда (0 — не удалять)</div>
+            <input type="number" class="info-input" id="retDeleteDays" min="0" max="3650" step="1" value="0" style="width:120px" oninput="retentionFormChanged()">
+          </div>
+          <div class="info-field" style="margin-bottom:18px">
+            <label style="display:flex;gap:10px;align-items:flex-start;cursor:pointer;font-size:13px;color:var(--text-secondary);line-height:1.6">
+              <input type="checkbox" id="retPurgeCancelled" onchange="retentionFormChanged()" style="margin-top:4px">
+              <span>Удалять файлы отменённых броней (если договор не был подписан). Отменённые брони с подписанным договором не трогаются.</span>
+            </label>
+          </div>
+          <div id="retPreview" style="font-size:12px;color:var(--gold);line-height:1.7;margin-bottom:16px"></div>
+          <button class="btn btn-primary" onclick="saveRetentionSettings()">Сохранить сроки</button>
+        </div>
+      </div>
       <div class="card">
         <div class="card-header">
           <span class="card-title">Архив договоров</span>
@@ -1617,17 +1647,17 @@ if(localStorage.getItem('adminUiGlobal')==='round')h.classList.add('ui-round');}
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
-<script src="/static/admin-js/core.js?v=20261108b"></script>
-<script src="/static/admin-js/theme.js?v=20261108b"></script>
-<script src="/static/admin-js/prices-promo.js?v=20261108b"></script>
-<script src="/static/admin-js/bookings-dashboard.js?v=20261108b"></script>
-<script src="/static/admin-js/ui-contract.js?v=20261108b"></script>
-<script src="/static/admin-js/archive-photos.js?v=20261108b"></script>
-<script src="/static/admin-js/content.js?v=20261108b"></script>
-<script src="/static/admin-js/site-settings.js?v=20261108b"></script>
-<script src="/static/admin-js/properties.js?v=20261108b"></script>
-<script src="/static/admin-js/catalog.js?v=20261108b"></script>
-<script src="/static/admin-js/integrations.js?v=20261108b"></script>
-<script src="/static/admin-js/init.js?v=20261108b"></script>
+<script src="/static/admin-js/core.js?v=20261108c"></script>
+<script src="/static/admin-js/theme.js?v=20261108c"></script>
+<script src="/static/admin-js/prices-promo.js?v=20261108c"></script>
+<script src="/static/admin-js/bookings-dashboard.js?v=20261108c"></script>
+<script src="/static/admin-js/ui-contract.js?v=20261108c"></script>
+<script src="/static/admin-js/archive-photos.js?v=20261108c"></script>
+<script src="/static/admin-js/content.js?v=20261108c"></script>
+<script src="/static/admin-js/site-settings.js?v=20261108c"></script>
+<script src="/static/admin-js/properties.js?v=20261108c"></script>
+<script src="/static/admin-js/catalog.js?v=20261108c"></script>
+<script src="/static/admin-js/integrations.js?v=20261108c"></script>
+<script src="/static/admin-js/init.js?v=20261108c"></script>
 </body>
 </html>

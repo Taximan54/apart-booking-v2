@@ -24,6 +24,7 @@ from core.constants import (
     PLACES_FILE,
     CONTRACTS_DIR,
     PASSPORT_DIR,
+    ARCHIVE_DIR,
     BACKUP_KEEP_COUNT,
     DEFAULT_CONTACTS,
     LANDLORD_EMAIL,
@@ -116,7 +117,7 @@ def create_backup_zip():
 
         # Договоры и фото паспортов — критичные документы, не подлежат восстановлению
         # из кода, поэтому кладём целиком, каждую папку в свою поддиректорию в архиве
-        for folder, arc_prefix in ((CONTRACTS_DIR, "contracts"), (PASSPORT_DIR, "passports")):
+        for folder, arc_prefix in ((CONTRACTS_DIR, "contracts"), (PASSPORT_DIR, "passports"), (ARCHIVE_DIR, "contracts_archive")):
             if os.path.isdir(folder):
                 for fname in os.listdir(folder):
                     fpath = os.path.join(folder, fname)

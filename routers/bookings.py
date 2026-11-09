@@ -45,6 +45,7 @@ from core.models import (
     PaymentNotify,
 )
 from core.passports import load_passport_map, save_passport_map
+from core.retention import delete_archive
 from core.runtime import bot, now_nsk
 from core.emails import (
     email_booking_created,
@@ -472,7 +473,7 @@ def _delete_contract_files_and_photos(ref):
     "осиротевших" файлов, у которых брони в БД уже нет.
     """
     for candidate in {ref, booking_ref_alt(ref)}:
-        for suffix in (".txt", "_podpisan.pdf", "_soglasie_pd.pdf"):
+        for suffix in (".txt", ".pdf", "_podpisan.pdf", "_soglasie_pd.pdf"):
             path = os.path.join(CONTRACTS_DIR, candidate + suffix)
             if os.path.exists(path):
                 try:
@@ -495,6 +496,12 @@ def _delete_contract_files_and_photos(ref):
                         logger.warning(f"Не удалось удалить фото паспорта {fpath}: {e}")
             pm.pop(candidate, None)
     save_passport_map(pm)
+
+    # упакованный архив брони (см. core/retention.py) тоже удаляется
+    try:
+        delete_archive(ref)
+    except Exception as e:
+        logger.warning(f"Не удалось удалить архив брони {ref}: {e}")
 
 @router.delete("/api/bookings/{booking_ref}")
 async def delete_booking_api(booking_ref: str, _: bool = Depends(require_admin)):
