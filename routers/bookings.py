@@ -233,7 +233,7 @@ async def create_manual_booking(b: ManualBookingCreate, _: bool = Depends(requir
     if nights_count < 1:
         raise HTTPException(status_code=400, detail="Дата выезда должна быть позже даты заезда")
 
-    valid_sources = {"avito", "yandex", "sutochno", "phone", "other"} | {p["source"] for p in list_platforms()}
+    valid_sources = {"avito", "yandex", "sutochno", "phone", "other"} | {p["source"] for p in list_platforms(property_id)}
     source = b.source if b.source in valid_sources else "other"
     deposit = b.deposit or get_default_deposit(property_id)
     sign_token = secrets.token_urlsafe(24)

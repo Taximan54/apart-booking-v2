@@ -287,20 +287,23 @@ def sign_booking(booking_id, signed_at: str, sign_ip: str, guest_fields: Optiona
 # Синхронизация календарей (iCal)
 # ---------------------------------------------------------------------------
 
-def list_exportable(today: str, skip_sources: tuple) -> list:
+def list_exportable(today: str, skip_sources: tuple, property_id=None) -> list:
     """
     Занятые даты для календаря, который забирают другие площадки: всё, что не отменено
     и не пришло с самой площадки (иначе её же брони вернулись бы к ней обратно).
+    property_id — только брони этого объекта (без него — всех, как раньше).
     """
     marks = ",".join("?" for _ in skip_sources)
+    sql = (f"SELECT id, username, check_in, check_out, status FROM bookings "
+           f"WHERE status != 'cancelled' AND COALESCE(source, '') NOT IN ({marks}) AND check_out >= ?")
+    params = [*skip_sources, today]
+    if property_id is not None:
+        sql += " AND COALESCE(property_id, 1) = ?"
+        params.append(property_id)
+    sql += " ORDER BY check_in"
     conn = get_db()
     try:
-        rows = conn.execute(
-            f"SELECT id, username, check_in, check_out, status FROM bookings "
-            f"WHERE status != 'cancelled' AND COALESCE(source, '') NOT IN ({marks}) AND check_out >= ? "
-            f"ORDER BY check_in",
-            (*skip_sources, today),
-        ).fetchall()
+        rows = conn.execute(sql, tuple(params)).fetchall()
         return [dict(r) for r in rows]
     finally:
         conn.close()
@@ -315,15 +318,20 @@ def find_covering(property_id, start: str, end: str, skip_source: str) -> Option
     )
 
 
-def list_active_blocks(source: str, today: str) -> list:
-    """Действующие блокировки из внешнего календаря (источник source), которые ещё не закончились."""
+def list_active_blocks(source: str, today: str, property_id=None) -> list:
+    """
+    Действующие блокировки из внешнего календаря (источник source), которые ещё не закончились.
+    property_id — только блокировки этого объекта (без него — всех, как раньше).
+    """
+    sql = ("SELECT id, username, check_in, check_out FROM bookings "
+           "WHERE source = ? AND status = 'blocked' AND check_out >= ?")
+    params = [source, today]
+    if property_id is not None:
+        sql += " AND COALESCE(property_id, 1) = ?"
+        params.append(property_id)
     conn = get_db()
     try:
-        rows = conn.execute(
-            "SELECT id, username, check_in, check_out FROM bookings "
-            "WHERE source = ? AND status = 'blocked' AND check_out >= ?",
-            (source, today),
-        ).fetchall()
+        rows = conn.execute(sql, tuple(params)).fetchall()
         return [dict(r) for r in rows]
     finally:
         conn.close()
@@ -345,9 +353,15 @@ def set_block_range(booking_id, check_in, check_out, nights) -> None:
            (check_in, check_out, nights, booking_id))
 
 
-def cancel_all_blocks(source: str) -> int:
-    """Отменяет все действующие блокировки из внешнего календаря (например, при удалении площадки)."""
-    return _write("UPDATE bookings SET status='cancelled' WHERE source = ? AND status = 'blocked'", (source,))
+def cancel_all_blocks(source: str, property_id=None) -> int:
+    """
+    Отменяет все действующие блокировки из внешнего календаря (например, при удалении площадки).
+    property_id — только блокировки этого объекта (без него — всех, как раньше).
+    """
+    if property_id is None:
+        return _write("UPDATE bookings SET status='cancelled' WHERE source = ? AND status = 'blocked'", (source,))
+    return _write("UPDATE bookings SET status='cancelled' WHERE source = ? AND status = 'blocked' "
+                  "AND COALESCE(property_id, 1) = ?", (source, property_id))
 
 
 def cancel_blocks_overlapping(property_id, start: str, end: str, source: str) -> int:

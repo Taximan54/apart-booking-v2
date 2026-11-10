@@ -14,13 +14,26 @@ function calSyncText(sync, hasUrl) {
   return `Последняя синхронизация ${sync.at}: новых блокировок ${sync.created}, обновлено ${sync.updated}, снято ${sync.cancelled}, пропущено (уже заняты) ${sync.skipped}.`;
 }
 
+// Название выбранного объекта (показываем, когда объектов больше одного): у каждого объекта свои календари и свои ссылки
+function calObjectNote() {
+  try {
+    const list = (typeof propState !== 'undefined' && propState.properties && propState.properties.length > 1)
+      ? propState.properties : (typeof propCacheRead === 'function' ? propCacheRead() : []);
+    if (list.length < 2) return '';
+    const cur = list.find(p => String(p.id) === ADMIN_PROPERTY_ID);
+    if (!cur) return '';
+    return `<div style="font-size:12px;color:var(--gold);line-height:1.7;margin-bottom:14px;padding:10px 14px;border:1px solid rgba(201,168,76,.35)">Календари объекта «${calEsc(cur.name)}». У каждого объекта свои ссылки: вставляйте их только в объявлениях этого объекта. Другой объект выбирается в меню слева.</div>`;
+  } catch(e) { return ''; }
+}
+
 function renderCalendars() {
   const box = document.getElementById('calPlatforms');
   if (!box) return;
+  const objNote = calObjectNote();
   if (!calState.platforms.length) {
-    box.innerHTML = '<div style="color:var(--text-muted);padding:8px 0 4px;font-size:12px">Площадки пока не добавлены. Выберите площадку ниже и нажмите «Добавить».</div>';
+    box.innerHTML = objNote + '<div style="color:var(--text-muted);padding:8px 0 4px;font-size:12px">Площадки пока не добавлены. Выберите площадку ниже и нажмите «Добавить».</div>';
   } else {
-    box.innerHTML = calState.platforms.map(p => {
+    box.innerHTML = objNote + calState.platforms.map(p => {
       const s = calEsc(p.source);
       const failed = p.url && p.last_sync && !p.last_sync.ok;
       const badge = !p.url ? ['только отдаём даты', 'rgba(90,74,48,.3)', 'var(--text-muted)']
