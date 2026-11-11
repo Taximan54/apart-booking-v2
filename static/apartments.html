@@ -55,18 +55,51 @@ h1{font-family:var(--title-font);font-size:calc(46px * var(--title-scale));font-
 .price b{font-family:var(--card-font);font-size:calc(26px * var(--card-scale));font-weight:var(--card-weight);color:var(--text-primary)}
 .btn{display:inline-block;padding:12px 22px;font-family:var(--text-font);font-size:calc(11px * var(--text-scale));letter-spacing:.18em;text-transform:uppercase;text-decoration:none;color:var(--black);background:var(--gold);transition:opacity .3s}
 .btn:hover{opacity:.85}
-.search{display:none;max-width:760px;margin:-24px auto 44px;padding:18px 20px;border:1px solid var(--black-border);background:var(--black-card)}
+.search{display:none;max-width:820px;margin:-24px auto 44px;padding:14px;border:1px solid var(--black-border);background:var(--black-card);border-radius:28px;box-shadow:0 10px 30px rgba(0,0,0,.18);--tint:rgba(201,168,76,.18);--glow:rgba(201,168,76,.3)}
+@supports (background:color-mix(in srgb,red 50%,transparent)){.search{--tint:color-mix(in srgb,var(--gold) 20%,transparent);--glow:color-mix(in srgb,var(--gold) 32%,transparent)}}
 .search.on{display:block}
-.search-row{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}
-.search label{flex:1 1 150px;display:flex;flex-direction:column;gap:6px;font-family:var(--text-font);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-secondary)}
-.search input{font:inherit;font-size:15px;letter-spacing:0;text-transform:none;padding:10px 12px;border:1px solid var(--black-border);background:transparent;color:var(--text-primary);min-height:44px}
-.search button{font-family:var(--text-font);font-size:11px;letter-spacing:.18em;text-transform:uppercase;padding:0 22px;min-height:44px;border:1px solid var(--gold);cursor:pointer}
-.search .go{background:var(--gold);color:var(--black)}
+.search [hidden]{display:none!important}
+.search .sbar{display:flex;gap:10px;flex-wrap:wrap;align-items:stretch}
+.search .sfield{flex:1 1 170px;min-width:0;text-align:left;display:flex;flex-direction:column;justify-content:center;gap:2px;padding:10px 20px;min-height:58px;border:1px solid var(--black-border);border-radius:20px;background:transparent;color:var(--text-primary);cursor:pointer;font:inherit;transition:border-color .2s,box-shadow .2s}
+.search .sfield:hover{border-color:var(--gold)}
+.search .sfield.act{border-color:var(--gold);box-shadow:0 0 0 3px var(--glow)}
+.search .slabel{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--text-secondary)}
+.search .sval{font-size:15px;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.search .sval.ph{color:var(--text-muted)}
+.search .spill{min-height:58px;padding:0 30px;border-radius:999px;font-family:var(--text-font);font-size:11px;letter-spacing:.18em;text-transform:uppercase;cursor:pointer;border:1px solid var(--gold);transition:opacity .2s,transform .2s}
+.search .spill:hover:not(:disabled){transform:translateY(-1px)}
+.search .spill:disabled{opacity:.6;cursor:default}
+.search .go{background:var(--gold);color:var(--black);font-weight:600}
 .search .reset{background:transparent;color:var(--text-secondary);border-color:var(--black-border)}
-.search-status{margin-top:12px;font-family:var(--text-font);font-size:13px;color:var(--text-secondary);min-height:1.2em}
+.search .reset:hover{border-color:var(--gold);color:var(--text-primary)}
+.search .cal{position:relative;margin-top:12px;padding:20px 18px 14px;border:1px solid var(--black-border);border-radius:22px;animation:calIn .22s ease}
+@keyframes calIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+.search .cal-arrow{position:absolute;top:16px;width:36px;height:36px;border-radius:50%;border:1px solid var(--black-border);background:transparent;color:var(--text-primary);font-size:20px;line-height:1;cursor:pointer;z-index:2;transition:border-color .2s,background .2s}
+.search .cal-arrow:hover:not(:disabled){border-color:var(--gold);background:var(--tint)}
+.search .cal-arrow:disabled{opacity:.3;cursor:default}
+.search .cal-prev{left:14px}.search .cal-next{right:14px}
+.search .cal-months{display:flex;gap:32px}
+.search .cal-month{flex:1;min-width:0}
+.search .cal-title{text-align:center;font-family:var(--card-font);font-size:20px;line-height:36px;margin-bottom:10px;color:var(--text-primary)}
+.search .cal-week,.search .cal-days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr))}
+.search .cal-week span{text-align:center;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);padding-bottom:6px}
+.search .dw{height:40px;display:flex;align-items:center;justify-content:center}
+.search .dbtn{width:38px;height:38px;border-radius:50%;border:0;background:transparent;color:var(--text-primary);font:inherit;font-size:14px;cursor:pointer;transition:background .15s,color .15s}
+.search .dbtn:hover:not(:disabled):not(.sel){background:var(--tint)}
+.search .dbtn:disabled{opacity:.3;cursor:default}
+.search .dbtn.today{box-shadow:inset 0 0 0 1px var(--gold)}
+.search .dbtn.sel{background:var(--gold);color:var(--black);font-weight:600;box-shadow:0 4px 14px var(--glow)}
+.search .dw.mid{background:var(--tint)}
+.search .dw.mid:nth-child(7n+1){border-radius:20px 0 0 20px}
+.search .dw.mid:nth-child(7n){border-radius:0 20px 20px 0}
+.search .dw.rs{background:linear-gradient(to right,transparent 50%,var(--tint) 50%)}
+.search .dw.re{background:linear-gradient(to left,transparent 50%,var(--tint) 50%)}
+.search .cal-info{text-align:center;margin-top:12px;font-size:13px;color:var(--text-secondary);min-height:1.2em}
+.search .search-status{margin-top:12px;padding:0 8px;font-size:13px;color:var(--text-secondary);min-height:1.2em;text-align:center}
+.busy-note{display:inline-block;align-self:flex-start;padding:4px 14px;border:1px solid var(--gold);border-radius:999px;font-family:var(--text-font);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-primary)}
+@media(max-width:700px){.search{margin:-16px 0 32px;padding:12px;border-radius:24px}.search .sfield{flex:1 1 calc(50% - 5px);padding:10px 14px}.search .spill{flex:1 1 100%}.search .cal{padding:18px 8px 12px}.search .cal-prev{left:8px}.search .cal-next{right:8px}.search .dbtn{width:36px;height:36px}}
 .card.busy{opacity:.55;filter:grayscale(1)}
 .card.busy:hover{border-color:var(--black-border)}
-.busy-note{font-family:var(--text-font);font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-primary)}
 .msg{text-align:center;color:var(--text-muted);font-size:13px;padding:60px 20px;grid-column:1/-1}
 footer{padding:40px 60px;border-top:1px solid var(--black-border);text-align:center;font-size:11px;color:var(--text-muted);letter-spacing:.1em}
 @media(max-width:768px){header{padding:20px 24px}.container{padding:36px 16px}h1{font-size:calc(32px * var(--title-scale))}.cards,.cards.cols-2,.cards.cols-3,.cards.cols-4{grid-template-columns:minmax(0,1fr);gap:24px}.logo{font-size:calc(20px * var(--brand-scale))}footer{padding:24px}.arrow{width:38px;height:38px}}
@@ -96,11 +129,17 @@ window.CP_THEME_NO_AUTO = true;
   <h1 id="pageTitle">Наши апартаменты</h1>
   <div class="subtitle" id="pageSubtitle"></div>
   <div class="search" id="search">
-    <div class="search-row">
-      <label>Заезд<input type="date" id="sIn"></label>
-      <label>Выезд<input type="date" id="sOut"></label>
-      <button type="button" class="go" id="sGo">Найти</button>
-      <button type="button" class="reset" id="sReset" hidden>Сбросить</button>
+    <div class="sbar">
+      <button type="button" class="sfield" id="sFieldIn"><span class="slabel">Заезд</span><span class="sval ph" id="sValIn">Выберите дату</span></button>
+      <button type="button" class="sfield" id="sFieldOut"><span class="slabel">Выезд</span><span class="sval ph" id="sValOut">Выберите дату</span></button>
+      <button type="button" class="spill go" id="sGo">Найти</button>
+      <button type="button" class="spill reset" id="sReset" hidden>Сбросить</button>
+    </div>
+    <div class="cal" id="cal" hidden>
+      <button type="button" class="cal-arrow cal-prev" id="calPrev" aria-label="Предыдущий месяц">‹</button>
+      <button type="button" class="cal-arrow cal-next" id="calNext" aria-label="Следующий месяц">›</button>
+      <div class="cal-months" id="calMonths"></div>
+      <div class="cal-info" id="calInfo"></div>
     </div>
     <div class="search-status" id="sStatus" role="status"></div>
   </div>
@@ -250,26 +289,103 @@ function markBusy(busyIds) {
   });
 }
 
+function ruNights(n) {
+  const m = n % 100, d = n % 10;
+  return n + ' ' + ((m >= 11 && m <= 14) ? 'ночей' : d === 1 ? 'ночь' : (d >= 2 && d <= 4) ? 'ночи' : 'ночей');
+}
+function parseIso(s) { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); }
+function fmtDay(s) { return parseIso(s).toLocaleDateString('ru-RU', { weekday: 'short', day: 'numeric', month: 'short' }); }
+
+// Свой календарь: встроенный календарь браузера нельзя оформить под стиль сайта
 function setupSearch(total) {
-  const box = document.getElementById('search');
-  const inEl = document.getElementById('sIn'), outEl = document.getElementById('sOut');
+  const box = document.getElementById('search'), cal = document.getElementById('cal'), grid = document.getElementById('calMonths');
+  const fIn = document.getElementById('sFieldIn'), fOut = document.getElementById('sFieldOut');
+  const vIn = document.getElementById('sValIn'), vOut = document.getElementById('sValOut');
   const go = document.getElementById('sGo'), reset = document.getElementById('sReset'), status = document.getElementById('sStatus');
-  const today = iso(new Date());
-  inEl.min = today; outEl.min = today;
+  const prev = document.getElementById('calPrev'), next = document.getElementById('calNext'), info = document.getElementById('calInfo');
+  const today = iso(new Date()), now = new Date();
+  const minMonth = now.getFullYear() * 12 + now.getMonth(), maxMonth = minMonth + 17;
+  const wide = window.matchMedia('(min-width: 700px)');
+  let selIn = '', selOut = '', hover = '', view = minMonth;
+  const cells = [];
   box.classList.add('on');
-  inEl.addEventListener('change', () => {
-    if (!inEl.value) return;
-    const next = new Date(inEl.value + 'T00:00:00');
-    next.setDate(next.getDate() + 1);
-    outEl.min = iso(next);
-    if (outEl.value && outEl.value <= inEl.value) outEl.value = '';
+
+  function syncFields() {
+    vIn.textContent = selIn ? fmtDay(selIn) : 'Выберите дату'; vIn.classList.toggle('ph', !selIn);
+    vOut.textContent = selOut ? fmtDay(selOut) : 'Выберите дату'; vOut.classList.toggle('ph', !selOut);
+    const open = !cal.hidden, stepIn = !selIn || !!selOut;
+    fIn.classList.toggle('act', open && stepIn);
+    fOut.classList.toggle('act', open && !stepIn);
+    info.textContent = selIn && selOut ? 'Выбрано: ' + ruNights(Math.round((parseIso(selOut) - parseIso(selIn)) / 86400000))
+      : selIn ? 'Теперь выберите дату выезда' : 'Выберите дату заезда';
+  }
+
+  function paint() {
+    const end = selOut || (selIn && hover > selIn ? hover : '');
+    cells.forEach(({ s, w, b }) => {
+      const isStart = s === selIn, isEnd = !!end && s === end;
+      w.className = 'dw' + (selIn && end && s > selIn && s < end ? ' mid' : '') + (isStart && end ? ' rs' : '') + (isEnd ? ' re' : '');
+      b.className = 'dbtn' + (s === today ? ' today' : '') + (isStart || isEnd ? ' sel' : '');
+    });
+  }
+
+  function build() {
+    grid.innerHTML = ''; cells.length = 0;
+    const count = wide.matches ? 2 : 1;
+    for (let k = 0; k < count; k++) {
+      const idx = view + k, y = Math.floor(idx / 12), mo = idx % 12;
+      const month = el('div', 'cal-month');
+      const title = new Date(y, mo, 1).toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' });
+      month.appendChild(el('div', 'cal-title', title.charAt(0).toUpperCase() + title.slice(1)));
+      const week = el('div', 'cal-week');
+      ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'].forEach(n => week.appendChild(el('span', '', n)));
+      month.appendChild(week);
+      const days = el('div', 'cal-days');
+      const lead = (new Date(y, mo, 1).getDay() + 6) % 7;
+      for (let i = 0; i < lead; i++) days.appendChild(el('span', 'dw'));
+      const last = new Date(y, mo + 1, 0).getDate();
+      for (let d = 1; d <= last; d++) {
+        const s = iso(new Date(y, mo, d));
+        const w = el('span', 'dw'), b = el('button', 'dbtn', String(d));
+        b.type = 'button'; b.dataset.d = s; b.disabled = s < today;
+        w.appendChild(b); days.appendChild(w); cells.push({ s, w, b });
+      }
+      month.appendChild(days);
+      grid.appendChild(month);
+    }
+    prev.disabled = view <= minMonth;
+    next.disabled = view + count - 1 >= maxMonth;
+    paint();
+  }
+
+  function openCal() { if (cal.hidden) { cal.hidden = false; build(); } syncFields(); }
+  function closeCal() { cal.hidden = true; hover = ''; syncFields(); }
+
+  [fIn, fOut].forEach(f => f.addEventListener('click', () => { if (cal.hidden) openCal(); else closeCal(); }));
+  prev.addEventListener('click', () => { if (view > minMonth) { view--; build(); } });
+  next.addEventListener('click', () => { if (view + (wide.matches ? 2 : 1) - 1 < maxMonth) { view++; build(); } });
+  grid.addEventListener('click', e => {
+    const b = e.target.closest('.dbtn');
+    if (!b || b.disabled) return;
+    const s = b.dataset.d;
+    if (!selIn || selOut || s <= selIn) { selIn = s; selOut = ''; hover = ''; paint(); syncFields(); }
+    else { selOut = s; hover = ''; paint(); closeCal(); }
   });
+  grid.addEventListener('mouseover', e => {
+    const b = e.target.closest('.dbtn');
+    if (!b || b.disabled || !selIn || selOut || hover === b.dataset.d) return;
+    hover = b.dataset.d; paint();
+  });
+  grid.addEventListener('mouseleave', () => { if (hover) { hover = ''; paint(); } });
+  document.addEventListener('click', e => { if (!cal.hidden && !box.contains(e.target)) closeCal(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !cal.hidden) closeCal(); });
+  if (wide.addEventListener) wide.addEventListener('change', () => { if (!cal.hidden) build(); });
+
   go.onclick = async () => {
-    if (!inEl.value || !outEl.value) { status.textContent = 'Выберите даты заезда и выезда'; return; }
-    if (outEl.value <= inEl.value) { status.textContent = 'Дата выезда должна быть позже даты заезда'; return; }
+    if (!selIn || !selOut) { status.textContent = 'Выберите даты заезда и выезда'; openCal(); return; }
     go.disabled = true; status.textContent = 'Ищем…';
     try {
-      const r = await fetch('/api/catalog/availability?check_in=' + encodeURIComponent(inEl.value) + '&check_out=' + encodeURIComponent(outEl.value));
+      const r = await fetch('/api/catalog/availability?check_in=' + encodeURIComponent(selIn) + '&check_out=' + encodeURIComponent(selOut));
       const data = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(data.detail || 'Не удалось выполнить поиск');
       markBusy(data.busy);
@@ -282,7 +398,8 @@ function setupSearch(total) {
       go.disabled = false;
     }
   };
-  reset.onclick = () => { inEl.value = ''; outEl.value = ''; outEl.min = today; markBusy(null); status.textContent = ''; reset.hidden = true; };
+  reset.onclick = () => { selIn = ''; selOut = ''; hover = ''; markBusy(null); status.textContent = ''; reset.hidden = true; if (!cal.hidden) paint(); syncFields(); };
+  syncFields();
 }
 
 async function loadCatalog() {
