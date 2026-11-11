@@ -111,6 +111,7 @@ class CatalogSettings(BaseModel):
     button_label: str = ""       # название кнопки перехода в каталог на страницах сайта (пусто — «Квартиры»)
     button_scale: float = 1.0    # размер шрифта этой кнопки (масштаб 0,5–2,5)
     columns: str = "auto"        # сетка карточек: auto / 1 / 2 / 3 / 4 в ряд
+    date_search: Optional[bool] = None   # поиск свободных апартаментов по датам (None — не менять сохранённое)
     fonts: CatalogFonts = Field(default_factory=CatalogFonts)
     items: List[CatalogItemSettings] = Field(default_factory=list)   # порядок в списке = порядок в каталоге
 

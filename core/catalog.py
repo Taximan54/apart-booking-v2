@@ -9,8 +9,10 @@
 import json
 import os
 import re
+from datetime import date, timedelta
 from urllib.parse import quote
 
+from core import bookings_repo as repo
 from core.constants import DATA_DIR, DEFAULT_PRICES, PRICE_FILE, SETTINGS_FILE
 from core.data_store import get_site_settings_dict
 from core.landlord import landlord_brand
@@ -132,6 +134,7 @@ def load_catalog_settings() -> dict:
         "button_label": str(data.get("button_label") or "").strip()[:MAX_BUTTON_LABEL],
         "button_scale": _clean_button_scale(data.get("button_scale")),
         "columns": columns if columns in COLUMNS else "auto",
+        "date_search": bool(data.get("date_search")),
         "fonts": _clean_fonts(data.get("fonts")),
         "brand": str(data.get("brand") or "").strip()[:80],
         "title": str(data.get("title") or "").strip()[:100],
@@ -149,7 +152,7 @@ def _check_site_url(url: str) -> None:
         raise CatalogError("Свой адрес сайта должен начинаться с http://, https:// или «/», без пробелов")
 
 
-def save_catalog_settings(brand, title, subtitle, background_theme, color_theme, items, button_label="", columns="auto", fonts=None, button_scale=1.0) -> dict:
+def save_catalog_settings(brand, title, subtitle, background_theme, color_theme, items, button_label="", columns="auto", fonts=None, button_scale=1.0, date_search=None) -> dict:
     brand, title, subtitle = (brand or "").strip(), (title or "").strip(), (subtitle or "").strip()
     if len(brand) > 80:
         raise CatalogError("Название сети слишком длинное (макс. 80 символов)")
@@ -176,6 +179,8 @@ def save_catalog_settings(brand, title, subtitle, background_theme, color_theme,
         raise CatalogError("Неизвестный фон")
     if color_theme and color_theme not in COLOR_THEMES:
         raise CatalogError("Неизвестный цвет")
+    if date_search is None:   # старые запросы без этого поля не меняют сохранённое значение
+        date_search = load_catalog_settings()["date_search"]
     clean, seen = [], set()
     for item in items or []:
         row = _clean_item(item if isinstance(item, dict) else (item.model_dump() if hasattr(item, "model_dump") else item.dict()), truncate=False)
@@ -189,7 +194,7 @@ def save_catalog_settings(brand, title, subtitle, background_theme, color_theme,
         _check_site_url(row["site_url"])
         clean.append(row)
     data = {"brand": brand, "title": title, "subtitle": subtitle, "background_theme": background_theme or "",
-            "color_theme": color_theme or "", "button_label": button_label, "button_scale": round(button_scale, 2), "columns": columns, "fonts": clean_fonts, "items": clean}
+            "color_theme": color_theme or "", "button_label": button_label, "button_scale": round(button_scale, 2), "columns": columns, "date_search": bool(date_search), "fonts": clean_fonts, "items": clean}
     os.makedirs(os.path.dirname(CATALOG_FILE), exist_ok=True)
     tmp = CATALOG_FILE + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:
@@ -316,10 +321,40 @@ def build_public_catalog() -> dict:
         "button_label": settings["button_label"] or DEFAULT_BUTTON_LABEL,
         "button_scale": settings["button_scale"],
         "columns": settings["columns"],
+        "date_search": settings["date_search"],
         "fonts": _resolved_fonts(settings["fonts"]),
         "count": len(items),
         "items": items,
     }
+
+
+MAX_SEARCH_NIGHTS = 365
+
+
+def _parse_day(value, label: str) -> date:
+    try:
+        return date.fromisoformat(str(value or "").strip())
+    except ValueError:
+        raise CatalogError(f"Неверная дата {label}")
+
+
+def catalog_availability(check_in, check_out) -> dict:
+    """
+    Поиск по датам: какие из показанных в каталоге объектов заняты на даты [check_in, check_out).
+    Ничего не меняет в данных. Если поиск выключен в админке, возвращает ошибку.
+    """
+    if not load_catalog_settings()["date_search"]:
+        raise CatalogError("Поиск по датам выключен")
+    d_in, d_out = _parse_day(check_in, "заезда"), _parse_day(check_out, "выезда")
+    if d_out <= d_in:
+        raise CatalogError("Дата выезда должна быть позже даты заезда")
+    if d_in < date.today() - timedelta(days=1):   # запас в сутки на разницу часовых поясов
+        raise CatalogError("Дата заезда уже прошла")
+    if (d_out - d_in).days > MAX_SEARCH_NIGHTS:
+        raise CatalogError("Слишком длинный срок")
+    busy = repo.busy_property_ids(d_in.isoformat(), d_out.isoformat())
+    shown = [prop["id"] for prop, cfg in _merged_items() if prop["active"] and cfg["visible"]]
+    return {"check_in": d_in.isoformat(), "check_out": d_out.isoformat(), "busy": [i for i in shown if i in busy]}
 
 
 def admin_catalog_state() -> dict:
@@ -340,7 +375,7 @@ def admin_catalog_state() -> dict:
             "url": object_url(prop, cfg),
         })
     return {
-        "settings": {k: settings[k] for k in ("brand", "title", "subtitle", "background_theme", "color_theme", "button_label", "button_scale", "columns", "fonts")},
+        "settings": {k: settings[k] for k in ("brand", "title", "subtitle", "background_theme", "color_theme", "button_label", "button_scale", "columns", "date_search", "fonts")},
         "items": rows,
         "defaults": {"brand": landlord_brand(), "title": DEFAULT_TITLE, "subtitle": DEFAULT_SUBTITLE,
                      "button_label": DEFAULT_BUTTON_LABEL, "fonts": _resolved_fonts(_clean_fonts({}))},

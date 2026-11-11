@@ -2,7 +2,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import HTMLResponse
 
-from core.catalog import build_public_catalog
+from core.catalog import CatalogError, build_public_catalog, catalog_availability
 from core.properties import get_property_by_slug, public_property_id
 from services.booking_service import get_booked_ranges
 
@@ -37,6 +37,14 @@ async def apartments_page():
 async def catalog():
     """Публичные данные каталога: карточки видимых действующих объектов (фото, описание, цена, удобства)."""
     return build_public_catalog()
+
+@router.get("/api/catalog/availability")
+async def catalog_availability_api(check_in: str = "", check_out: str = ""):
+    """Поиск по датам в каталоге: номера объектов, занятых на выбранные даты."""
+    try:
+        return catalog_availability(check_in, check_out)
+    except CatalogError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 @router.get("/health")
 async def health():

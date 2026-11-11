@@ -65,6 +65,22 @@ def count_bookings(property_id) -> int:
         conn.close()
 
 
+def busy_property_ids(start: str, end: str) -> set:
+    """
+    Номера объектов, у которых на даты [start, end) есть любая не отменённая бронь или блокировка
+    (те же правила, что и при создании брони: день выезда одного гостя может быть днём заезда другого).
+    """
+    conn = get_db()
+    try:
+        rows = conn.execute(
+            "SELECT DISTINCT COALESCE(property_id, 1) FROM bookings "
+            "WHERE status != 'cancelled' AND check_in < ? AND check_out > ?", (end, start)
+        ).fetchall()
+        return {int(r[0]) for r in rows}
+    finally:
+        conn.close()
+
+
 def get_by_ref(ref: str) -> Optional[dict]:
     """Бронь по номеру (username), например GP-ABC123."""
     return _fetch_one("SELECT * FROM bookings WHERE username=? LIMIT 1", (ref,))

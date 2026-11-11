@@ -55,6 +55,18 @@ h1{font-family:var(--title-font);font-size:calc(46px * var(--title-scale));font-
 .price b{font-family:var(--card-font);font-size:calc(26px * var(--card-scale));font-weight:var(--card-weight);color:var(--text-primary)}
 .btn{display:inline-block;padding:12px 22px;font-family:var(--text-font);font-size:calc(11px * var(--text-scale));letter-spacing:.18em;text-transform:uppercase;text-decoration:none;color:var(--black);background:var(--gold);transition:opacity .3s}
 .btn:hover{opacity:.85}
+.search{display:none;max-width:760px;margin:-24px auto 44px;padding:18px 20px;border:1px solid var(--black-border);background:var(--black-card)}
+.search.on{display:block}
+.search-row{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}
+.search label{flex:1 1 150px;display:flex;flex-direction:column;gap:6px;font-family:var(--text-font);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-secondary)}
+.search input{font:inherit;font-size:15px;letter-spacing:0;text-transform:none;padding:10px 12px;border:1px solid var(--black-border);background:transparent;color:var(--text-primary);min-height:44px}
+.search button{font-family:var(--text-font);font-size:11px;letter-spacing:.18em;text-transform:uppercase;padding:0 22px;min-height:44px;border:1px solid var(--gold);cursor:pointer}
+.search .go{background:var(--gold);color:var(--black)}
+.search .reset{background:transparent;color:var(--text-secondary);border-color:var(--black-border)}
+.search-status{margin-top:12px;font-family:var(--text-font);font-size:13px;color:var(--text-secondary);min-height:1.2em}
+.card.busy{opacity:.55;filter:grayscale(1)}
+.card.busy:hover{border-color:var(--black-border)}
+.busy-note{font-family:var(--text-font);font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-primary)}
 .msg{text-align:center;color:var(--text-muted);font-size:13px;padding:60px 20px;grid-column:1/-1}
 footer{padding:40px 60px;border-top:1px solid var(--black-border);text-align:center;font-size:11px;color:var(--text-muted);letter-spacing:.1em}
 @media(max-width:768px){header{padding:20px 24px}.container{padding:36px 16px}h1{font-size:calc(32px * var(--title-scale))}.cards,.cards.cols-2,.cards.cols-3,.cards.cols-4{grid-template-columns:minmax(0,1fr);gap:24px}.logo{font-size:calc(20px * var(--brand-scale))}footer{padding:24px}.arrow{width:38px;height:38px}}
@@ -83,6 +95,15 @@ window.CP_THEME_NO_AUTO = true;
 <div class="container">
   <h1 id="pageTitle">Наши апартаменты</h1>
   <div class="subtitle" id="pageSubtitle"></div>
+  <div class="search" id="search">
+    <div class="search-row">
+      <label>Заезд<input type="date" id="sIn"></label>
+      <label>Выезд<input type="date" id="sOut"></label>
+      <button type="button" class="go" id="sGo">Найти</button>
+      <button type="button" class="reset" id="sReset" hidden>Сбросить</button>
+    </div>
+    <div class="search-status" id="sStatus" role="status"></div>
+  </div>
   <div class="cards" id="cards"><div class="msg">Загрузка…</div></div>
 </div>
 
@@ -183,6 +204,7 @@ function applyFonts(fonts) {
 
 function buildCard(item) {
   const card = el('article', 'card');
+  card.dataset.id = item.id;
   card.appendChild(buildSlider(item.photos || [], item.name));
   const body = el('div', 'body');
   const h = el('h2', 'name');
@@ -209,6 +231,58 @@ function buildCard(item) {
   body.appendChild(foot);
   card.appendChild(body);
   return card;
+}
+
+// Поиск по датам (включается в админке: «Каталог сайта»). Занятые на эти даты карточки остаются в списке серыми.
+function iso(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+
+function markBusy(busyIds) {
+  document.querySelectorAll('.card[data-id]').forEach(card => {
+    const busy = busyIds !== null && busyIds.includes(Number(card.dataset.id));
+    card.classList.toggle('busy', busy);
+    let note = card.querySelector('.busy-note');
+    if (busy && !note) {
+      note = el('div', 'busy-note', 'Занято на эти даты');
+      card.querySelector('.body').insertBefore(note, card.querySelector('.foot'));
+    } else if (!busy && note) {
+      note.remove();
+    }
+  });
+}
+
+function setupSearch(total) {
+  const box = document.getElementById('search');
+  const inEl = document.getElementById('sIn'), outEl = document.getElementById('sOut');
+  const go = document.getElementById('sGo'), reset = document.getElementById('sReset'), status = document.getElementById('sStatus');
+  const today = iso(new Date());
+  inEl.min = today; outEl.min = today;
+  box.classList.add('on');
+  inEl.addEventListener('change', () => {
+    if (!inEl.value) return;
+    const next = new Date(inEl.value + 'T00:00:00');
+    next.setDate(next.getDate() + 1);
+    outEl.min = iso(next);
+    if (outEl.value && outEl.value <= inEl.value) outEl.value = '';
+  });
+  go.onclick = async () => {
+    if (!inEl.value || !outEl.value) { status.textContent = 'Выберите даты заезда и выезда'; return; }
+    if (outEl.value <= inEl.value) { status.textContent = 'Дата выезда должна быть позже даты заезда'; return; }
+    go.disabled = true; status.textContent = 'Ищем…';
+    try {
+      const r = await fetch('/api/catalog/availability?check_in=' + encodeURIComponent(inEl.value) + '&check_out=' + encodeURIComponent(outEl.value));
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(data.detail || 'Не удалось выполнить поиск');
+      markBusy(data.busy);
+      const free = total - data.busy.length;
+      status.textContent = free > 0 ? 'Свободно на эти даты: ' + free + ' из ' + total : 'На эти даты всё занято. Попробуйте другие даты.';
+      reset.hidden = false;
+    } catch (e) {
+      status.textContent = e.message || 'Не удалось выполнить поиск. Попробуйте ещё раз.';
+    } finally {
+      go.disabled = false;
+    }
+  };
+  reset.onclick = () => { inEl.value = ''; outEl.value = ''; outEl.min = today; markBusy(null); status.textContent = ''; reset.hidden = true; };
 }
 
 async function loadCatalog() {
@@ -239,6 +313,7 @@ async function loadCatalog() {
     } else {
       cards.classList.toggle('single', data.items.length === 1);
       data.items.forEach(item => cards.appendChild(buildCard(item)));
+      if (data.date_search) setupSearch(data.items.length);
     }
     // показываем страницу, когда нужные шрифты загружены (но не дольше 1,5 сек)
     await Promise.race([Promise.all([...fontLoads, stylePromise]), new Promise(r => setTimeout(r, 1500))]);
