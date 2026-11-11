@@ -60,9 +60,12 @@ h1{font-family:var(--title-font);font-size:calc(46px * var(--title-scale));font-
 .search.on{display:block}
 .search [hidden]{display:none!important}
 .search .sbar{display:flex;gap:10px;flex-wrap:wrap;align-items:stretch}
-.search .sfield{flex:1 1 170px;min-width:0;text-align:left;display:flex;flex-direction:column;justify-content:center;gap:2px;padding:10px 20px;min-height:58px;border:1px solid var(--black-border);border-radius:20px;background:transparent;color:var(--text-primary);cursor:pointer;font:inherit;transition:border-color .2s,box-shadow .2s}
+.search .sfield{flex:2 1 340px;min-width:0;text-align:left;display:flex;align-items:center;padding:0 6px;min-height:58px;border:1px solid var(--black-border);border-radius:20px;background:transparent;color:var(--text-primary);cursor:pointer;font:inherit;transition:border-color .2s,box-shadow .2s}
 .search .sfield:hover{border-color:var(--gold)}
 .search .sfield.act{border-color:var(--gold);box-shadow:0 0 0 3px var(--glow)}
+.search .shalf{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;padding:8px 16px}
+.search .sdiv{flex:0 0 1px;height:32px;background:var(--black-border)}
+.search .shalf.act .slabel{color:var(--gold)}
 .search .slabel{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--text-secondary)}
 .search .sval{font-size:15px;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .search .sval.ph{color:var(--text-muted)}
@@ -97,7 +100,7 @@ h1{font-family:var(--title-font);font-size:calc(46px * var(--title-scale));font-
 .search .cal-info{text-align:center;margin-top:12px;font-size:13px;color:var(--text-secondary);min-height:1.2em}
 .search .search-status{margin-top:12px;padding:0 8px;font-size:13px;color:var(--text-secondary);min-height:1.2em;text-align:center}
 .busy-note{display:inline-block;align-self:flex-start;padding:4px 14px;border:1px solid var(--gold);border-radius:999px;font-family:var(--text-font);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-primary)}
-@media(max-width:700px){.search{margin:-16px 0 32px;padding:12px;border-radius:24px}.search .sfield{flex:1 1 calc(50% - 5px);padding:10px 14px}.search .spill{flex:1 1 100%}.search .cal{padding:18px 8px 12px}.search .cal-prev{left:8px}.search .cal-next{right:8px}.search .dbtn{width:36px;height:36px}}
+@media(max-width:700px){.search{margin:-16px 0 32px;padding:12px;border-radius:24px}.search .sfield{flex:1 1 100%;padding:0 2px}.search .shalf{padding:8px 12px}.search .spill{flex:1 1 100%}.search .cal{padding:18px 8px 12px}.search .cal-prev{left:8px}.search .cal-next{right:8px}.search .dbtn{width:36px;height:36px}}
 .card.busy{opacity:.55;filter:grayscale(1)}
 .card.busy:hover{border-color:var(--black-border)}
 .msg{text-align:center;color:var(--text-muted);font-size:13px;padding:60px 20px;grid-column:1/-1}
@@ -130,8 +133,11 @@ window.CP_THEME_NO_AUTO = true;
   <div class="subtitle" id="pageSubtitle"></div>
   <div class="search" id="search">
     <div class="sbar">
-      <button type="button" class="sfield" id="sFieldIn"><span class="slabel">Заезд</span><span class="sval ph" id="sValIn">Выберите дату</span></button>
-      <button type="button" class="sfield" id="sFieldOut"><span class="slabel">Выезд</span><span class="sval ph" id="sValOut">Выберите дату</span></button>
+      <button type="button" class="sfield" id="sField" aria-label="Выбрать даты заезда и выезда">
+        <span class="shalf" id="sHalfIn"><span class="slabel">Заезд</span><span class="sval ph" id="sValIn">Выберите дату</span></span>
+        <span class="sdiv"></span>
+        <span class="shalf" id="sHalfOut"><span class="slabel">Выезд</span><span class="sval ph" id="sValOut">Выберите дату</span></span>
+      </button>
       <button type="button" class="spill go" id="sGo">Найти</button>
       <button type="button" class="spill reset" id="sReset" hidden>Сбросить</button>
     </div>
@@ -299,7 +305,7 @@ function fmtDay(s) { return parseIso(s).toLocaleDateString('ru-RU', { weekday: '
 // Свой календарь: встроенный календарь браузера нельзя оформить под стиль сайта
 function setupSearch(total) {
   const box = document.getElementById('search'), cal = document.getElementById('cal'), grid = document.getElementById('calMonths');
-  const fIn = document.getElementById('sFieldIn'), fOut = document.getElementById('sFieldOut');
+  const fld = document.getElementById('sField'), hIn = document.getElementById('sHalfIn'), hOut = document.getElementById('sHalfOut');
   const vIn = document.getElementById('sValIn'), vOut = document.getElementById('sValOut');
   const go = document.getElementById('sGo'), reset = document.getElementById('sReset'), status = document.getElementById('sStatus');
   const prev = document.getElementById('calPrev'), next = document.getElementById('calNext'), info = document.getElementById('calInfo');
@@ -314,8 +320,9 @@ function setupSearch(total) {
     vIn.textContent = selIn ? fmtDay(selIn) : 'Выберите дату'; vIn.classList.toggle('ph', !selIn);
     vOut.textContent = selOut ? fmtDay(selOut) : 'Выберите дату'; vOut.classList.toggle('ph', !selOut);
     const open = !cal.hidden, stepIn = !selIn || !!selOut;
-    fIn.classList.toggle('act', open && stepIn);
-    fOut.classList.toggle('act', open && !stepIn);
+    fld.classList.toggle('act', open);
+    hIn.classList.toggle('act', open && stepIn);
+    hOut.classList.toggle('act', open && !stepIn);
     info.textContent = selIn && selOut ? 'Выбрано: ' + ruNights(Math.round((parseIso(selOut) - parseIso(selIn)) / 86400000))
       : selIn ? 'Теперь выберите дату выезда' : 'Выберите дату заезда';
   }
@@ -361,7 +368,7 @@ function setupSearch(total) {
   function openCal() { if (cal.hidden) { cal.hidden = false; build(); } syncFields(); }
   function closeCal() { cal.hidden = true; hover = ''; syncFields(); }
 
-  [fIn, fOut].forEach(f => f.addEventListener('click', () => { if (cal.hidden) openCal(); else closeCal(); }));
+  fld.addEventListener('click', () => { if (cal.hidden) openCal(); else closeCal(); });
   prev.addEventListener('click', () => { if (view > minMonth) { view--; build(); } });
   next.addEventListener('click', () => { if (view + (wide.matches ? 2 : 1) - 1 < maxMonth) { view++; build(); } });
   grid.addEventListener('click', e => {
