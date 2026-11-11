@@ -12,16 +12,16 @@ if(localStorage.getItem('adminUiGlobal')==='round')h.classList.add('ui-round');}
 </script>
 <title>Панель управления — Городская Пауза</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Montserrat:wght@300;400;500;600&family=PT+Serif:wght@400;700&family=IM+Fell+English&family=Yeseva+One&family=Marck+Script&family=Pacifico&family=Poiret+One&family=Great+Vibes&family=Bad+Script&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/static/admin.css?v=20261110a">
+<link rel="stylesheet" href="/static/admin.css?v=20261111a">
 <script>window.CP_THEME_NO_AUTO = true;</script>
 <script src="/static/page-theme.js?v=20261101b"></script>
 <script>
 // Тема выбранного объекта из прошлого захода — применяем сразу, чтобы админка не мигала цветами по умолчанию
 (function(){try{var id=localStorage.getItem('adminPropertyId')||'1';var c=JSON.parse(localStorage.getItem('adminTheme:'+id)||'null');if(c&&window.CityPauseTheme)window.CityPauseTheme.apply(c.bg,c.color);}catch(e){}})();
 </script>
-<link rel="stylesheet" href="/static/buttons.css?v=20261110a">
-<link rel="stylesheet" href="/static/admin-round.css?v=20261110a">
-<script src="/static/buttons.js?v=20261110a" defer></script>
+<link rel="stylesheet" href="/static/buttons.css?v=20261111a">
+<link rel="stylesheet" href="/static/admin-round.css?v=20261111a">
+<script src="/static/buttons.js?v=20261111a" defer></script>
 </head>
 <body>
 
@@ -96,6 +96,7 @@ if(localStorage.getItem('adminUiGlobal')==='round')h.classList.add('ui-round');}
       <a class="sb-item" id="sbProperties" onclick="showPanel('properties',this)"><span class="sb-icon">⌂</span>Объекты</a>
 <a class="sb-item" id="sbCatalog" onclick="showPanel('catalog',this)"><span class="sb-icon">▦</span>Каталог сайта</a>
       <a class="sb-item" id="sbIntegrations" onclick="showPanel('integrations',this)"><span class="sb-icon">⇄</span>Интеграции</a>
+      <a class="sb-item" id="sbMonitoring" onclick="showPanel('monitoring',this)"><span class="sb-icon">◉</span>Мониторинг</a>
       <a class="sb-item" onclick="logout()"><span class="sb-icon">⏻</span>Выйти</a>
     </div>
   </nav>
@@ -1599,6 +1600,48 @@ if(localStorage.getItem('adminUiGlobal')==='round')h.classList.add('ui-round');}
       </div>
     </div>
 
+    <!-- MONITORING -->
+    <div class="panel" id="panel-monitoring">
+      <div class="card" style="max-width:900px;margin-bottom:24px">
+        <div class="card-header"><span class="card-title">Мониторинг сбоев</span></div>
+        <div class="card-body">
+          <div id="monBanner" style="padding:14px 18px;margin-bottom:16px;font-size:13px;border:1px solid var(--black-border)"></div>
+          <div id="monOpen" style="margin-bottom:16px"></div>
+          <div style="font-size:11px;color:var(--text-muted);line-height:1.7">Сайт сам проверяет себя раз в 5 минут и пишет на почту <span id="monRecipient"></span>, если что-то перестало работать. Последняя проверка: <span id="monLastRun">—</span>.</div>
+        </div>
+      </div>
+      <div class="card" style="max-width:900px;margin-bottom:24px">
+        <div class="card-header"><span class="card-title">Настройки</span></div>
+        <div class="card-body">
+          <label style="display:flex;gap:8px;align-items:center;font-size:12px;color:var(--text-primary);margin-bottom:16px;cursor:pointer">
+            <input type="checkbox" id="monEnabled"> Мониторинг включён</label>
+          <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px">
+            <div class="info-field" style="flex:1;min-width:200px"><div class="info-label">Календари без синхронизации, часов</div>
+              <input type="number" class="info-input" id="monIcal" min="1" max="48"></div>
+            <div class="info-field" style="flex:1;min-width:200px"><div class="info-label">Резервная копия старше, часов</div>
+              <input type="number" class="info-input" id="monBackup" min="6" max="96"></div>
+            <div class="info-field" style="flex:1;min-width:200px"><div class="info-label">Свободного места на диске меньше, %</div>
+              <input type="number" class="info-input" id="monDisk" min="5" max="50"></div>
+            <div class="info-field" style="flex:1;min-width:200px"><div class="info-label">Напоминать о проблеме раз в, часов</div>
+              <input type="number" class="info-input" id="monRemind" min="1" max="72"></div>
+          </div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <button class="btn btn-primary" onclick="saveMonitoring()">Сохранить</button>
+            <button class="btn btn-ghost" onclick="runMonitoringNow()">Проверить сейчас</button>
+            <button class="btn btn-ghost" onclick="testMonitoringMail()">Отправить тестовое письмо</button>
+          </div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:16px;line-height:1.7">
+            <b>Если упал сам сервер</b>, письмо отправить некому. Для этого подключите бесплатный внешний сервис проверки сайта (например, UptimeRobot) и укажите ему адрес:
+            <span id="monDeepUrl" style="color:var(--gold)"></span>. Он отвечает «ок» или ошибкой 503, если не работает база данных или кончилось место на диске.
+          </div>
+        </div>
+      </div>
+      <div class="card" style="max-width:900px;margin-bottom:24px">
+        <div class="card-header"><span class="card-title">Журнал инцидентов (последние 30)</span></div>
+        <div class="card-body"><div id="monHistory"></div></div>
+      </div>
+    </div>
+
     <!-- INTEGRATIONS -->
     <div class="panel" id="panel-integrations">
       <div class="card" style="max-width:900px;margin-bottom:24px">
@@ -1650,17 +1693,18 @@ if(localStorage.getItem('adminUiGlobal')==='round')h.classList.add('ui-round');}
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
-<script src="/static/admin-js/core.js?v=20261110a"></script>
-<script src="/static/admin-js/theme.js?v=20261110a"></script>
-<script src="/static/admin-js/prices-promo.js?v=20261110a"></script>
-<script src="/static/admin-js/bookings-dashboard.js?v=20261110a"></script>
-<script src="/static/admin-js/ui-contract.js?v=20261110a"></script>
-<script src="/static/admin-js/archive-photos.js?v=20261110a"></script>
-<script src="/static/admin-js/content.js?v=20261110a"></script>
-<script src="/static/admin-js/site-settings.js?v=20261110a"></script>
-<script src="/static/admin-js/properties.js?v=20261110a"></script>
-<script src="/static/admin-js/catalog.js?v=20261110a"></script>
-<script src="/static/admin-js/integrations.js?v=20261110a"></script>
-<script src="/static/admin-js/init.js?v=20261110a"></script>
+<script src="/static/admin-js/core.js?v=20261111a"></script>
+<script src="/static/admin-js/theme.js?v=20261111a"></script>
+<script src="/static/admin-js/prices-promo.js?v=20261111a"></script>
+<script src="/static/admin-js/bookings-dashboard.js?v=20261111a"></script>
+<script src="/static/admin-js/ui-contract.js?v=20261111a"></script>
+<script src="/static/admin-js/archive-photos.js?v=20261111a"></script>
+<script src="/static/admin-js/content.js?v=20261111a"></script>
+<script src="/static/admin-js/site-settings.js?v=20261111a"></script>
+<script src="/static/admin-js/properties.js?v=20261111a"></script>
+<script src="/static/admin-js/catalog.js?v=20261111a"></script>
+<script src="/static/admin-js/integrations.js?v=20261111a"></script>
+<script src="/static/admin-js/monitoring.js?v=20261111a"></script>
+<script src="/static/admin-js/init.js?v=20261111a"></script>
 </body>
 </html>

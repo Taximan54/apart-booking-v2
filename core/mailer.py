@@ -1,6 +1,7 @@
 """Отправка email (SMTP)."""
 import os
 import smtplib
+import time
 from email import encoders
 from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
@@ -17,6 +18,9 @@ logger = get_logger(__name__)
 MAIL_FROM     = os.getenv("MAIL_FROM", "citypause@mail.ru")
 MAIL_PASSWORD = os.getenv("MAIL_PASSWORD", "")
 
+# Итог последних отправок (для мониторинга сбоев): время и текст последней ошибки
+STATUS = {"last_ok_ts": 0.0, "last_error_ts": 0.0, "last_error": ""}
+
 def send_email(to, subject, html_body, attachments=None, text_body=None):
     """
     attachments: список словарей. Поддерживаются два варианта:
@@ -25,6 +29,7 @@ def send_email(to, subject, html_body, attachments=None, text_body=None):
     """
     if not MAIL_PASSWORD:
         logger.warning("MAIL_PASSWORD not set")
+        STATUS.update(last_error_ts=time.time(), last_error="не задан MAIL_PASSWORD")
         return
     try:
         from email.header import Header
@@ -59,5 +64,7 @@ def send_email(to, subject, html_body, attachments=None, text_body=None):
             server.login(MAIL_FROM, MAIL_PASSWORD)
             server.sendmail(MAIL_FROM, [to], msg.as_string())
         logger.info("OK EMAIL sent to " + to)
+        STATUS["last_ok_ts"] = time.time()
     except Exception as e:
         logger.error("ERROR email: " + str(e), exc_info=True)
+        STATUS.update(last_error_ts=time.time(), last_error=str(e)[:200])

@@ -10,7 +10,8 @@ from core.ical_sync import ical_sync_loop
 from core.scheduler import send_notifications
 from core.payment_timeout import expire_unpaid_loop
 from core.retention import retention_loop
-from routers import pages, admin_auth, pricing, content, photos, contracts, bookings, signing_api, ical, properties
+from core.monitoring import watchdog_loop
+from routers import pages, admin_auth, pricing, content, photos, contracts, bookings, signing_api, ical, properties, monitoring
 from services.booking_service import init_db
 from core.logger import get_logger
 import core.telegram_callbacks  # noqa: F401  (регистрирует обработчики кнопок Telegram на dp)
@@ -42,6 +43,7 @@ app.include_router(bookings.router)
 app.include_router(signing_api.router)
 app.include_router(ical.router)
 app.include_router(properties.router)
+app.include_router(monitoring.router)
 
 # =====================================================
 # STARTUP / SHUTDOWN
@@ -67,6 +69,7 @@ async def startup():
     asyncio.create_task(ical_sync_loop())
     asyncio.create_task(expire_unpaid_loop())   # автоотмена броней, за которые не подтверждена оплата
     asyncio.create_task(retention_loop())       # упаковка/удаление данных броней по срокам хранения (по умолчанию выключено)
+    asyncio.create_task(watchdog_loop())       # мониторинг сбоев: письма админу, если что-то перестало работать
     logger.info("SCHEDULER STARTED")
 
 @app.on_event("shutdown")
