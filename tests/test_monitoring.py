@@ -24,11 +24,11 @@ def env(tmp_path, monkeypatch):
     monkeypatch.setattr(mon, "list_platforms", lambda pid: ctx["platforms"])
     monkeypatch.setattr(mon, "_disk_free_percent", lambda: ctx["disk"])
     monkeypatch.setattr(mon, "_backup_password_set", lambda: ctx["password"])
-    monkeypatch.setattr(mon, "_newest_backup_time", lambda: ctx["backup_age"])
+    monkeypatch.setattr(mon, "_backup_age_hours", lambda: ctx["backup_age"])
     monkeypatch.setattr(mon, "alert_recipient", lambda: "admin@example.com")
     monkeypatch.setattr(mon.repo, "count_bookings", lambda pid: 0 if ctx["db_ok"] else (_ for _ in ()).throw(RuntimeError("db down")), raising=False)
     monkeypatch.setattr(mailer, "STATUS", {"last_ok_ts": 0.0, "last_error_ts": 0.0, "last_error": ""})
-    ctx["backup_age"] = T0 - timedelta(hours=2)
+    ctx["backup_age"] = 2.0
     ctx["send"] = lambda kind, inc: ctx["mails"].append((kind, inc["key"]))
     return ctx
 
@@ -103,8 +103,20 @@ def test_ical_disabled_or_no_url_ignored(env):
     assert env["mails"] == []
 
 
+def test_backup_age_ignores_server_timezone(tmp_path, monkeypatch):
+    """Свежий файл копии считается свежим при любом часовом поясе сервера (раньше сравнение с поясом Новосибирска давало лишние 7 часов)."""
+    monkeypatch.setattr(mon, "BACKUP_DIR", str(tmp_path))
+    assert mon._backup_age_hours() is None
+    path = tmp_path / "backup_2026-11-11_04-12.zip"
+    path.write_bytes(b"x")
+    import time as _t
+    os.utime(path, (_t.time() - 19 * 3600, _t.time() - 19 * 3600))
+    age = mon._backup_age_hours()
+    assert 18.9 < age < 19.1
+
+
 def test_backup_stale_and_password(env):
-    env["backup_age"] = T0 - timedelta(hours=30)
+    env["backup_age"] = 30.0
     env["password"] = False
     run(env, T0)
     assert {k for _, k in env["mails"]} == {"backup:stale", "backup:password"}

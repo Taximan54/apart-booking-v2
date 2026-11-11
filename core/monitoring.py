@@ -18,7 +18,8 @@ import asyncio
 import json
 import os
 import shutil
-from datetime import datetime
+import time
+from datetime import datetime, timedelta
 
 from core import bookings_repo as repo
 from core.constants import BACKUP_DIR, DATA_DIR, LANDLORD_EMAIL
@@ -142,12 +143,12 @@ def _disk_free_percent():
         return None
 
 
-def _newest_backup_time():
-    """Время самой свежей резервной копии (datetime) или None, если копий нет."""
+def _backup_age_hours():
+    """Сколько часов назад создана самая свежая копия, или None, если копий нет. Считается по абсолютному времени, часовой пояс сервера не влияет."""
     try:
         names = [n for n in os.listdir(BACKUP_DIR) if n.startswith("backup_") and n.endswith(".zip")]
         times = [os.path.getmtime(os.path.join(BACKUP_DIR, n)) for n in names]
-        return datetime.fromtimestamp(max(times)) if times else None
+        return max(0.0, (time.time() - max(times)) / 3600) if times else None
     except Exception:
         return None
 
@@ -182,14 +183,14 @@ def _check_ical(settings, now, state, keep) -> list:
 
 def _check_backup(settings, now, state, keep) -> list:
     problems, hours = [], settings["backup_hours"]
-    newest = _newest_backup_time()
-    if newest is None:
+    age = _backup_age_hours()
+    if age is None:
         if _grace(state, keep, "backup:none", True, now, hours):
             problems.append({"key": "backup:none", "title": "Нет резервных копий",
                              "detail": f"В папке копий нет ни одного файла уже больше {hours} ч."})
-    elif (now - newest).total_seconds() >= hours * 3600:
+    elif age >= hours:
         problems.append({"key": "backup:stale", "title": "Резервная копия устарела",
-                         "detail": f"Последняя копия создана {_fmt(newest)}, это дольше {hours} ч назад."})
+                         "detail": f"Последняя копия создана примерно {_fmt(now - timedelta(hours=age))}, это {age:.0f} ч назад (порог {hours} ч)."})
     try:
         if not _backup_password_set():
             problems.append({"key": "backup:password", "title": "Не задан пароль резервных копий",
