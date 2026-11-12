@@ -1415,7 +1415,7 @@ async function applySiteSettings() {
 }
 
 // Даты из каталога: /o/<адрес>?checkin=ГГГГ-ММ-ДД&checkout=ГГГГ-ММ-ДД подставляются в календарь,
-// если они корректны, не в прошлом, не короче 2 ночей и свободны. Иначе календарь остаётся пустым, как обычно.
+// если они корректны, не в прошлом, не короче минимального срока объекта и свободны. Иначе календарь остаётся пустым, как обычно.
 function applyDatesFromUrl(){
   try{
     const q = new URLSearchParams(location.search);
@@ -1423,7 +1423,7 @@ function applyDatesFromUrl(){
     const re = /^\d{4}-\d{2}-\d{2}$/;
     if(!a || !b || !re.test(a) || !re.test(b) || b <= a || isPast(a)) return;
     const nights = Math.round((new Date(b + 'T00:00:00') - new Date(a + 'T00:00:00')) / 86400000);
-    if(!(nights >= 2)) return;
+    if(!(nights >= (CONFIG.minNights || 2))) return;
     if(CONFIG.bookedDates.some(d => d >= a && d < b)) return;
     selStart = a; selEnd = b;
     const d = new Date(a + 'T00:00:00');
@@ -1471,6 +1471,7 @@ async function init() {
     const arr = Array.isArray(bk) ? bk : (bk.booked_dates || []);
     CONFIG.bookedDates    = arr.map(b => b.date || b).filter(Boolean);
     CONFIG.checkoutDates  = bk.checkout_dates || [];
+    CONFIG.minNights      = parseInt(bk.min_nights, 10) || 2;   // минимальный срок объекта
     // Дата выезда не блокируется — выезд в 12:00, заезд в 15:00
     CONFIG.bookedDates = CONFIG.bookedDates.filter(
       d => !CONFIG.checkoutDates.includes(d)
@@ -1911,13 +1912,19 @@ function animateNumber(el, newValue, prefix = '₽'){
   requestAnimationFrame(step);
 }
 
+function minNightsText(n){
+  const m = n % 100, d = n % 10;
+  return n + ' ' + ((m >= 11 && m <= 14) ? 'ночей' : d === 1 ? 'ночь' : (d >= 2 && d <= 4) ? 'ночи' : 'ночей');
+}
+
 function updatePanel(){
   if(!selStart || !selEnd) return;
   const s = new Date(selStart + 'T00:00:00');
   const e = new Date(selEnd   + 'T00:00:00');
   const nights = Math.round((e - s) / 86400000);
-  if(nights < 2){
-    showToast('Минимальный срок бронирования — 2 ночи', 'err');
+  const minN = CONFIG.minNights || 2;   // минимум задаётся в админке для каждого объекта
+  if(nights < minN){
+    showToast('Минимальный срок бронирования — ' + minNightsText(minN), 'err');
     selEnd = null;
     renderCal();
     return;

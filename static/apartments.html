@@ -286,19 +286,26 @@ function withDates(url, dates) {
   return url + (url.includes('?') ? '&' : '?') + 'checkin=' + encodeURIComponent(dates.in) + '&checkout=' + encodeURIComponent(dates.out);
 }
 
-function markBusy(busyIds, dates) {
+function markBusy(busyIds, dates, tooShort) {
+  tooShort = tooShort || {};
   document.querySelectorAll('.card[data-id]').forEach(card => {
-    const busy = busyIds !== null && busyIds.includes(Number(card.dataset.id));
-    card.classList.toggle('busy', busy);
+    const id = Number(card.dataset.id);
+    const busy = busyIds !== null && busyIds.includes(id);
+    const short = !busy && busyIds !== null && tooShort[id] !== undefined;   // срок короче минимального у этой квартиры
+    const off = busy || short;
+    card.classList.toggle('busy', off);
     card.querySelectorAll('.name a, .foot a').forEach(a => {
       if (a.dataset.h0 === undefined) a.dataset.h0 = a.getAttribute('href') || '';
-      a.setAttribute('href', (!busy && dates && a.dataset.h0) ? withDates(a.dataset.h0, dates) : a.dataset.h0);
+      a.setAttribute('href', (!off && dates && a.dataset.h0) ? withDates(a.dataset.h0, dates) : a.dataset.h0);
     });
     let note = card.querySelector('.busy-note');
-    if (busy && !note) {
-      note = el('div', 'busy-note', 'Занято на эти даты');
-      card.querySelector('.body').insertBefore(note, card.querySelector('.foot'));
-    } else if (!busy && note) {
+    if (off) {
+      if (!note) {
+        note = el('div', 'busy-note');
+        card.querySelector('.body').insertBefore(note, card.querySelector('.foot'));
+      }
+      note.textContent = busy ? 'Занято на эти даты' : 'Минимум ' + ruNights(tooShort[id]);
+    } else if (note) {
       note.remove();
     }
   });
@@ -308,13 +315,14 @@ function ruNights(n) {
   const m = n % 100, d = n % 10;
   return n + ' ' + ((m >= 11 && m <= 14) ? 'ночей' : d === 1 ? 'ночь' : (d >= 2 && d <= 4) ? 'ночи' : 'ночей');
 }
-const MIN_NIGHTS = 2;   // минимальный срок бронирования (как на странице квартиры)
+let MIN_NIGHTS = 2;   // самый короткий минимальный срок среди показанных объектов (задаётся в админке у каждого объекта)
 function addDays(s, n) { const d = parseIso(s); d.setDate(d.getDate() + n); return iso(d); }
 function parseIso(s) { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); }
 function fmtDay(s) { return parseIso(s).toLocaleDateString('ru-RU', { weekday: 'short', day: 'numeric', month: 'short' }); }
 
 // Свой календарь: встроенный календарь браузера нельзя оформить под стиль сайта
-function setupSearch(total) {
+function setupSearch(total, minNights) {
+  MIN_NIGHTS = Math.max(1, parseInt(minNights, 10) || 2);
   const box = document.getElementById('search'), cal = document.getElementById('cal'), grid = document.getElementById('calMonths');
   const fld = document.getElementById('sField'), hIn = document.getElementById('sHalfIn'), hOut = document.getElementById('sHalfOut');
   const vIn = document.getElementById('sValIn'), vOut = document.getElementById('sValOut');
@@ -408,8 +416,9 @@ function setupSearch(total) {
       const r = await fetch('/api/catalog/availability?check_in=' + encodeURIComponent(selIn) + '&check_out=' + encodeURIComponent(selOut));
       const data = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(data.detail || 'Не удалось выполнить поиск');
-      markBusy(data.busy, { in: data.check_in, out: data.check_out });
-      const free = total - data.busy.length;
+      markBusy(data.busy, { in: data.check_in, out: data.check_out }, data.too_short);
+      const unavailable = new Set([...data.busy, ...Object.keys(data.too_short || {}).map(Number)]);
+      const free = total - unavailable.size;
       status.textContent = free > 0 ? 'Свободно на эти даты: ' + free + ' из ' + total : 'На эти даты всё занято. Попробуйте другие даты.';
       reset.hidden = false;
     } catch (e) {
@@ -450,7 +459,7 @@ async function loadCatalog() {
     } else {
       cards.classList.toggle('single', data.items.length === 1);
       data.items.forEach(item => cards.appendChild(buildCard(item)));
-      if (data.date_search) setupSearch(data.items.length);
+      if (data.date_search) setupSearch(data.items.length, data.items.length ? Math.min(...data.items.map(i => i.min_nights || 2)) : 2);
     }
     // показываем страницу, когда нужные шрифты загружены (но не дольше 1,5 сек)
     await Promise.race([Promise.all([...fontLoads, stylePromise]), new Promise(r => setTimeout(r, 1500))]);

@@ -1,12 +1,15 @@
 """API: объекты (квартиры): список, создание, изменение, удаление."""
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 
 from core import bookings_repo as repo
 from core.auth import require_admin
+from core.booking_rules import get_min_nights, set_min_nights
 from core.catalog import CatalogError, admin_catalog_state, save_catalog_settings
 from core.models import CatalogSettings, PropertyCreate, PropertyUpdate
 from core.properties import (
     PropertyError,
+    admin_property_id,
     copy_property_settings,
     create_property,
     delete_property,
@@ -89,3 +92,22 @@ async def set_catalog_admin(data: CatalogSettings, _: bool = Depends(require_adm
     except CatalogError as e:
         _bad_request(e)
     return admin_catalog_state()
+
+
+# =====================================================
+# ПРАВИЛА БРОНИРОВАНИЯ ОБЪЕКТА (минимальный срок в ночах): у каждого объекта свои
+# =====================================================
+
+class BookingRulesUpdate(BaseModel):
+    min_nights: int
+
+
+@router.get("/api/admin/booking-rules")
+async def get_booking_rules(_: bool = Depends(require_admin), property_id: int = Depends(admin_property_id)):
+    return {"min_nights": get_min_nights(property_id)}
+
+
+@router.post("/api/admin/booking-rules")
+async def set_booking_rules(data: BookingRulesUpdate, _: bool = Depends(require_admin),
+                            property_id: int = Depends(admin_property_id)):
+    return {"min_nights": set_min_nights(property_id, data.min_nights)}

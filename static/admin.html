@@ -12,16 +12,16 @@ if(localStorage.getItem('adminUiGlobal')==='round')h.classList.add('ui-round');}
 </script>
 <title>Панель управления — Городская Пауза</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Montserrat:wght@300;400;500;600&family=PT+Serif:wght@400;700&family=IM+Fell+English&family=Yeseva+One&family=Marck+Script&family=Pacifico&family=Poiret+One&family=Great+Vibes&family=Bad+Script&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/static/admin.css?v=20261111a">
+<link rel="stylesheet" href="/static/admin.css?v=20261112a">
 <script>window.CP_THEME_NO_AUTO = true;</script>
 <script src="/static/page-theme.js?v=20261101b"></script>
 <script>
 // Тема выбранного объекта из прошлого захода — применяем сразу, чтобы админка не мигала цветами по умолчанию
 (function(){try{var id=localStorage.getItem('adminPropertyId')||'1';var c=JSON.parse(localStorage.getItem('adminTheme:'+id)||'null');if(c&&window.CityPauseTheme)window.CityPauseTheme.apply(c.bg,c.color);}catch(e){}})();
 </script>
-<link rel="stylesheet" href="/static/buttons.css?v=20261111a">
-<link rel="stylesheet" href="/static/admin-round.css?v=20261111a">
-<script src="/static/buttons.js?v=20261111a" defer></script>
+<link rel="stylesheet" href="/static/buttons.css?v=20261112a">
+<link rel="stylesheet" href="/static/admin-round.css?v=20261112a">
+<script src="/static/buttons.js?v=20261112a" defer></script>
 </head>
 <body>
 
@@ -1266,6 +1266,16 @@ if(localStorage.getItem('adminUiGlobal')==='round')h.classList.add('ui-round');}
       </div>
 
       <div class="card" data-ss-tab="about" style="max-width:700px;margin-bottom:20px">
+        <div class="card-header"><span class="card-title">Минимальный срок бронирования</span></div>
+        <div class="card-body">
+          <div class="info-field" style="max-width:260px;margin-bottom:12px"><div class="info-label">Минимум ночей (от 1 до 30)</div>
+            <input type="number" class="info-input" id="brMinNights" min="1" max="30" value="2"></div>
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:16px;line-height:1.7">Задаётся для выбранного объекта: календарь на сайте, проверка при бронировании и каталог. На брони с площадок (Авито, Яндекс, Суточно) и ручные брони в админке не влияет. Сохраняется отдельной кнопкой.</div>
+          <button class="btn btn-primary" onclick="saveBookingRules()">Сохранить срок</button>
+        </div>
+      </div>
+
+      <div class="card" data-ss-tab="about" style="max-width:700px;margin-bottom:20px">
         <div class="card-header"><span class="card-title">Описание квартиры</span></div>
         <div class="card-body">
           <div class="info-field" style="margin-bottom:8px">
@@ -1693,18 +1703,19 @@ if(localStorage.getItem('adminUiGlobal')==='round')h.classList.add('ui-round');}
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
-<script src="/static/admin-js/core.js?v=20261111a"></script>
-<script src="/static/admin-js/theme.js?v=20261111a"></script>
-<script src="/static/admin-js/prices-promo.js?v=20261111a"></script>
-<script src="/static/admin-js/bookings-dashboard.js?v=20261111a"></script>
-<script src="/static/admin-js/ui-contract.js?v=20261111a"></script>
-<script src="/static/admin-js/archive-photos.js?v=20261111a"></script>
-<script src="/static/admin-js/content.js?v=20261111a"></script>
-<script src="/static/admin-js/site-settings.js?v=20261111a"></script>
-<script src="/static/admin-js/properties.js?v=20261111a"></script>
-<script src="/static/admin-js/catalog.js?v=20261111a"></script>
-<script src="/static/admin-js/integrations.js?v=20261111a"></script>
-<script src="/static/admin-js/monitoring.js?v=20261111a"></script>
-<script src="/static/admin-js/init.js?v=20261111a"></script>
+<script src="/static/admin-js/core.js?v=20261112a"></script>
+<script src="/static/admin-js/theme.js?v=20261112a"></script>
+<script src="/static/admin-js/prices-promo.js?v=20261112a"></script>
+<script src="/static/admin-js/bookings-dashboard.js?v=20261112a"></script>
+<script src="/static/admin-js/ui-contract.js?v=20261112a"></script>
+<script src="/static/admin-js/archive-photos.js?v=20261112a"></script>
+<script src="/static/admin-js/content.js?v=20261112a"></script>
+<script src="/static/admin-js/site-settings.js?v=20261112a"></script>
+<script src="/static/admin-js/properties.js?v=20261112a"></script>
+<script src="/static/admin-js/catalog.js?v=20261112a"></script>
+<script src="/static/admin-js/integrations.js?v=20261112a"></script>
+<script src="/static/admin-js/booking-rules.js?v=20261112a"></script>
+<script src="/static/admin-js/monitoring.js?v=20261112a"></script>
+<script src="/static/admin-js/init.js?v=20261112a"></script>
 </body>
 </html>

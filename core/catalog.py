@@ -13,6 +13,7 @@ from datetime import date, timedelta
 from urllib.parse import quote
 
 from core import bookings_repo as repo
+from core.booking_rules import get_min_nights
 from core.constants import DATA_DIR, DEFAULT_PRICES, PRICE_FILE, SETTINGS_FILE
 from core.data_store import get_site_settings_dict
 from core.landlord import landlord_brand
@@ -307,6 +308,7 @@ def build_public_catalog() -> dict:
                 "caption": cfg["caption"],
                 "url": object_url(prop, cfg),
                 "price_from": _price_from(prices),
+                "min_nights": get_min_nights(prop["id"]),
                 "amenities": _amenities(site),
                 "photos": photos,
             })
@@ -354,7 +356,11 @@ def catalog_availability(check_in, check_out) -> dict:
         raise CatalogError("Слишком длинный срок")
     busy = repo.busy_property_ids(d_in.isoformat(), d_out.isoformat())
     shown = [prop["id"] for prop, cfg in _merged_items() if prop["active"] and cfg["visible"]]
-    return {"check_in": d_in.isoformat(), "check_out": d_out.isoformat(), "busy": [i for i in shown if i in busy]}
+    nights = (d_out - d_in).days
+    # объекты, у которых минимальный срок больше выбранного (минимум у каждого объекта свой)
+    too_short = {str(i): get_min_nights(i) for i in shown if nights < get_min_nights(i)}
+    return {"check_in": d_in.isoformat(), "check_out": d_out.isoformat(),
+            "busy": [i for i in shown if i in busy], "too_short": too_short}
 
 
 def admin_catalog_state() -> dict:

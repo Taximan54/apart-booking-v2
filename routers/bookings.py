@@ -11,6 +11,7 @@ from typing import Optional
 
 from config import ADMIN_IDS, BASE_URL
 from core.auth import require_admin, verify_token
+from core.booking_rules import get_min_nights, ru_nights
 from core.constants import PROMO_FILE, CODE_FILE, CONTRACTS_DIR, PASSPORT_DIR, MAIL_ADMIN
 from core.contract_docs import save_contract, generate_contract
 from core.data_store import get_default_deposit
@@ -113,7 +114,7 @@ async def get_bookings(admin: Optional[str] = None, authorization: Optional[str]
             while d < e:
                 booked.append(d.strftime("%Y-%m-%d"))
                 d += timedelta(days=1)
-    return {"booked_dates": booked, "checkout_dates": checkout_dates}
+    return {"booked_dates": booked, "checkout_dates": checkout_dates, "min_nights": get_min_nights(property_id)}
 
 @router.post("/api/bookings")
 async def create_booking(b: BookingCreate, property_id: int = Depends(public_property_id)):
@@ -124,8 +125,9 @@ async def create_booking(b: BookingCreate, property_id: int = Depends(public_pro
         nights_count = (d_out - d_in).days
     except Exception:
         raise HTTPException(status_code=400, detail="\u041d\u0435\u0432\u0435\u0440\u043d\u044b\u0439 \u0444\u043e\u0440\u043c\u0430\u0442 \u0434\u0430\u0442")
-    if nights_count < 2:
-        raise HTTPException(status_code=400, detail="\u041c\u0438\u043d\u0438\u043c\u0430\u043b\u044c\u043d\u044b\u0439 \u0441\u0440\u043e\u043a \u0431\u0440\u043e\u043d\u0438\u0440\u043e\u0432\u0430\u043d\u0438\u044f \u2014 2 \u043d\u043e\u0447\u0438")
+    min_nights = get_min_nights(property_id)   # минимум у каждого объекта свой (админка → Настройки сайта → О квартире)
+    if nights_count < min_nights:
+        raise HTTPException(status_code=400, detail=f"Минимальный срок бронирования — {ru_nights(min_nights)}")
     if not _phone_digits_ok(b.guest_phone):
         raise HTTPException(status_code=400, detail="Некорректный номер телефона — должно быть 10 цифр после +7")
     if not _passport_digits_ok(b.passport):
