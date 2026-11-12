@@ -1414,6 +1414,25 @@ async function applySiteSettings() {
   document.documentElement.classList.remove('cp-wait');
 }
 
+// Даты из каталога: /o/<адрес>?checkin=ГГГГ-ММ-ДД&checkout=ГГГГ-ММ-ДД подставляются в календарь,
+// если они корректны, не в прошлом, не короче 2 ночей и свободны. Иначе календарь остаётся пустым, как обычно.
+function applyDatesFromUrl(){
+  try{
+    const q = new URLSearchParams(location.search);
+    const a = q.get('checkin'), b = q.get('checkout');
+    const re = /^\d{4}-\d{2}-\d{2}$/;
+    if(!a || !b || !re.test(a) || !re.test(b) || b <= a || isPast(a)) return;
+    const nights = Math.round((new Date(b + 'T00:00:00') - new Date(a + 'T00:00:00')) / 86400000);
+    if(!(nights >= 2)) return;
+    if(CONFIG.bookedDates.some(d => d >= a && d < b)) return;
+    selStart = a; selEnd = b;
+    const d = new Date(a + 'T00:00:00');
+    curYear = d.getFullYear(); curMonth = d.getMonth();
+    renderCal(); updatePanel();
+    setTimeout(() => { const el = document.getElementById('booking'); if(el) el.scrollIntoView({behavior:'smooth', block:'start'}); }, 400);
+  }catch(e){}
+}
+
 async function init() {
   const siteSettingsDone = applySiteSettings();   // настройки сайта — первыми и параллельно с остальным
   // 1. Сразу рендерим галерею и календарь — не ждём API
@@ -1457,6 +1476,7 @@ async function init() {
       d => !CONFIG.checkoutDates.includes(d)
     );
     renderCal(); // перерисовываем с реальными данными
+    applyDatesFromUrl(); // даты, выбранные в каталоге
   } catch(e) {
     console.warn('Bookings API unavailable');
   }

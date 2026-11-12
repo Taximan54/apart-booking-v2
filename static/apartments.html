@@ -281,10 +281,19 @@ function buildCard(item) {
 // Поиск по датам (включается в админке: «Каталог сайта»). Занятые на эти даты карточки остаются в списке серыми.
 function iso(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
 
-function markBusy(busyIds) {
+// Ссылки свободных карточек получают выбранные даты, чтобы страница квартиры открылась с ними (занятые и после сброса остаются прежними)
+function withDates(url, dates) {
+  return url + (url.includes('?') ? '&' : '?') + 'checkin=' + encodeURIComponent(dates.in) + '&checkout=' + encodeURIComponent(dates.out);
+}
+
+function markBusy(busyIds, dates) {
   document.querySelectorAll('.card[data-id]').forEach(card => {
     const busy = busyIds !== null && busyIds.includes(Number(card.dataset.id));
     card.classList.toggle('busy', busy);
+    card.querySelectorAll('.name a, .foot a').forEach(a => {
+      if (a.dataset.h0 === undefined) a.dataset.h0 = a.getAttribute('href') || '';
+      a.setAttribute('href', (!busy && dates && a.dataset.h0) ? withDates(a.dataset.h0, dates) : a.dataset.h0);
+    });
     let note = card.querySelector('.busy-note');
     if (busy && !note) {
       note = el('div', 'busy-note', 'Занято на эти даты');
@@ -395,7 +404,7 @@ function setupSearch(total) {
       const r = await fetch('/api/catalog/availability?check_in=' + encodeURIComponent(selIn) + '&check_out=' + encodeURIComponent(selOut));
       const data = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(data.detail || 'Не удалось выполнить поиск');
-      markBusy(data.busy);
+      markBusy(data.busy, { in: data.check_in, out: data.check_out });
       const free = total - data.busy.length;
       status.textContent = free > 0 ? 'Свободно на эти даты: ' + free + ' из ' + total : 'На эти даты всё занято. Попробуйте другие даты.';
       reset.hidden = false;
