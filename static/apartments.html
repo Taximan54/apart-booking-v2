@@ -308,6 +308,8 @@ function ruNights(n) {
   const m = n % 100, d = n % 10;
   return n + ' ' + ((m >= 11 && m <= 14) ? 'ночей' : d === 1 ? 'ночь' : (d >= 2 && d <= 4) ? 'ночи' : 'ночей');
 }
+const MIN_NIGHTS = 2;   // минимальный срок бронирования (как на странице квартиры)
+function addDays(s, n) { const d = parseIso(s); d.setDate(d.getDate() + n); return iso(d); }
 function parseIso(s) { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); }
 function fmtDay(s) { return parseIso(s).toLocaleDateString('ru-RU', { weekday: 'short', day: 'numeric', month: 'short' }); }
 
@@ -333,7 +335,7 @@ function setupSearch(total) {
     hIn.classList.toggle('act', open && stepIn);
     hOut.classList.toggle('act', open && !stepIn);
     info.textContent = selIn && selOut ? 'Выбрано: ' + ruNights(Math.round((parseIso(selOut) - parseIso(selIn)) / 86400000))
-      : selIn ? 'Теперь выберите дату выезда' : 'Выберите дату заезда';
+      : selIn ? 'Теперь выберите дату выезда (минимум ' + ruNights(MIN_NIGHTS) + ')' : 'Выберите дату заезда';
   }
 
   function paint() {
@@ -342,6 +344,7 @@ function setupSearch(total) {
       const isStart = s === selIn, isEnd = !!end && s === end;
       w.className = 'dw' + (selIn && end && s > selIn && s < end ? ' mid' : '') + (isStart && end ? ' rs' : '') + (isEnd ? ' re' : '');
       b.className = 'dbtn' + (s === today ? ' today' : '') + (isStart || isEnd ? ' sel' : '');
+      b.disabled = s < today || (!!selIn && !selOut && s > selIn && s < addDays(selIn, MIN_NIGHTS));   // слишком короткий срок недоступен
     });
   }
 
@@ -399,6 +402,7 @@ function setupSearch(total) {
 
   go.onclick = async () => {
     if (!selIn || !selOut) { status.textContent = 'Выберите даты заезда и выезда'; openCal(); return; }
+    if (selOut < addDays(selIn, MIN_NIGHTS)) { status.textContent = 'Минимальный срок — ' + ruNights(MIN_NIGHTS); return; }
     go.disabled = true; status.textContent = 'Ищем…';
     try {
       const r = await fetch('/api/catalog/availability?check_in=' + encodeURIComponent(selIn) + '&check_out=' + encodeURIComponent(selOut));
