@@ -12,16 +12,16 @@ if(localStorage.getItem('adminUiGlobal')==='round')h.classList.add('ui-round');}
 </script>
 <title>Панель управления — Городская Пауза</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Montserrat:wght@300;400;500;600&family=PT+Serif:wght@400;700&family=IM+Fell+English&family=Yeseva+One&family=Marck+Script&family=Pacifico&family=Poiret+One&family=Great+Vibes&family=Bad+Script&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/static/admin.css?v=20261112a">
+<link rel="stylesheet" href="/static/admin.css?v=20261112b">
 <script>window.CP_THEME_NO_AUTO = true;</script>
 <script src="/static/page-theme.js?v=20261101b"></script>
 <script>
 // Тема выбранного объекта из прошлого захода — применяем сразу, чтобы админка не мигала цветами по умолчанию
 (function(){try{var id=localStorage.getItem('adminPropertyId')||'1';var c=JSON.parse(localStorage.getItem('adminTheme:'+id)||'null');if(c&&window.CityPauseTheme)window.CityPauseTheme.apply(c.bg,c.color);}catch(e){}})();
 </script>
-<link rel="stylesheet" href="/static/buttons.css?v=20261112a">
-<link rel="stylesheet" href="/static/admin-round.css?v=20261112a">
-<script src="/static/buttons.js?v=20261112a" defer></script>
+<link rel="stylesheet" href="/static/buttons.css?v=20261112b">
+<link rel="stylesheet" href="/static/admin-round.css?v=20261112b">
+<script src="/static/buttons.js?v=20261112b" defer></script>
 </head>
 <body>
 
@@ -96,6 +96,7 @@ if(localStorage.getItem('adminUiGlobal')==='round')h.classList.add('ui-round');}
       <a class="sb-item" id="sbProperties" onclick="showPanel('properties',this)"><span class="sb-icon">⌂</span>Объекты</a>
 <a class="sb-item" id="sbCatalog" onclick="showPanel('catalog',this)"><span class="sb-icon">▦</span>Каталог сайта</a>
       <a class="sb-item" id="sbIntegrations" onclick="showPanel('integrations',this)"><span class="sb-icon">⇄</span>Интеграции</a>
+      <a class="sb-item" id="sbChatFaq" onclick="showPanel('chatfaq',this)"><span class="sb-icon">✉</span>Чат-помощник</a>
       <a class="sb-item" id="sbMonitoring" onclick="showPanel('monitoring',this)"><span class="sb-icon">◉</span>Мониторинг</a>
       <a class="sb-item" onclick="logout()"><span class="sb-icon">⏻</span>Выйти</a>
     </div>
@@ -1610,6 +1611,35 @@ if(localStorage.getItem('adminUiGlobal')==='round')h.classList.add('ui-round');}
       </div>
     </div>
 
+    <!-- CHAT FAQ -->
+    <div class="panel" id="panel-chatfaq">
+      <div class="card" style="max-width:900px;margin-bottom:24px">
+        <div class="card-header"><span class="card-title">Чат-помощник на сайте</span></div>
+        <div class="card-body">
+          <label style="display:flex;gap:8px;align-items:center;font-size:12px;color:var(--text-primary);margin-bottom:6px;cursor:pointer">
+            <input type="checkbox" id="cfEnabled"> Показывать чат на странице квартиры</label>
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:16px;line-height:1.7">В углу страницы появится кнопка чата с готовыми вопросами. Вопрос без ответа гостю не показывается. Для выбранного объекта (у каждого объекта свой набор). Если гость не нашёл ответ, он пишет вам сам: чат открывает WhatsApp, Telegram или почту из раздела «Контакты», а наш сервер вопросы не хранит.</div>
+          <div style="display:flex;gap:16px;flex-wrap:wrap">
+            <div class="info-field" style="flex:1;min-width:200px"><div class="info-label">Название окна</div>
+              <input type="text" class="info-input" id="cfTitle" maxlength="40" placeholder="Помощник"></div>
+            <div class="info-field" style="flex:2;min-width:260px"><div class="info-label">Приветствие</div>
+              <textarea class="info-input" id="cfGreeting" rows="2" maxlength="300" style="width:100%;resize:vertical;line-height:1.5"></textarea></div>
+          </div>
+        </div>
+      </div>
+      <div class="card" style="max-width:900px;margin-bottom:24px">
+        <div class="card-header"><span class="card-title">Вопросы и ответы</span></div>
+        <div class="card-body">
+          <div id="cfItems"></div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px">
+            <button class="btn btn-ghost" onclick="addChatFaqItem()">+ Добавить вопрос</button>
+            <button class="btn btn-primary" onclick="saveChatFaq()">Сохранить</button>
+          </div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:14px;line-height:1.7">Пишите коротко и по-человечески: одна-две фразы. Примеры ответов внизу каждого вопроса можно вставить кнопкой и поправить под ваши правила, но проверьте, что они верны для вашего объекта.</div>
+        </div>
+      </div>
+    </div>
+
     <!-- MONITORING -->
     <div class="panel" id="panel-monitoring">
       <div class="card" style="max-width:900px;margin-bottom:24px">
@@ -1703,19 +1733,20 @@ if(localStorage.getItem('adminUiGlobal')==='round')h.classList.add('ui-round');}
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
-<script src="/static/admin-js/core.js?v=20261112a"></script>
-<script src="/static/admin-js/theme.js?v=20261112a"></script>
-<script src="/static/admin-js/prices-promo.js?v=20261112a"></script>
-<script src="/static/admin-js/bookings-dashboard.js?v=20261112a"></script>
-<script src="/static/admin-js/ui-contract.js?v=20261112a"></script>
-<script src="/static/admin-js/archive-photos.js?v=20261112a"></script>
-<script src="/static/admin-js/content.js?v=20261112a"></script>
-<script src="/static/admin-js/site-settings.js?v=20261112a"></script>
-<script src="/static/admin-js/properties.js?v=20261112a"></script>
-<script src="/static/admin-js/catalog.js?v=20261112a"></script>
-<script src="/static/admin-js/integrations.js?v=20261112a"></script>
-<script src="/static/admin-js/booking-rules.js?v=20261112a"></script>
-<script src="/static/admin-js/monitoring.js?v=20261112a"></script>
-<script src="/static/admin-js/init.js?v=20261112a"></script>
+<script src="/static/admin-js/core.js?v=20261112b"></script>
+<script src="/static/admin-js/theme.js?v=20261112b"></script>
+<script src="/static/admin-js/prices-promo.js?v=20261112b"></script>
+<script src="/static/admin-js/bookings-dashboard.js?v=20261112b"></script>
+<script src="/static/admin-js/ui-contract.js?v=20261112b"></script>
+<script src="/static/admin-js/archive-photos.js?v=20261112b"></script>
+<script src="/static/admin-js/content.js?v=20261112b"></script>
+<script src="/static/admin-js/site-settings.js?v=20261112b"></script>
+<script src="/static/admin-js/properties.js?v=20261112b"></script>
+<script src="/static/admin-js/catalog.js?v=20261112b"></script>
+<script src="/static/admin-js/integrations.js?v=20261112b"></script>
+<script src="/static/admin-js/chat-faq.js?v=20261112b"></script>
+<script src="/static/admin-js/booking-rules.js?v=20261112b"></script>
+<script src="/static/admin-js/monitoring.js?v=20261112b"></script>
+<script src="/static/admin-js/init.js?v=20261112b"></script>
 </body>
 </html>
