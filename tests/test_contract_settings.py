@@ -24,7 +24,7 @@ BOOKING = {"check_in": "2027-01-10", "check_out": "2027-01-12", "nights": 2, "gu
 
 def test_defaults_when_nothing_saved(env):
     s = cs.load_contract_settings(1)
-    assert s == {"landlord_name": "", "object_kind": "", "address": "", "inventory": ""}
+    assert s == {"landlord_name": "", "object_kind": "", "address": "", "inventory": "", "basis": ""}
     p = cd._contract_placeholders(BOOKING)
     assert p["АРЕНДОДАТЕЛЬ"] == "Городская Пауза"
     assert p["ВИД_ОБЪЕКТА"] == "помещение"
@@ -68,3 +68,13 @@ def test_public_values_for_site(env):
 def test_too_long_values_are_cut(env):
     saved = cs.save_contract_settings(1, {"landlord_name": "я" * 500})
     assert len(saved["landlord_name"]) == 200
+
+
+def test_basis_placeholder_default_and_saved(env):
+    """Основание права распоряжения (п. 1.3): по умолчанию нейтральный текст, иначе то, что заполнено у объекта."""
+    assert cd._contract_placeholders(BOOKING)["ОСНОВАНИЕ"] == "правоустанавливающие документы"
+    assert cd.contract_public_values(1)["basis"] == "правоустанавливающие документы"
+    cs.save_contract_settings(1, {"basis": "Договор доверительного управления"})
+    assert cd._contract_placeholders(BOOKING)["ОСНОВАНИЕ"] == "Договор доверительного управления"
+    assert cd.contract_public_values(1)["basis"] == "Договор доверительного управления"
+    assert cd.fill_contract_for_booking("п. 1.3: {{ОСНОВАНИЕ}}.", BOOKING).count("Договор доверительного управления") == 1
