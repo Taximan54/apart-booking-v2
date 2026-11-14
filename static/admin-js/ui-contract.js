@@ -208,6 +208,7 @@ async function loadContractSettings() {
     document.getElementById('csKind').value = d.object_kind || '';
     document.getElementById('csAddress').value = d.address || '';
     document.getElementById('csInventory').value = d.inventory || '';
+    document.getElementById('csBasis').value = d.basis || '';
   } catch(e) {}
 }
 
@@ -217,7 +218,8 @@ async function saveContractSettings() {
       landlord_name: document.getElementById('csLandlord').value.trim(),
       object_kind: document.getElementById('csKind').value.trim(),
       address: document.getElementById('csAddress').value.trim(),
-      inventory: document.getElementById('csInventory').value.trim()
+      inventory: document.getElementById('csInventory').value.trim(),
+      basis: document.getElementById('csBasis').value.trim()
     });
     showToast('Данные объекта для договора сохранены', 'gold');
   } catch(e) {

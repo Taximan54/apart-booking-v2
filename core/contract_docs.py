@@ -135,6 +135,9 @@ def fill_contract(template, data):
             template = template.replace(placeholder, f"{_AUTO_BOLD_OPEN}{value}{_AUTO_BOLD_CLOSE}")
     return template
 
+DEFAULT_BASIS = "правоустанавливающие документы"   # п. 1.3 договора, если основание не заполнено в данных объекта
+
+
 def _property_address(booking):
     """Адрес квартиры для договора: адрес объекта брони (если он задан и это не основной объект), иначе адрес арендодателя."""
     property_id = booking.get("property_id") or DEFAULT_PROPERTY_ID
@@ -168,6 +171,7 @@ def _contract_placeholders(booking):
         "ПАСПОРТ":        booking.get("passport", "____________"),
         "АДРЕС":          settings["address"] or _property_address(booking),
         "ВИД_ОБЪЕКТА":    settings["object_kind"] or "помещение",
+        "ОСНОВАНИЕ":      settings["basis"] or DEFAULT_BASIS,
         "НОЧЕЙ":          str(nights),
         "ДАТА_ЗАЕЗДА":    checkin_fmt,
         "ДАТА_ВЫЕЗДА":    checkout_fmt,
@@ -208,6 +212,7 @@ def contract_public_values(property_id):
         "address":     settings["address"] or _property_address({"property_id": property_id}),
         "object_kind": settings["object_kind"] or "помещение",
         "inventory":   settings["inventory"],
+        "basis":       settings["basis"] or DEFAULT_BASIS,
         "domain":      landlord_domain(),
         "email":       get_landlord_email(),
         "deposit":     get_default_deposit(property_id),

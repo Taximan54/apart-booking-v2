@@ -3,7 +3,8 @@
 // ============================================================
 // CONFIG — same API base as index.html
 // ============================================================
-let API_BASE = localStorage.getItem('gorodskaya-pauza_api_base') || 'https://citypause.ru';
+// адрес сайта берётся из адреса открытой админки (можно переопределить в настройках админки)
+let API_BASE = localStorage.getItem('gorodskaya-pauza_api_base') || (location.protocol.indexOf('http') === 0 ? location.origin : 'https://citypause.ru');
 
 // Объект (квартира), с которым работает админка. Номер 1 — основной объект.
 let ADMIN_PROPERTY_ID = (function() {

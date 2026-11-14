@@ -1020,7 +1020,7 @@ let PHOTOS = [
 // API CONFIG — замените BASE_URL на URL вашего FastAPI сервера
 // ============================================================
 const API = {
-  BASE: 'https://citypause.ru',
+  BASE: location.origin,   // адрес текущего сайта (раньше был прописан вручную)
   prices:     () => fetch(`${API.BASE}/api/prices`).then(r=>r.json()),
   bookings:   () => fetch(`${API.BASE}/api/bookings`).then(r=>r.json()),
   doorCode:   () => fetch(`${API.BASE}/api/door-code`).then(r=>r.json()),
@@ -2159,6 +2159,7 @@ async function buildContract() {
     'ПАСПОРТ':        passport,
     'АДРЕС':          info.address || 'г. Новосибирск, ул. Дачная, д. 5, квартира 286, 22 этаж',
     'ВИД_ОБЪЕКТА':    info.object_kind || 'помещение',
+    'ОСНОВАНИЕ':      info.basis || 'правоустанавливающие документы',
     'ИМУЩЕСТВО':      info.inventory || '',
     'НОЧЕЙ':          String(nights),
     'ДАТА_ЗАЕЗДА':    fmt(bookingData.start),

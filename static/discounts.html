@@ -60,7 +60,7 @@ footer a{color:var(--gold);text-decoration:none}
 <footer>© 2026 <span class="js-site-name">Городская Пауза</span> · <a href="/" class="js-home">На главную</a></footer>
 
 <script>
-const API_BASE = 'https://citypause.ru';
+const API_BASE = location.origin;   // адрес текущего сайта
 // Акции конкретного объекта: адрес страницы приходит в ?property=название (ссылка с /o/название)
 const PROPERTY_SLUG = new URLSearchParams(location.search).get('property') || '';
 if (PROPERTY_SLUG) {

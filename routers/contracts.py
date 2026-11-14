@@ -71,7 +71,7 @@ async def get_contract_settings(_: bool = Depends(require_admin), property_id: i
 
 @router.post("/api/admin/contract-settings")
 async def set_contract_settings(s: ContractSettings, _: bool = Depends(require_admin), property_id: int = Depends(admin_property_id)):
-    if len(s.landlord_name) > 200 or len(s.object_kind) > 100 or len(s.address) > 300 or len(s.inventory) > 8000:
+    if len(s.landlord_name) > 200 or len(s.object_kind) > 100 or len(s.address) > 300 or len(s.inventory) > 8000 or len(s.basis) > 500:
         raise HTTPException(status_code=400, detail="Слишком длинный текст в одном из полей")
     return save_contract_settings(property_id, s.dict())
 

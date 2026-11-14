@@ -9,8 +9,8 @@ from core.properties import property_file
 
 logger = get_logger(__name__)
 
-FIELDS = ("landlord_name", "object_kind", "address", "inventory")
-LIMITS = {"landlord_name": 200, "object_kind": 100, "address": 300, "inventory": 8000}
+FIELDS = ("landlord_name", "object_kind", "address", "inventory", "basis")
+LIMITS = {"landlord_name": 200, "object_kind": 100, "address": 300, "inventory": 8000, "basis": 500}
 
 
 def load_contract_settings(property_id: int) -> dict:
