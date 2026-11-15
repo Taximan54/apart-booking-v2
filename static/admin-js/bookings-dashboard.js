@@ -470,7 +470,7 @@ async function getPropertiesMap() {
     propertiesCache = {};
     props.forEach(p => propertiesCache[p.id] = p.name);
   } catch(e) {
-    propertiesCache = {1: 'Городская Пауза'};
+    propertiesCache = {1: 'Основной объект'};
   }
   return propertiesCache;
 }
