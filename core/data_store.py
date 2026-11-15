@@ -74,8 +74,8 @@ def load_properties():
             return json.load(f)
     default = [{
         "id": 1,
-        "name": "Городская Пауза",
-        "address": "Новосибирск, ул. Дачная, д. 5, кв. 286",
+        "name": "Моя квартира",
+        "address": "",
         "active": True,
     }]
     with open(PROPERTIES_FILE, "w", encoding="utf-8") as f:

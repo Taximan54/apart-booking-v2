@@ -56,8 +56,8 @@ def _load() -> list:
     if not isinstance(items, list) or not any(p.get("id") == DEFAULT_PROPERTY_ID for p in items):
         # Объект № 1 есть всегда
         items = [p for p in items if isinstance(p, dict)] if isinstance(items, list) else []
-        items.insert(0, {"id": DEFAULT_PROPERTY_ID, "name": "Городская Пауза",
-                         "address": "Новосибирск, ул. Дачная, д. 5, кв. 286", "active": True})
+        items.insert(0, {"id": DEFAULT_PROPERTY_ID, "name": "Моя квартира",
+                         "address": "", "active": True})
     normalized = []
     for p in items:
         normalized.append({

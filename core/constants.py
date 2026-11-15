@@ -123,7 +123,7 @@ LANDLORD_EMAIL = "citypause@mail.ru"
 
 DEFAULT_SETTINGS = {
     "hero_photo": "", "hero_photo_mobile": "", "map_photo": "", "map_url": "", "map_service": "yandex",
-    "site_name": "Городская Пауза",
+    "site_name": "Моя квартира",
     "hero_title": "Искусство комфортного проживания",
     "hero_subtitle": "Апартаменты премиум-класса · Посуточная аренда",
     "logo_font": "im_fell",
@@ -186,10 +186,10 @@ DEFAULT_SETTINGS = {
         {"icon": "", "name": ""},
     ],
     "location_points": [
-        {"icon": "🦁", "name": "Новосибирский зоопарк", "distance": "1.2 км · 15 мин пешком", "description": "Один из крупнейших зоопарков России — 770 видов животных"},
-        {"icon": "🚇", "name": "Метро Заельцовская", "distance": "700 м · 8 мин пешком", "description": "Площадь Калинина — прямое сообщение с центром города"},
-        {"icon": "🛍", "name": "ТЦ Роял Парк", "distance": "700 м · 8 мин пешком", "description": "Крупный торгово-развлекательный центр на Красном проспекте"},
-        {"icon": "🍎", "name": "Золотое Яблоко", "distance": "9 мин пешком", "description": "Магазин косметики и парфюмерии премиум-класса"},
+        {"icon": "", "name": "", "distance": "", "description": ""},
+        {"icon": "", "name": "", "distance": "", "description": ""},
+        {"icon": "", "name": "", "distance": "", "description": ""},
+        {"icon": "", "name": "", "distance": "", "description": ""},
         {"icon": "", "name": "", "distance": "", "description": ""},
     ],
 }
@@ -202,9 +202,9 @@ DEFAULT_CONTACTS = {"phone": "", "email": "", "telegram": "", "whatsapp": "", "m
 
 # Данные арендодателя по умолчанию (используются, пока в админке не заданы свои)
 DEFAULT_LANDLORD = {
-    "brand_name": "Городская Пауза",
-    "domain": "citypause.ru",
-    "address": "г. Новосибирск, ул. Дачная, д. 5, квартира 286, 22 этаж",
+    "brand_name": "Моя квартира",
+    "domain": "example.ru",
+    "address": "адрес не указан",
 }
 
 OWNER_NOTIFY_FILE = f"{DATA_DIR}/owner_notify_log.json"

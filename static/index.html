@@ -431,7 +431,7 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
 
 <!-- HEADER -->
 <header id="mainHeader">
-  <div class="logo-box"><a href="#" class="logo">Городская Пауза</a><a href="/apartments" class="catalog-link js-catalog-link" style="display:none">Квартиры</a></div>
+  <div class="logo-box"><a href="#" class="logo">Моя квартира</a><a href="/apartments" class="catalog-link js-catalog-link" style="display:none">Квартиры</a></div>
   <nav>
     <div class="nav-row">
       <a href="#gallery" id="navLabel-gallery">Галерея</a>
@@ -491,7 +491,7 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
 <!-- FEATURES STRIP -->
 <div class="features-strip">
   <div class="feature-item"><div class="feature-icon">⊞</div><div class="feature-title">Площадь</div><div class="feature-desc">43 м² апартаменты<br>с видом на город</div></div>
-  <div class="feature-item"><div class="feature-icon">◈</div><div class="feature-title">Локация</div><div class="feature-desc">Рядом зоопарк,<br>8 мин до метро</div></div>
+  <div class="feature-item"><div class="feature-icon">◈</div><div class="feature-title">Локация</div><div class="feature-desc">Удобное<br>расположение</div></div>
   <div class="feature-item"><div class="feature-icon">⊛</div><div class="feature-title">Wi-Fi</div><div class="feature-desc">Высокоскоростной<br>интернет 300 Мбит/с</div></div>
   <div class="feature-item"><div class="feature-icon">⊕</div><div class="feature-title">Заезд 24/7</div><div class="feature-desc">Умный замок,<br>самостоятельный заезд</div></div>
 </div>
@@ -568,8 +568,8 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
     </div>
     <div class="location-grid reveal">
       <div class="location-map">
-        <a id="locationMapLink" href="https://yandex.ru/maps/65/novosibirsk/?ll=82.9043%2C55.0546&z=15&pt=82.9043%2C55.0546" target="_blank" style="display:block;position:relative;text-decoration:none;overflow:hidden">
-          <iframe id="locationMapFrame" src="https://yandex.ru/map-widget/v1/?ll=82.9043%2C55.0546&z=15&pt=82.9043%2C55.0546%2Cpm2rdl~Городская+Пауза&lang=ru_RU&from=mapframe" width="100%" height="420" style="border:0;display:block;pointer-events:none" frameborder="0" allowfullscreen></iframe>
+        <a id="locationMapLink" href="#" target="_blank" style="display:none;position:relative;text-decoration:none;overflow:hidden">
+          <iframe id="locationMapFrame" width="100%" height="420" style="border:0;display:block;pointer-events:none;visibility:hidden" frameborder="0" allowfullscreen></iframe>
           <img id="locationMapImg" src="" style="width:100%;height:420px;object-fit:cover;display:none;position:absolute;top:0;left:0">
           <div style="position:absolute;inset:0;cursor:pointer;display:flex;align-items:flex-end;justify-content:flex-start;padding:16px">
             <div style="font-family:'Cormorant Garamond',serif;font-size:12px;letter-spacing:.15em;color:#fff;background:rgba(0,0,0,.5);padding:6px 14px;backdrop-filter:blur(4px)">Открыть на карте →</div>
@@ -585,38 +585,6 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
         </div>
       </div>
       <div class="location-points" id="locationPointsGrid">
-        <div class="loc-point reveal">
-          <div class="loc-icon">🦁</div>
-          <div class="loc-info">
-            <div class="loc-name">Новосибирский зоопарк</div>
-            <div class="loc-dist">1.2 км · 15 мин пешком</div>
-            <div class="loc-desc">Один из крупнейших зоопарков России — 770 видов животных</div>
-          </div>
-        </div>
-        <div class="loc-point reveal">
-          <div class="loc-icon">🚇</div>
-          <div class="loc-info">
-            <div class="loc-name">Метро Заельцовская</div>
-            <div class="loc-dist">700 м · 8 мин пешком</div>
-            <div class="loc-desc">Площадь Калинина — прямое сообщение с центром города</div>
-          </div>
-        </div>
-        <div class="loc-point reveal">
-          <div class="loc-icon">🛍</div>
-          <div class="loc-info">
-            <div class="loc-name">ТЦ Роял Парк</div>
-            <div class="loc-dist">700 м · 8 мин пешком</div>
-            <div class="loc-desc">Крупный торгово-развлекательный центр на Красном проспекте</div>
-          </div>
-        </div>
-        <div class="loc-point reveal">
-          <div class="loc-icon">🍎</div>
-          <div class="loc-info">
-            <div class="loc-name">Золотое Яблоко</div>
-            <div class="loc-dist">9 мин пешком</div>
-            <div class="loc-desc">Магазин косметики и парфюмерии премиум-класса</div>
-          </div>
-        </div>
       </div>
     </div>
   </div>
@@ -943,18 +911,18 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
 
 <footer>
   <div>
-    <div class="footer-brand">Городская Пауза</div>
+    <div class="footer-brand">Моя квартира</div>
     <div style="margin-top:12px;font-size:11px;color:var(--text-muted);font-weight:300;letter-spacing:.05em;line-height:1.7">Апартаменты премиум-класса<br>Посуточная аренда</div>
   </div>
   <div class="footer-c">
     <div style="color:var(--gold);font-size:11px;letter-spacing:.2em;margin-bottom:8px">КОНТАКТЫ</div>
-    <div><a id="footerEmail" href="mailto:citypause@mail.ru" style="color:var(--text-muted);text-decoration:none">citypause@mail.ru</a></div>
+    <div><a id="footerEmail" href="#" style="color:var(--text-muted);text-decoration:none"></a></div>
     <div><a id="footerPhone" href="tel:+74950000000" style="color:var(--text-muted);text-decoration:none">+7 (495) 000-00-00</a></div>
     <div><a id="footerTelegram" href="#" style="color:var(--text-muted);text-decoration:none" target="_blank"></a></div>
     <div style="margin-top:12px"><a href="/static/privacy.html" style="font-size:10px;color:var(--text-muted);text-decoration:none;letter-spacing:.1em;transition:color .3s" onmouseover="this.style.color='var(--gold)'" onmouseout="this.style.color='var(--text-muted)'">Политика конфиденциальности</a></div>
   </div>
   <div class="footer-r">
-    <div id="footerCopy">© 2026 Городская Пауза</div>
+    <div id="footerCopy">© 2026 Моя квартира</div>
     <div style="margin-top:8px"><a href="/static/admin.html" style="color:var(--text-muted);text-decoration:none;font-size:10px;letter-spacing:.1em;opacity:.4;transition:opacity .3s" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=.4">Панель управления</a></div>
   </div>
 </footer>
@@ -1311,7 +1279,7 @@ async function applySiteSettings() {
     document.documentElement.style.setProperty('--gold-muted', theme.muted);
     document.documentElement.style.setProperty('--accent-gradient', theme.gradient);
 
-    const siteName = settings.site_name || 'Городская Пауза';
+    const siteName = settings.site_name || 'Моя квартира';
     document.title = `${siteName} — Апартаменты посуточно`;
     document.querySelectorAll('.logo').forEach(el => el.textContent = siteName);
     document.querySelectorAll('.footer-brand').forEach(el => el.textContent = siteName);
@@ -1410,7 +1378,10 @@ async function applySiteSettings() {
         mapImg.src = `/data/photos/${settings.map_photo}`;
         mapImg.style.display = 'block';
       }
-      if(mapLink && settings.map_url) mapLink.href = settings.map_url;
+      if(mapLink) {
+        mapLink.style.display = 'block';
+        if(settings.map_url) mapLink.href = settings.map_url; else mapLink.removeAttribute('href');
+      }
     }
   } catch(e) {}
   // дожидаемся шрифтов из настроек (но не дольше 1,5 сек) и только потом показываем страницу
@@ -2157,10 +2128,10 @@ async function buildContract() {
   const info = await loadContractInfo();
   const data = {
     'ДАТА_ДОГОВОРА':  today,
-    'АРЕНДОДАТЕЛЬ':   info.landlord || 'Городская Пауза',
+    'АРЕНДОДАТЕЛЬ':   info.landlord || '',
     'ФИО':            name,
     'ПАСПОРТ':        passport,
-    'АДРЕС':          info.address || 'г. Новосибирск, ул. Дачная, д. 5, квартира 286, 22 этаж',
+    'АДРЕС':          info.address || '',
     'ВИД_ОБЪЕКТА':    info.object_kind || 'помещение',
     'ОСНОВАНИЕ':      info.basis || 'правоустанавливающие документы',
     'ИМУЩЕСТВО':      info.inventory || '',
@@ -2171,8 +2142,8 @@ async function buildContract() {
     'ЦЕНА_В_СУТКИ':   perNight.toLocaleString('ru'),
     'ИТОГО':          total.toLocaleString('ru'),
     'ДЕПОЗИТ':        info.deposit ? Number(info.deposit).toLocaleString('ru-RU') : '6 000',
-    'EMAIL':          info.email || 'citypause@mail.ru',
-    'САЙТ':           info.domain || 'citypause.ru',
+    'EMAIL':          info.email || '',
+    'САЙТ':           info.domain || location.hostname,
     'НОМЕР_БРОНИ':    'будет присвоен после оплаты',
   };
 

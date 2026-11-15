@@ -166,7 +166,7 @@ class SiteSettings(BaseModel):
     map_photo: str = ""         # имя файла из /data/photos/
     map_url: str = ""           # ссылка на карту (Яндекс/2ГИС/Google)
     map_service: str = "yandex" # yandex / 2gis / google
-    site_name: str = "Городская Пауза"
+    site_name: str = "Моя квартира"
     hero_title: str = "Искусство комфортного проживания"
     hero_subtitle: str = "Апартаменты премиум-класса · Посуточная аренда"
     logo_font: str = "im_fell"  # im_fell(=PT Serif) / playfair / unifraktur(=Yeseva One) / tangerine(=Marck Script) / pacifico / great_vibes / berkshire(=Bad Script) / poiret — ключи исторические, реальные шрифты см. FONT_OPTIONS в admin.html
