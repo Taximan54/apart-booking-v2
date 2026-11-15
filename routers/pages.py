@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import HTMLResponse
 
 from core.catalog import CatalogError, build_public_catalog, catalog_availability
+from core.page_meta import render_index_html
 from core.properties import get_property_by_slug, public_property_id
 from services.booking_service import get_booked_ranges
 
@@ -16,7 +17,7 @@ router = APIRouter()
 @router.get("/", response_class=HTMLResponse)
 async def home():
     with open("static/index.html", encoding="utf-8") as f:
-        return f.read()
+        return render_index_html(f.read(), 1, "/")
 
 @router.get("/o/{slug}", response_class=HTMLResponse)
 async def property_page(slug: str):
@@ -25,7 +26,7 @@ async def property_page(slug: str):
     if not prop or not prop["active"]:
         raise HTTPException(status_code=404, detail="Объект не найден")
     with open("static/index.html", encoding="utf-8") as f:
-        return f.read()
+        return render_index_html(f.read(), prop["id"], "/o/" + prop["slug"])
 
 @router.get("/apartments", response_class=HTMLResponse)
 async def apartments_page():
