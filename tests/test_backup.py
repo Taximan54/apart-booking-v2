@@ -81,12 +81,13 @@ def test_encrypted_backup_is_sent_by_email(env, monkeypatch):
     monkeypatch.setattr(bk.config, "BACKUP_PASSWORD", "Пароль-123", raising=False)
     monkeypatch.setattr(bk, "ADMIN_IDS", [])                         # Telegram в тесте не трогаем
     monkeypatch.setattr(bk, "get_site_settings_dict", lambda: {})
+    monkeypatch.setattr(bk, "LANDLORD_EMAIL", "owner@test.ru")      # «Контакты» в тесте пустые, запасная почта задаётся здесь
     path = bk.create_backup_zip()
     sent = []
     monkeypatch.setattr(bk, "send_email", lambda to, subject, html, attachments=None: sent.append((to, html, attachments)))
     result = asyncio.run(bk.send_backup_everywhere(path))
     assert result["email"] is True and result["encrypted"] is True
-    assert len(sent) == 1 and sent[0][2][0]["filepath"] == path
+    assert len(sent) == 1 and sent[0][0] == "owner@test.ru" and sent[0][2][0]["filepath"] == path
     assert "защищён паролем" in sent[0][1]
     assert "Пароль-123" not in sent[0][1], "пароль не должен попадать в письмо"
 
