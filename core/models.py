@@ -166,6 +166,8 @@ class SiteSettings(BaseModel):
     map_photo: str = ""         # имя файла из /data/photos/
     map_url: str = ""           # ссылка на карту (Яндекс/2ГИС/Google)
     map_service: str = "yandex" # yandex / 2gis / google
+    location_address: str = ""  # адрес рядом с картой на сайте (пусто — блок адреса скрыт)
+    location_note: str = ""     # пояснение под адресом (этаж, вид и т.п.)
     site_name: str = "Моя квартира"
     hero_title: str = "Искусство комфортного проживания"
     hero_subtitle: str = "Апартаменты премиум-класса · Посуточная аренда"

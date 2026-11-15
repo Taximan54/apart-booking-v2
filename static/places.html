@@ -76,7 +76,7 @@ footer a{color:var(--gold);text-decoration:none}
 
 <header>
   <div class="logo-box">
-    <a href="/" class="logo js-home">Городская <span style="font-weight:600">·</span> Пауза</a>
+    <a href="/" class="logo js-home">Моя квартира</a>
     <a href="/apartments" class="catalog-link js-catalog-link" style="display:none">Квартиры</a>
   </div>
   <a href="/" class="back js-home">← На главную</a>
@@ -85,7 +85,7 @@ footer a{color:var(--gold);text-decoration:none}
 <div class="page-hero">
   <div class="page-eyebrow">Рядом с апартаментами</div>
   <h1 class="page-title">Куда сходить?</h1>
-  <p class="page-subtitle">Лучшие места вблизи — зоопарк, рестораны, кофейни и шопинг</p>
+  <p class="page-subtitle">Лучшие места вблизи — рестораны, кофейни, достопримечательности и шопинг</p>
 </div>
 
 <div class="categories" id="categoriesBar">
@@ -97,7 +97,7 @@ footer a{color:var(--gold);text-decoration:none}
 </div>
 
 <footer>
-  <a href="/" class="js-home">citypause.ru</a> &nbsp;·&nbsp; Новосибирск, ул. Дачная, д. 5, 22 этаж
+  <a href="/" class="js-home" id="footerHost"></a><span id="footerAddr"></span>
 </footer>
 
 <script>
@@ -173,6 +173,16 @@ function renderPlaces(places) {
 }
 
 loadPlaces();
+
+// Подвал: адрес сайта и адрес объекта («Настройки сайта → Карта и адрес»)
+document.getElementById('footerHost').textContent = location.hostname;
+fetch('/api/site-settings' + (PROPERTY_SLUG ? '?property=' + encodeURIComponent(PROPERTY_SLUG) : ''))
+  .then(r => r.json())
+  .then(s => {
+    const addr = (s.location_address || '').trim();
+    if (addr) document.getElementById('footerAddr').textContent = '\u00a0·\u00a0' + addr;
+  })
+  .catch(() => {});
 </script>
 </body>
 </html>

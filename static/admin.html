@@ -10,25 +10,25 @@
 if(q==='round'||q==='classic'){window.CP_UI_FORCE=q;if(q==='round')h.classList.add('ui-round');return;}
 if(localStorage.getItem('adminUiGlobal')==='round')h.classList.add('ui-round');}catch(e){}})();
 </script>
-<title>Панель управления — Городская Пауза</title>
+<title>Панель управления</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Montserrat:wght@300;400;500;600&family=PT+Serif:wght@400;700&family=IM+Fell+English&family=Yeseva+One&family=Marck+Script&family=Pacifico&family=Poiret+One&family=Great+Vibes&family=Bad+Script&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/static/admin.css?v=20261113a">
+<link rel="stylesheet" href="/static/admin.css?v=20261115a">
 <script>window.CP_THEME_NO_AUTO = true;</script>
 <script src="/static/page-theme.js?v=20261101b"></script>
 <script>
 // Тема выбранного объекта из прошлого захода — применяем сразу, чтобы админка не мигала цветами по умолчанию
 (function(){try{var id=localStorage.getItem('adminPropertyId')||'1';var c=JSON.parse(localStorage.getItem('adminTheme:'+id)||'null');if(c&&window.CityPauseTheme)window.CityPauseTheme.apply(c.bg,c.color);}catch(e){}})();
 </script>
-<link rel="stylesheet" href="/static/buttons.css?v=20261113a">
-<link rel="stylesheet" href="/static/admin-round.css?v=20261113a">
-<script src="/static/buttons.js?v=20261113a" defer></script>
+<link rel="stylesheet" href="/static/buttons.css?v=20261115a">
+<link rel="stylesheet" href="/static/admin-round.css?v=20261115a">
+<script src="/static/buttons.js?v=20261115a" defer></script>
 </head>
 <body>
 
 <!-- LOGIN -->
 <div class="login-screen" id="loginScreen">
   <div class="login-box">
-    <div class="login-logo" style="font-size:28px;letter-spacing:.15em">Городская Пауза</div>
+    <div class="login-logo" style="font-size:28px;letter-spacing:.15em">Моя квартира</div>
     <div class="login-sub">Панель управления</div>
     <div class="info-field">
       <div class="info-label">Пароль</div>
@@ -45,7 +45,7 @@ if(localStorage.getItem('adminUiGlobal')==='round')h.classList.add('ui-round');}
 <!-- SIDEBAR -->
 <aside class="sidebar" id="sidebar">
   <div class="sb-logo">
-    <div class="sb-logo-text" style="font-size:17px;letter-spacing:.15em">Городская Пауза</div>
+    <div class="sb-logo-text" style="font-size:17px;letter-spacing:.15em">Моя квартира</div>
     <div class="sb-logo-sub">Панель управления</div>
   </div>
   <div id="sbPropertyBox" style="display:none;padding:12px 16px 14px;border-bottom:1px solid var(--black-border)">
@@ -852,11 +852,11 @@ if(localStorage.getItem('adminUiGlobal')==='round')h.classList.add('ui-round');}
           </div>
           <div class="info-field" style="margin-bottom:16px">
             <div class="info-label">Email</div>
-            <input type="text" class="info-input" id="contactsEmail" placeholder="citypause@mail.ru">
+            <input type="text" class="info-input" id="contactsEmail" placeholder="name@example.ru">
           </div>
           <div class="info-field" style="margin-bottom:16px">
-            <div class="info-label">Telegram (username без @, например: citypause)</div>
-            <input type="text" class="info-input" id="contactsTelegram" placeholder="citypause">
+            <div class="info-label">Telegram (username без @, например: username)</div>
+            <input type="text" class="info-input" id="contactsTelegram" placeholder="username">
           </div>
           <div class="info-field" style="margin-bottom:16px">
             <div class="info-label">WhatsApp (номер телефона)</div>
@@ -867,8 +867,8 @@ if(localStorage.getItem('adminUiGlobal')==='round')h.classList.add('ui-round');}
             <input type="text" class="info-input" id="contactsMax" placeholder="+7 (383) 000-00-00">
           </div>
           <div class="info-field" style="margin-bottom:24px">
-            <div class="info-label">Instagram (username без @, например: citypause)</div>
-            <input type="text" class="info-input" id="contactsInstagram" placeholder="citypause">
+            <div class="info-label">Instagram (username без @, например: username)</div>
+            <input type="text" class="info-input" id="contactsInstagram" placeholder="username">
           </div>
           <div style="font-size:10px;color:var(--text-muted);margin-bottom:16px">Незаполненные поля не показываются на сайте</div>
           <button class="btn btn-primary" onclick="saveContacts()">Сохранить контакты</button>
@@ -937,7 +937,7 @@ if(localStorage.getItem('adminUiGlobal')==='round')h.classList.add('ui-round');}
             <div class="grid-2col" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
               <div class="info-field">
                 <div class="info-label">Название</div>
-                <input type="text" class="info-input" id="placeName" placeholder="Новосибирский зоопарк">
+                <input type="text" class="info-input" id="placeName" placeholder="Например: городской парк">
               </div>
               <div class="info-field">
                 <div class="info-label">Категория</div>
@@ -950,7 +950,7 @@ if(localStorage.getItem('adminUiGlobal')==='round')h.classList.add('ui-round');}
             </div>
             <div class="info-field" style="margin-bottom:16px">
               <div class="info-label">Описание (до 5 предложений)</div>
-              <textarea class="info-input" id="placeDescription" rows="4" style="resize:vertical" placeholder="Один из крупнейших зоопарков России..."></textarea>
+              <textarea class="info-input" id="placeDescription" rows="4" style="resize:vertical" placeholder="Коротко: чем интересно это место"></textarea>
             </div>
             <div style="font-size:11px;color:var(--text-muted);margin-bottom:20px;padding:12px 16px;background:rgba(201,168,76,.04);border:1px solid rgba(201,168,76,.1)">
               Фото загружается в разделе «Фото и медиа».
@@ -1124,7 +1124,7 @@ if(localStorage.getItem('adminUiGlobal')==='round')h.classList.add('ui-round');}
         <div class="card-body">
           <div id="designPreview" style="position:sticky;top:8px;z-index:5;margin-bottom:28px;border:1px solid var(--black-border);border-radius:4px;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,.4)">
             <div id="dpHeader" style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:14px 20px;background:linear-gradient(to bottom,rgba(10,10,10,.98),rgba(10,10,10,.85));border-bottom:1px solid rgba(201,168,76,.15)">
-              <div id="dpLogo" style="letter-spacing:.05em;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%">Городская Пауза</div>
+              <div id="dpLogo" style="letter-spacing:.05em;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%">Моя квартира</div>
               <div id="dpBookBtn" style="padding:6px 14px;border:1px solid #D4A017;font-size:10px;letter-spacing:.05em;white-space:nowrap;flex-shrink:0">Забронировать</div>
             </div>
             <div id="dpHero" style="padding:36px 24px;min-height:160px;display:flex;flex-direction:column;justify-content:center;background:#141414">
@@ -1139,7 +1139,7 @@ if(localStorage.getItem('adminUiGlobal')==='round')h.classList.add('ui-round');}
           <div data-ss-tab="brand">
           <div class="info-field" style="margin-bottom:16px">
             <div class="info-label">Название сайта</div>
-            <input type="text" class="info-input" id="settingsSiteName" placeholder="Городская Пауза" style="width:100%" oninput="renderDesignPreview()">
+            <input type="text" class="info-input" id="settingsSiteName" placeholder="Моя квартира" style="width:100%" oninput="renderDesignPreview()">
           </div>
           <div class="info-field" style="margin-bottom:8px">
             <div class="info-label">Шрифт логотипа и навигации</div>
@@ -1295,7 +1295,7 @@ if(localStorage.getItem('adminUiGlobal')==='round')h.classList.add('ui-round');}
 
       <div class="card" data-ss-tab="location" style="max-width:700px">
         <div class="card-header">
-          <span class="card-title">Карта: ссылка и сервис</span>
+          <span class="card-title">Карта и адрес</span>
         </div>
         <div class="card-body">
           <div style="font-size:11px;color:var(--text-muted);margin-bottom:24px;padding:12px 16px;background:rgba(201,168,76,.04);border:1px solid rgba(201,168,76,.1)">
@@ -1305,6 +1305,16 @@ if(localStorage.getItem('adminUiGlobal')==='round')h.classList.add('ui-round');}
           <div class="info-field" style="margin-bottom:16px">
             <div class="info-label">Ссылка на карту (открывается при клике на фото)</div>
             <input type="text" class="info-input" id="settingsMapUrl" placeholder="https://yandex.ru/maps/..." style="width:100%">
+          </div>
+
+          <div class="info-field" style="margin-bottom:16px">
+            <div class="info-label">Адрес рядом с картой на сайте (пусто — блок адреса не показывается)</div>
+            <input type="text" class="info-input" id="settingsLocAddress" maxlength="200" placeholder="г. Город, ул. Улица, д. 1" style="width:100%">
+          </div>
+
+          <div class="info-field" style="margin-bottom:16px">
+            <div class="info-label">Пояснение под адресом (например: этаж, вид из окон; можно оставить пустым)</div>
+            <input type="text" class="info-input" id="settingsLocNote" maxlength="200" style="width:100%">
           </div>
 
           <div class="info-field" style="margin-bottom:24px">
@@ -1405,11 +1415,11 @@ if(localStorage.getItem('adminUiGlobal')==='round')h.classList.add('ui-round');}
           </div>
           <div class="info-field" style="margin-bottom:20px">
             <div class="info-label">Название (бренд)</div>
-            <input type="text" class="info-input" id="landlordBrand" maxlength="80" placeholder="Городская Пауза">
+            <input type="text" class="info-input" id="landlordBrand" maxlength="80" placeholder="Моя квартира">
           </div>
           <div class="info-field" style="margin-bottom:20px">
             <div class="info-label">Домен сайта</div>
-            <input type="text" class="info-input" id="landlordDomain" maxlength="100" placeholder="citypause.ru">
+            <input type="text" class="info-input" id="landlordDomain" maxlength="100" placeholder="example.ru">
             <div style="font-size:10px;color:var(--text-muted);margin-top:6px">Без https:// и без www, например example.ru</div>
           </div>
           <div class="info-field" style="margin-bottom:20px">
@@ -1523,7 +1533,7 @@ if(localStorage.getItem('adminUiGlobal')==='round')h.classList.add('ui-round');}
             <div style="font-size:11px;color:var(--text-muted);line-height:1.7;margin-bottom:16px">
               База данных броней, ключевые настройки, подписанные договоры и фото паспортов
               автоматически бэкапятся каждую ночь в 04:00 и отправляются файлом в Telegram
-              администраторам и на почту (указанную в Контактах, либо citypause@mail.ru по
+              администраторам и на почту (указанную в Контактах, либо почта по
               умолчанию). Последние 14 копий также хранятся на самом сервере.<br><br>
               Архив защищён паролем (AES-256): пароль задаётся на сервере в config.py (BACKUP_PASSWORD) и нигде в письмах не показывается. Без пароля копия создаётся только на сервере и наружу не отправляется. Открывать архив можно программой 7-Zip.<br><br>
             Если архив вырастет больше 50 МБ — в Telegram не отправится (лимит бота),
@@ -1738,20 +1748,20 @@ if(localStorage.getItem('adminUiGlobal')==='round')h.classList.add('ui-round');}
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
-<script src="/static/admin-js/core.js?v=20261113a"></script>
-<script src="/static/admin-js/theme.js?v=20261113a"></script>
-<script src="/static/admin-js/prices-promo.js?v=20261113a"></script>
-<script src="/static/admin-js/bookings-dashboard.js?v=20261113a"></script>
-<script src="/static/admin-js/ui-contract.js?v=20261113a"></script>
-<script src="/static/admin-js/archive-photos.js?v=20261113a"></script>
-<script src="/static/admin-js/content.js?v=20261113a"></script>
-<script src="/static/admin-js/site-settings.js?v=20261113a"></script>
-<script src="/static/admin-js/properties.js?v=20261113a"></script>
-<script src="/static/admin-js/catalog.js?v=20261113a"></script>
-<script src="/static/admin-js/integrations.js?v=20261113a"></script>
-<script src="/static/admin-js/chat-faq.js?v=20261113a"></script>
-<script src="/static/admin-js/booking-rules.js?v=20261113a"></script>
-<script src="/static/admin-js/monitoring.js?v=20261113a"></script>
-<script src="/static/admin-js/init.js?v=20261113a"></script>
+<script src="/static/admin-js/core.js?v=20261115a"></script>
+<script src="/static/admin-js/theme.js?v=20261115a"></script>
+<script src="/static/admin-js/prices-promo.js?v=20261115a"></script>
+<script src="/static/admin-js/bookings-dashboard.js?v=20261115a"></script>
+<script src="/static/admin-js/ui-contract.js?v=20261115a"></script>
+<script src="/static/admin-js/archive-photos.js?v=20261115a"></script>
+<script src="/static/admin-js/content.js?v=20261115a"></script>
+<script src="/static/admin-js/site-settings.js?v=20261115a"></script>
+<script src="/static/admin-js/properties.js?v=20261115a"></script>
+<script src="/static/admin-js/catalog.js?v=20261115a"></script>
+<script src="/static/admin-js/integrations.js?v=20261115a"></script>
+<script src="/static/admin-js/chat-faq.js?v=20261115a"></script>
+<script src="/static/admin-js/booking-rules.js?v=20261115a"></script>
+<script src="/static/admin-js/monitoring.js?v=20261115a"></script>
+<script src="/static/admin-js/init.js?v=20261115a"></script>
 </body>
 </html>

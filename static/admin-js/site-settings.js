@@ -224,7 +224,7 @@ function renderFontPicker() {
   const el = document.getElementById('fontPicker');
   el.innerHTML = FONT_OPTIONS.map(f => `
     <div onclick="selectFont('${f.key}')" id="fontOpt-${f.key}" style="cursor:pointer;padding:14px 8px;text-align:center;border:1px solid ${f.key === selectedFont ? 'var(--gold)' : 'var(--black-border)'};background:var(--black-card);transition:border-color .2s">
-      <div style="font-family:${f.family};font-weight:${selectedBold ? 700 : f.weight};font-size:20px;letter-spacing:.03em;background:linear-gradient(180deg,#FFD060 0%,#D4920A 28%,#8B5E00 50%,#D4920A 72%,#FFD060 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:4px">Городская Пауза</div>
+      <div style="font-family:${f.family};font-weight:${selectedBold ? 700 : f.weight};font-size:20px;letter-spacing:.03em;background:linear-gradient(180deg,#FFD060 0%,#D4920A 28%,#8B5E00 50%,#D4920A 72%,#FFD060 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:4px">Моя квартира</div>
       <div style="font-size:9px;color:var(--text-muted);letter-spacing:.05em">${f.label}</div>
     </div>
   `).join('');
@@ -256,7 +256,7 @@ function renderHeroFontPicker() {
   const el = document.getElementById('heroFontPicker');
   el.innerHTML = HERO_FONT_OPTIONS.map(f => `
     <div onclick="selectHeroFont('${f.key}')" id="heroFontOpt-${f.key}" style="cursor:pointer;padding:14px 8px;text-align:center;border:1px solid ${f.key === selectedHeroFont ? 'var(--gold)' : 'var(--black-border)'};background:var(--black-card);transition:border-color .2s">
-      <div style="font-family:${f.family};font-weight:${selectedHeroBold ? 700 : f.weight};font-size:20px;letter-spacing:.03em;background:linear-gradient(180deg,#FFD060 0%,#D4920A 28%,#8B5E00 50%,#D4920A 72%,#FFD060 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:4px">Городская Пауза</div>
+      <div style="font-family:${f.family};font-weight:${selectedHeroBold ? 700 : f.weight};font-size:20px;letter-spacing:.03em;background:linear-gradient(180deg,#FFD060 0%,#D4920A 28%,#8B5E00 50%,#D4920A 72%,#FFD060 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:4px">Моя квартира</div>
       <div style="font-size:9px;color:var(--text-muted);letter-spacing:.05em">${f.label}</div>
     </div>
   `).join('');
@@ -377,7 +377,7 @@ function renderDesignPreview() {
   const siteNameEl  = document.getElementById('settingsSiteName');
   const heroTitleIn = document.getElementById('settingsHeroTitle');
   const heroSubIn   = document.getElementById('settingsHeroSubtitle');
-  const siteName  = (siteNameEl && siteNameEl.value.trim()) || 'Городская Пауза';
+  const siteName  = (siteNameEl && siteNameEl.value.trim()) || 'Моя квартира';
   const heroTitle = (heroTitleIn && heroTitleIn.value.trim()) || 'Искусство комфортного проживания';
   const heroSub   = (heroSubIn && heroSubIn.value.trim()) || 'Апартаменты премиум-класса · Посуточная аренда';
 
@@ -427,7 +427,9 @@ async function loadSiteSettings() {
     const s = await apiGet('/api/site-settings');
     document.getElementById('settingsMapUrl').value       = s.map_url        || '';
     document.getElementById('settingsMapService').value   = s.map_service    || 'yandex';
-    document.getElementById('settingsSiteName').value     = s.site_name      || 'Городская Пауза';
+    document.getElementById('settingsLocAddress').value   = s.location_address || '';
+    document.getElementById('settingsLocNote').value      = s.location_note  || '';
+    document.getElementById('settingsSiteName').value     = s.site_name      || 'Моя квартира';
     document.getElementById('settingsHeroTitle').value    = s.hero_title     || '';
     document.getElementById('settingsHeroSubtitle').value = s.hero_subtitle  || '';
     document.getElementById('settingsHeroEyebrow').value  = s.hero_eyebrow   ?? 'Апартаменты в городе';
@@ -547,6 +549,8 @@ async function saveSiteSettings() {
   const payload = {
     map_url:     document.getElementById('settingsMapUrl').value.trim(),
     map_service: document.getElementById('settingsMapService').value,
+    location_address: document.getElementById('settingsLocAddress').value.trim(),
+    location_note:    document.getElementById('settingsLocNote').value.trim(),
   };
   try {
     // Сохраняем только URL и сервис — фото уже сохраняются при загрузке
@@ -563,7 +567,7 @@ async function saveDesignSettings() {
     collectedNavLabels[item.key] = el ? el.value.trim() : item.def;
   });
   const payload = {
-    site_name:     document.getElementById('settingsSiteName').value.trim()     || 'Городская Пауза',
+    site_name:     document.getElementById('settingsSiteName').value.trim()     || 'Моя квартира',
     hero_title:    document.getElementById('settingsHeroTitle').value.trim(),
     hero_subtitle: document.getElementById('settingsHeroSubtitle').value.trim(),
     hero_eyebrow:  document.getElementById('settingsHeroEyebrow').value.trim(),

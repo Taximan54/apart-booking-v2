@@ -575,13 +575,13 @@ footer{padding:60px;border-top:1px solid var(--black-border);display:grid;grid-t
             <div style="font-family:'Cormorant Garamond',serif;font-size:12px;letter-spacing:.15em;color:#fff;background:rgba(0,0,0,.5);padding:6px 14px;backdrop-filter:blur(4px)">Открыть на карте →</div>
           </div>
         </a>
-        <div class="loc-addr-row" style="padding:20px 24px;background:var(--black-card);border:1px solid var(--black-border);border-top:none;display:flex;align-items:center;justify-content:space-between">
+        <div class="loc-addr-row" id="locAddrRow" style="padding:20px 24px;background:var(--black-card);border:1px solid var(--black-border);border-top:none;display:none;align-items:center;justify-content:space-between">
           <div>
             <div style="font-size:10px;letter-spacing:.2em;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px">Адрес</div>
-            <div style="font-family:'Cormorant Garamond',serif;font-size:18px;color:var(--text-primary)">г. Новосибирск, ул. Дачная, д. 5</div>
-            <div style="font-size:11px;color:var(--text-muted);margin-top:2px">22 этаж · Панорамный вид на город</div>
+            <div id="locAddrText" style="font-family:'Cormorant Garamond',serif;font-size:18px;color:var(--text-primary)"></div>
+            <div id="locAddrNote" style="font-size:11px;color:var(--text-muted);margin-top:2px;display:none"></div>
           </div>
-          <a class="loc-map-btn" href="https://yandex.ru/maps/?text=Новосибирск%2C+ул.+Дачная+5&z=16" target="_blank" style="font-family:'Cormorant Garamond',serif;font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);text-decoration:none;border:1px solid rgba(212,160,23,.4);padding:10px 20px;white-space:nowrap;transition:all .3s" onmouseover="this.style.borderColor='var(--gold)'" onmouseout="this.style.borderColor='rgba(212,160,23,.4)'">На карте →</a>
+          <a class="loc-map-btn" id="locMapBtn" href="#" target="_blank" style="display:none;font-family:'Cormorant Garamond',serif;font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);text-decoration:none;border:1px solid rgba(212,160,23,.4);padding:10px 20px;white-space:nowrap;transition:all .3s" onmouseover="this.style.borderColor='var(--gold)'" onmouseout="this.style.borderColor='rgba(212,160,23,.4)'">На карте →</a>
         </div>
       </div>
       <div class="location-points" id="locationPointsGrid">
@@ -1354,6 +1354,22 @@ async function applySiteSettings() {
             </div>
           `).join('');
         }
+      }
+    }
+
+    // Адрес рядом с картой («Настройки сайта → Карта и адрес»); без адреса блок скрыт
+    const addrRow = document.getElementById('locAddrRow');
+    if(addrRow) {
+      const addr = (settings.location_address || '').trim();
+      if(addr) {
+        document.getElementById('locAddrText').textContent = addr;
+        const note = (settings.location_note || '').trim();
+        const noteEl = document.getElementById('locAddrNote');
+        noteEl.textContent = note;
+        noteEl.style.display = note ? '' : 'none';
+        const mapBtn = document.getElementById('locMapBtn');
+        if(settings.map_url) { mapBtn.href = settings.map_url; mapBtn.style.display = ''; } else { mapBtn.style.display = 'none'; }
+        addrRow.style.display = 'flex';
       }
     }
 

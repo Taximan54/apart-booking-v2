@@ -31,7 +31,7 @@ footer{padding:40px 60px;border-top:1px solid var(--black-border);text-align:cen
 
 <header>
   <div class="logo-box">
-    <a href="/" class="logo">Городская Пауза</a>
+    <a href="/" class="logo">Моя квартира</a>
     <a href="/apartments" class="catalog-link js-catalog-link" style="display:none">Квартиры</a>
   </div>
   <a href="/" class="back">← На главную</a>
@@ -42,7 +42,7 @@ footer{padding:40px 60px;border-top:1px solid var(--black-border);text-align:cen
   <div class="rules-text" id="rulesContent">Загрузка...</div>
 </div>
 
-<footer>citypause.ru &nbsp;·&nbsp; citypause@mail.ru</footer>
+<footer id="pageFooter"></footer>
 
 <script>
 // Правила конкретного объекта: адрес страницы приходит в ?property=название (ссылка со страницы /o/название)
@@ -63,6 +63,16 @@ fetch('/api/house-rules' + (PROPERTY_SLUG ? '?property=' + encodeURIComponent(PR
   .catch(() => {
     document.getElementById('rulesContent').textContent = 'Правила временно недоступны. Пожалуйста, свяжитесь с нами.';
   });
+// Подвал: адрес сайта и почта из раздела «Контакты»
+(function() {
+  var f = document.getElementById('pageFooter');
+  if (!f) return;
+  f.textContent = location.hostname;
+  fetch('/api/contacts').then(function(r) { return r.json(); }).then(function(c) {
+    var e = (c.email || '').trim();
+    if (e) f.textContent = location.hostname + '\u00a0·\u00a0' + e;
+  }).catch(function() {});
+})();
 </script>
 </body>
 </html>

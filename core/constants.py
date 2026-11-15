@@ -123,6 +123,7 @@ LANDLORD_EMAIL = "citypause@mail.ru"
 
 DEFAULT_SETTINGS = {
     "hero_photo": "", "hero_photo_mobile": "", "map_photo": "", "map_url": "", "map_service": "yandex",
+    "location_address": "", "location_note": "",
     "site_name": "Моя квартира",
     "hero_title": "Искусство комфортного проживания",
     "hero_subtitle": "Апартаменты премиум-класса · Посуточная аренда",
