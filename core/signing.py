@@ -6,7 +6,7 @@ from PIL import Image
 
 from core.constants import CONTACTS_FILE, LANDLORD_EMAIL, PASSPORT_DIR
 from core.contract_docs import generate_contract, generate_contract_pdf, generate_consent
-from core.landlord import landlord_brand, landlord_domain
+from core.landlord import get_landlord_email, landlord_brand, landlord_domain
 from core.logger import get_logger
 from core.passports import load_passport_map, apply_passport_watermark
 
@@ -36,14 +36,15 @@ def _doc_id_for(booking, doc_type):
 
 def _signature_block(booking, doc_type, doc_id):
     """
-    Блок электронной подписи (ПЭП) в рамке с логотипом «Городская Пауза» —
+    Блок электронной подписи (ПЭП) в рамке с названием арендодателя —
     одинаковый по структуре для любого документа (договор, согласие на ПД).
     doc_id передаётся снаружи, чтобы совпадать с тем, что показан в шапке
     каждой страницы документа.
     """
     landlord_phone = get_landlord_phone()
+    landlord_email = LANDLORD_EMAIL or get_landlord_email()   # почта из «Контактов» (константа — только запасной вариант)
     # Хэш арендодателя одинаковый для всех документов, пока не меняется телефон в контактах.
-    landlord_sign_hash = _sig_hash(LANDLORD_EMAIL, landlord_phone, landlord_brand())
+    landlord_sign_hash = _sig_hash(landlord_email, landlord_phone, landlord_brand())
 
     booking_ref = str(booking.get("username") or booking.get("id", ""))
     guest_hash = _sig_hash(booking_ref, doc_type, booking.get("guest_phone", ""), booking.get("signed_at", ""))
@@ -56,7 +57,7 @@ def _signature_block(booking, doc_type, doc_id):
         "Подпись Арендодателя:\n"
         f"{landlord_sign_hash}\n"
         f"{landlord_brand()}\n"
-        f"Email: {LANDLORD_EMAIL}\n"
+        f"Email: {landlord_email}\n"
         f"Телефон: {landlord_phone}\n\n"
         "Подпись Арендатора:\n"
         f"{guest_hash}\n"

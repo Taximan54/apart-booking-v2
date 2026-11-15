@@ -61,7 +61,7 @@ def email_contract_signed(booking):
         ]
     )
 
-    # Дублируем это же письмо на почту Городской Паузы (из Контактов) — для архива
+    # Дублируем это же письмо на почту арендодателя (из Контактов) — для архива
     landlord_email = LANDLORD_EMAIL
     if os.path.exists(CONTACTS_FILE):
         try:
@@ -465,6 +465,6 @@ def email_admin_new_booking(booking_id, guest_name, guest_phone, guest_email,
         "" + landlord_domain() + "/static/admin.html</a>"
         "</div></div>"
     )
-    send_email(MAIL_ADMIN,
+    send_email(MAIL_ADMIN or get_landlord_email(),
                "\u041d\u043e\u0432\u0430\u044f \u0431\u0440\u043e\u043d\u044c " + booking_id + " \u2014 \u0416\u0434\u0451\u0442 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0438\u044f",
                html)

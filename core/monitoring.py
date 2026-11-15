@@ -246,7 +246,12 @@ def alert_recipient() -> str:
             return email
     except Exception as e:
         logger.warning("Не удалось прочитать почту для уведомлений: %s", e)
-    return LANDLORD_EMAIL or ""
+    try:
+        from core.landlord import get_landlord_email
+        return LANDLORD_EMAIL or get_landlord_email() or ""
+    except Exception as e:
+        logger.warning("Не удалось прочитать почту арендодателя: %s", e)
+        return LANDLORD_EMAIL or ""
 
 
 def _brand() -> str:
@@ -254,7 +259,7 @@ def _brand() -> str:
         from core.landlord import get_landlord
         return get_landlord()["brand_name"]
     except Exception:
-        return "Городская Пауза"
+        return "Моя квартира"
 
 
 def _send_alert(kind: str, incident: dict) -> bool:

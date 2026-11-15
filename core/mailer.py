@@ -6,6 +6,7 @@ from email import encoders
 from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from core.landlord import landlord_brand
 from core.logger import get_logger
 
 logger = get_logger(__name__)
@@ -15,8 +16,17 @@ logger = get_logger(__name__)
 # EMAIL
 # =====================================================
 
-MAIL_FROM     = os.getenv("MAIL_FROM", "citypause@mail.ru")
+# Почтовый ящик, с которого уходят письма, задаётся в /app/.env (MAIL_FROM, MAIL_PASSWORD).
+# Необязательно: MAIL_FROM_NAME (имя отправителя; по умолчанию — название из раздела «Бренд»),
+# MAIL_SMTP_HOST и MAIL_SMTP_PORT (по умолчанию smtp.mail.ru:465).
+MAIL_FROM     = os.getenv("MAIL_FROM", "")
 MAIL_PASSWORD = os.getenv("MAIL_PASSWORD", "")
+MAIL_FROM_NAME = os.getenv("MAIL_FROM_NAME", "")
+MAIL_SMTP_HOST = os.getenv("MAIL_SMTP_HOST", "smtp.mail.ru")
+try:
+    MAIL_SMTP_PORT = int(os.getenv("MAIL_SMTP_PORT", "465"))
+except ValueError:
+    MAIL_SMTP_PORT = 465
 
 # Итог последних отправок (для мониторинга сбоев): время и текст последней ошибки
 STATUS = {"last_ok_ts": 0.0, "last_error_ts": 0.0, "last_error": ""}
@@ -36,7 +46,7 @@ def send_email(to, subject, html_body, attachments=None, text_body=None):
         from email.utils import formataddr
         msg = MIMEMultipart("mixed")
         msg["Subject"] = Header(subject, "utf-8")
-        msg["From"]    = formataddr((str(Header("Gorodskaya Pauza", "utf-8")), MAIL_FROM))
+        msg["From"]    = formataddr((str(Header(MAIL_FROM_NAME or landlord_brand(), "utf-8")), MAIL_FROM))
         msg["To"]      = to
         msg["MIME-Version"] = "1.0"
 
@@ -60,11 +70,12 @@ def send_email(to, subject, html_body, attachments=None, text_body=None):
             part.add_header("Content-Disposition", f'attachment; filename="{filename}"')
             msg.attach(part)
 
-        with smtplib.SMTP_SSL("smtp.mail.ru", 465) as server:
+        with smtplib.SMTP_SSL(MAIL_SMTP_HOST, MAIL_SMTP_PORT) as server:
             server.login(MAIL_FROM, MAIL_PASSWORD)
             server.sendmail(MAIL_FROM, [to], msg.as_string())
         logger.info("OK EMAIL sent to " + to)
         STATUS["last_ok_ts"] = time.time()
     except Exception as e:
         logger.error("ERROR email: " + str(e), exc_info=True)
-        STATUS.update(last_error_ts=time.time(), last_error=str(e)[:200])
+        reason = "не задан MAIL_FROM" if not MAIL_FROM else str(e)[:200]
+        STATUS.update(last_error_ts=time.time(), last_error=reason)

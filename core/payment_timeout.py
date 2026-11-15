@@ -8,6 +8,7 @@ from datetime import datetime, timedelta, timezone
 
 from core.bookings_repo import cancel_unpaid_by_id, list_expired_unpaid
 from core.constants import DATA_DIR, MAIL_ADMIN
+from core.landlord import get_landlord_email
 from core.logger import get_logger
 from core.mailer import send_email
 
@@ -57,7 +58,7 @@ def _notify_admin(booking: dict, hours: int) -> None:
         f"<p>Причина: оплата не подтверждена в течение {hours} ч. Даты снова свободны на сайте.</p>"
         "</div>"
     )
-    threading.Thread(target=send_email, args=(MAIL_ADMIN, f"Бронь отменена: оплата не подтверждена — {ref}", body)).start()
+    threading.Thread(target=send_email, args=(MAIL_ADMIN or get_landlord_email(), f"Бронь отменена: оплата не подтверждена — {ref}", body)).start()
 
 
 def run_expire() -> list:

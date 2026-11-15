@@ -107,7 +107,7 @@ DEFAULT_PRICES   = {
 }
 
 os.makedirs(CONTRACTS_DIR, exist_ok=True)
-MAIL_ADMIN    = os.getenv("MAIL_ADMIN", "citypause@mail.ru")
+MAIL_ADMIN    = os.getenv("MAIL_ADMIN", "")   # почта для служебных писем; пусто — берётся почта из «Контактов»
 
 # =====================================================
 # ПОДПИСАНИЕ ДОГОВОРА (ПЭП по 63-ФЗ, по образцу ОкиДоки)
@@ -116,7 +116,7 @@ MAIL_ADMIN    = os.getenv("MAIL_ADMIN", "citypause@mail.ru")
 # сам факт перехода по уникальной, известной только гостю ссылке и нажатия
 # кнопки «Подписать» является простой электронной подписью.
 
-LANDLORD_EMAIL = "citypause@mail.ru"
+LANDLORD_EMAIL = ""   # запасная почта арендодателя; обычно пусто — почта берётся из «Контактов» (core.landlord.get_landlord_email)
 
 # API — SITE SETTINGS (обложка, карта)
 # =====================================================

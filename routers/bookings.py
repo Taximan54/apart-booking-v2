@@ -61,7 +61,7 @@ from handlers.admin import load_door_code
 from services.booking_service import db_lock, is_dates_available
 from core.ical_sync import list_platforms, manual_booking_replaces_blocks
 from core.properties import admin_property_id, property_file, public_property_id
-from core.landlord import site_url
+from core.landlord import get_landlord_email, site_url
 from core.logger import get_logger
 
 logger = get_logger(__name__)
@@ -549,7 +549,7 @@ async def payment_notify(p: PaymentNotify):
     # Email админу
     import threading
     threading.Thread(target=send_email, args=(
-        MAIL_ADMIN,
+        MAIL_ADMIN or get_landlord_email(),
         "\u0413\u043e\u0441\u0442\u044c \u0441\u043e\u043e\u0431\u0449\u0438\u043b \u043e\u0431 \u043e\u043f\u043b\u0430\u0442\u0435 \u2014 " + p.booking_ref,
         "<div style='font-family:Arial;padding:24px;background:#0A0A0A;color:#F0E6C8'>"
         "<h2 style='color:#C9A84C'>\u0413\u043e\u0441\u0442\u044c \u0441\u043e\u043e\u0431\u0449\u0438\u043b \u043e\u0431 \u043e\u043f\u043b\u0430\u0442\u0435</h2>"
