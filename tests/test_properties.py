@@ -315,9 +315,11 @@ def test_booked_dates_and_listing_use_the_property(bookings_env, monkeypatch):
     assert "BLOCK-AAA111" in json.dumps(admin_main, ensure_ascii=False) and "BLOCK-BBB222" not in json.dumps(admin_main, ensure_ascii=False)
 
 
-def test_contract_address_comes_from_the_booking_property(bookings_env, monkeypatch):
+def test_contract_address_comes_from_the_booking_property(bookings_env, monkeypatch, tmp_path):
     rb, props, path = bookings_env
     import core.contract_docs as cd
+    import core.landlord as ll
+    monkeypatch.setattr(ll, "LANDLORD_FILE", str(tmp_path / "no_landlord.json"))   # не читать боевой /data/landlord.json
     from core.constants import DEFAULT_LANDLORD
     monkeypatch.setattr(cd, "load_contract_template", lambda: "{{АДРЕС}}")
     plain = lambda t: t.replace("\ue000", "").replace("\ue001", "")

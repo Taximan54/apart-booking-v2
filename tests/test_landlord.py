@@ -81,10 +81,11 @@ def test_contract_placeholders_use_settings(files, monkeypatch):
 
 
 def test_contract_uses_current_defaults_when_nothing_saved(files, monkeypatch):
-    """Без своих настроек договор выглядит как раньше (адрес, домен, бренд)."""
+    """Без своих настроек в договор попадают значения по умолчанию (бренд, адрес, домен)."""
     import core.contract_docs as cd
+    from core.constants import DEFAULT_LANDLORD as D
     monkeypatch.setattr(cd, "load_contract_template", lambda: "{{АРЕНДОДАТЕЛЬ}}|{{АДРЕС}}|{{САЙТ}}")
-    assert plain(cd.generate_contract(dict(BOOKING))) == "Городская Пауза|г. Новосибирск, ул. Дачная, д. 5, квартира 286, 22 этаж|citypause.ru"
+    assert plain(cd.generate_contract(dict(BOOKING))) == f"{D['brand_name']}|{D['address']}|{D['domain']}"
 
 
 def test_api_requires_admin():
