@@ -12,16 +12,16 @@ if(localStorage.getItem('adminUiGlobal')==='round')h.classList.add('ui-round');}
 </script>
 <title>Панель управления</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Montserrat:wght@300;400;500;600&family=PT+Serif:wght@400;700&family=IM+Fell+English&family=Yeseva+One&family=Marck+Script&family=Pacifico&family=Poiret+One&family=Great+Vibes&family=Bad+Script&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/static/admin.css?v=20261115a">
+<link rel="stylesheet" href="/static/admin.css?v=20261116a">
 <script>window.CP_THEME_NO_AUTO = true;</script>
 <script src="/static/page-theme.js?v=20261101b"></script>
 <script>
 // Тема выбранного объекта из прошлого захода — применяем сразу, чтобы админка не мигала цветами по умолчанию
 (function(){try{var id=localStorage.getItem('adminPropertyId')||'1';var c=JSON.parse(localStorage.getItem('adminTheme:'+id)||'null');if(c&&window.CityPauseTheme)window.CityPauseTheme.apply(c.bg,c.color);}catch(e){}})();
 </script>
-<link rel="stylesheet" href="/static/buttons.css?v=20261115a">
-<link rel="stylesheet" href="/static/admin-round.css?v=20261115a">
-<script src="/static/buttons.js?v=20261115a" defer></script>
+<link rel="stylesheet" href="/static/buttons.css?v=20261116a">
+<link rel="stylesheet" href="/static/admin-round.css?v=20261116a">
+<script src="/static/buttons.js?v=20261116a" defer></script>
 </head>
 <body>
 
@@ -608,6 +608,12 @@ if(localStorage.getItem('adminUiGlobal')==='round')h.classList.add('ui-round');}
             <label style="display:flex;gap:10px;align-items:flex-start;cursor:pointer;font-size:13px;color:var(--text-secondary);line-height:1.6">
               <input type="checkbox" id="retPurgeCancelled" onchange="retentionFormChanged()" style="margin-top:4px">
               <span>Удалять файлы отменённых броней (если договор не был подписан). Отменённые брони с подписанным договором не трогаются.</span>
+            </label>
+          </div>
+          <div class="info-field" style="margin-bottom:18px">
+            <label style="display:flex;gap:10px;align-items:flex-start;cursor:pointer;font-size:13px;color:var(--text-secondary);line-height:1.6">
+              <input type="checkbox" id="retClearPassport" onchange="retentionFormChanged()" style="margin-top:4px">
+              <span>Стирать номер паспорта в базе после возврата залога (если подписанный договор сохранён). В карточке брони вместо номера будет «удалён»; сам номер остаётся только в подписанном договоре. Необратимо.</span>
             </label>
           </div>
           <div id="retPreview" style="font-size:12px;color:var(--gold);line-height:1.7;margin-bottom:16px"></div>
@@ -1748,20 +1754,20 @@ if(localStorage.getItem('adminUiGlobal')==='round')h.classList.add('ui-round');}
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
-<script src="/static/admin-js/core.js?v=20261115a"></script>
-<script src="/static/admin-js/theme.js?v=20261115a"></script>
-<script src="/static/admin-js/prices-promo.js?v=20261115a"></script>
-<script src="/static/admin-js/bookings-dashboard.js?v=20261115a"></script>
-<script src="/static/admin-js/ui-contract.js?v=20261115a"></script>
-<script src="/static/admin-js/archive-photos.js?v=20261115a"></script>
-<script src="/static/admin-js/content.js?v=20261115a"></script>
-<script src="/static/admin-js/site-settings.js?v=20261115a"></script>
-<script src="/static/admin-js/properties.js?v=20261115a"></script>
-<script src="/static/admin-js/catalog.js?v=20261115a"></script>
-<script src="/static/admin-js/integrations.js?v=20261115a"></script>
-<script src="/static/admin-js/chat-faq.js?v=20261115a"></script>
-<script src="/static/admin-js/booking-rules.js?v=20261115a"></script>
-<script src="/static/admin-js/monitoring.js?v=20261115a"></script>
-<script src="/static/admin-js/init.js?v=20261115a"></script>
+<script src="/static/admin-js/core.js?v=20261116a"></script>
+<script src="/static/admin-js/theme.js?v=20261116a"></script>
+<script src="/static/admin-js/prices-promo.js?v=20261116a"></script>
+<script src="/static/admin-js/bookings-dashboard.js?v=20261116a"></script>
+<script src="/static/admin-js/ui-contract.js?v=20261116a"></script>
+<script src="/static/admin-js/archive-photos.js?v=20261116a"></script>
+<script src="/static/admin-js/content.js?v=20261116a"></script>
+<script src="/static/admin-js/site-settings.js?v=20261116a"></script>
+<script src="/static/admin-js/properties.js?v=20261116a"></script>
+<script src="/static/admin-js/catalog.js?v=20261116a"></script>
+<script src="/static/admin-js/integrations.js?v=20261116a"></script>
+<script src="/static/admin-js/chat-faq.js?v=20261116a"></script>
+<script src="/static/admin-js/booking-rules.js?v=20261116a"></script>
+<script src="/static/admin-js/monitoring.js?v=20261116a"></script>
+<script src="/static/admin-js/init.js?v=20261116a"></script>
 </body>
 </html>

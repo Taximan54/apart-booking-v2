@@ -29,10 +29,10 @@ def env(tmp_path, monkeypatch):
     return types.SimpleNamespace(contracts=contracts, pdir=pdir, archive=tmp_path / "archive")
 
 
-def add_booking(ref, status="confirmed", check_out="2026-10-01", deposit_returned=1, signed_at="2026-09-01 10:00:00"):
+def add_booking(ref, status="confirmed", check_out="2026-10-01", deposit_returned=1, signed_at="2026-09-01 10:00:00", passport=""):
     conn = db.get_db()
-    conn.execute("INSERT INTO bookings (username, status, check_out, deposit_returned, signed_at) VALUES (?,?,?,?,?)",
-                 (ref, status, check_out, deposit_returned, signed_at))
+    conn.execute("INSERT INTO bookings (username, status, check_out, deposit_returned, signed_at, passport) VALUES (?,?,?,?,?,?)",
+                 (ref, status, check_out, deposit_returned, signed_at, passport))
     conn.commit()
     conn.close()
 
@@ -55,22 +55,31 @@ def archive_names(path):
         return set(zf.namelist())
 
 
-def set_days(pack=0, delete=0, purge=False):
-    retention.save_settings(pack, delete, purge)
+def set_days(pack=0, delete=0, purge=False, clear=False):
+    retention.save_settings(pack, delete, purge, clear)
+
+
+def passport_of(ref):
+    conn = db.get_db()
+    try:
+        return conn.execute("SELECT passport FROM bookings WHERE username=?", (ref,)).fetchone()[0]
+    finally:
+        conn.close()
 
 
 def test_settings_default_off_and_validation(env):
-    assert retention.load_settings() == {"pack_days": 0, "delete_days": 0, "purge_cancelled": False}
+    assert retention.load_settings() == {"pack_days": 0, "delete_days": 0, "purge_cancelled": False, "clear_passport": False}
     with pytest.raises(ValueError):
         retention.save_settings(30, 20, False)
-    assert retention.save_settings(30, 90, True) == {"pack_days": 30, "delete_days": 90, "purge_cancelled": True}
+    assert retention.save_settings(30, 90, True) == {"pack_days": 30, "delete_days": 90, "purge_cancelled": True, "clear_passport": False}
+    assert retention.save_settings(30, 90, True, True)["clear_passport"] is True
     assert retention.save_settings(0, 10, False)["delete_days"] == 10   # упаковка выключена, архивы всё равно можно удалять по сроку
 
 
 def test_nothing_happens_by_default(env):
     add_booking("GP-AAA111")
     add_files(env, "GP-AAA111")
-    assert retention.run_retention() == {"packed": 0, "archives_deleted": 0, "purged": 0, "errors": 0}
+    assert retention.run_retention() == {"packed": 0, "archives_deleted": 0, "purged": 0, "passports_cleared": 0, "errors": 0}
     assert (env.contracts / "GP-AAA111_podpisan.pdf").exists() and (env.pdir / "GP-AAA111_1.jpg").exists()
 
 
@@ -163,7 +172,7 @@ def test_preview_matches_what_will_happen_and_changes_nothing(env):
     add_booking("GP-AAA111"); add_files(env, "GP-AAA111")
     add_booking("GP-CNL001", status="cancelled", deposit_returned=0, signed_at=""); add_files(env, "GP-CNL001", signed=False)
     p = retention.preview(30, 0, False)
-    assert p == {"to_pack": 1, "archives_to_delete": 0, "cancelled_with_files": 1}
+    assert p == {"to_pack": 1, "archives_to_delete": 0, "cancelled_with_files": 1, "passports_to_clear": 0}
     assert retention.preview(0, 0, False)["to_pack"] == 0
     assert (env.contracts / "GP-AAA111_podpisan.pdf").exists() and (env.contracts / "GP-CNL001.txt").exists()
     with pytest.raises(ValueError):
@@ -177,3 +186,60 @@ def test_delete_archive_removes_files_and_index(env):
     assert retention.delete_archive("GP-AAA111") == 1
     assert not (env.archive / "GP-AAA111.zip").exists() and retention.list_archived() == {}
     assert retention.delete_archive("GP-AAA111") == 0   # повторно безопасно
+
+
+# ---------------------------------------------------------------------------
+# Стирание номера паспорта в базе
+# ---------------------------------------------------------------------------
+
+def test_passport_cleared_after_deposit_returned_and_checkout(env):
+    add_booking("GP-AAA111", passport="1234 567890"); add_files(env, "GP-AAA111")
+    set_days(clear=True)
+    assert retention.run_retention()["passports_cleared"] == 1
+    assert passport_of("GP-AAA111") == retention.PASSPORT_CLEARED
+    assert (env.contracts / "GP-AAA111_podpisan.pdf").exists()      # подписанный договор с номером на месте
+    assert retention.run_retention()["passports_cleared"] == 0      # повторно ничего не делаем
+
+
+def test_passport_kept_when_flag_off_or_conditions_not_met(env):
+    add_booking("GP-OFF001", passport="1111 111111"); add_files(env, "GP-OFF001")
+    add_booking("GP-NODEP1", deposit_returned=0, passport="2222 222222"); add_files(env, "GP-NODEP1")
+    add_booking("GP-NOPDF1", passport="3333 333333"); add_files(env, "GP-NOPDF1", signed=False)       # подписанного договора нет
+    add_booking("GP-FUTUR1", check_out="2026-12-20", passport="4444 444444"); add_files(env, "GP-FUTUR1")   # выезд ещё впереди
+    set_days(clear=False)
+    assert retention.run_retention()["passports_cleared"] == 0
+    assert passport_of("GP-OFF001") == "1111 111111"
+    set_days(clear=True)
+    assert retention.run_retention()["passports_cleared"] == 1       # только GP-OFF001
+    assert passport_of("GP-OFF001") == retention.PASSPORT_CLEARED
+    assert passport_of("GP-NODEP1") == "2222 222222"
+    assert passport_of("GP-NOPDF1") == "3333 333333"
+    assert passport_of("GP-FUTUR1") == "4444 444444"
+
+
+def test_passport_cleared_for_already_archived_booking(env):
+    add_booking("GP-AAA111", passport="1234 567890"); add_files(env, "GP-AAA111")
+    set_days(pack=30)
+    retention.run_retention()                                        # упаковали: подписанный договор теперь в архиве
+    assert not (env.contracts / "GP-AAA111_podpisan.pdf").exists()
+    assert passport_of("GP-AAA111") == "1234 567890"
+    set_days(pack=30, clear=True)
+    assert retention.run_retention()["passports_cleared"] == 1
+    assert passport_of("GP-AAA111") == retention.PASSPORT_CLEARED
+
+
+def test_passport_of_cancelled_cleared_only_if_unsigned_and_purge_on(env):
+    add_booking("GP-CNL001", status="cancelled", deposit_returned=0, signed_at="", passport="5555 555555")
+    add_booking("GP-CNL002", status="cancelled", deposit_returned=0, passport="6666 666666"); add_files(env, "GP-CNL002")
+    set_days(purge=False, clear=True)
+    assert retention.run_retention()["passports_cleared"] == 0
+    set_days(purge=True, clear=True)
+    assert retention.run_retention()["passports_cleared"] == 1
+    assert passport_of("GP-CNL001") == retention.PASSPORT_CLEARED
+    assert passport_of("GP-CNL002") == "6666 666666"                 # отменённая с подписанным договором не трогается
+
+
+def test_preview_counts_passports_without_changing_them(env):
+    add_booking("GP-AAA111", passport="1234 567890"); add_files(env, "GP-AAA111")
+    assert retention.preview(0, 0, False)["passports_to_clear"] == 1
+    assert passport_of("GP-AAA111") == "1234 567890"

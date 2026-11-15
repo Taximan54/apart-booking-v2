@@ -224,6 +224,7 @@ class RetentionSettings(BaseModel):
     pack_days: int = 0
     delete_days: int = 0
     purge_cancelled: bool = False
+    clear_passport: bool = False
 
 def _retention_payload():
     s = retention.load_settings()
@@ -237,7 +238,7 @@ async def get_retention(_: bool = Depends(require_admin)):
 @router.post("/api/admin/retention")
 async def set_retention(body: RetentionSettings, _: bool = Depends(require_admin)):
     try:
-        retention.save_settings(body.pack_days, body.delete_days, body.purge_cancelled)
+        retention.save_settings(body.pack_days, body.delete_days, body.purge_cancelled, body.clear_passport)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     return _retention_payload()

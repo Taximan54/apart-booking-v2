@@ -5,6 +5,9 @@
                      с паролем (обычные файлы удаляются). Только если залог отмечен возвращённым. 0 — выключено.
   delete_days      — через сколько дней после выезда упакованный архив удаляется насовсем. 0 — не удалять.
   purge_cancelled  — удалять файлы ОТМЕНЁННЫХ броней, у которых договор не был подписан.
+  clear_passport   — стирать номер паспорта текстом в базе: у подтверждённой брони после возврата залога и выезда
+                     (если подписанный договор с номером сохранён, на диске или в архиве), у отменённой без подписи —
+                     вместе с purge_cancelled. Вместо номера пишется PASSPORT_CLEARED. Фото паспорта живут по сроку pack_days.
 Отменённые брони с подписанным договором не трогаются (решение по возврату предоплаты пока не принято).
 Пароль архива — тот же, что у резервных копий. Без пароля упаковка не запускается.
 """
@@ -23,6 +26,7 @@ logger = get_logger(__name__)
 
 CONTRACT_SUFFIXES = (".txt", ".pdf", "_podpisan.pdf", "_soglasie_pd.pdf")
 CONFIRMED_STATUSES = ("confirmed", "fully_paid")
+PASSPORT_CLEARED = "удалён"      # что записывается в базу вместо номера паспорта
 MAX_DAYS = 3650
 CHECK_EVERY_SECONDS = 3600      # как часто проверяем (раз в час)
 FIRST_RUN_DELAY = 120           # после запуска сервера первую проверку делаем через 2 минуты
@@ -43,11 +47,11 @@ def _clamp_days(value) -> int:
     return max(0, min(MAX_DAYS, n))
 
 
-def validate_settings(pack_days, delete_days, purge_cancelled) -> dict:
+def validate_settings(pack_days, delete_days, purge_cancelled, clear_passport=False) -> dict:
     p, d = _clamp_days(pack_days), _clamp_days(delete_days)
     if p > 0 and d > 0 and d < p:
         raise ValueError("Срок хранения архива не может быть меньше срока упаковки")
-    return {"pack_days": p, "delete_days": d, "purge_cancelled": bool(purge_cancelled)}
+    return {"pack_days": p, "delete_days": d, "purge_cancelled": bool(purge_cancelled), "clear_passport": bool(clear_passport)}
 
 
 def load_settings() -> dict:
@@ -60,11 +64,12 @@ def load_settings() -> dict:
         "pack_days": _clamp_days(raw.get("pack_days", 0)),
         "delete_days": _clamp_days(raw.get("delete_days", 0)),
         "purge_cancelled": bool(raw.get("purge_cancelled", False)),
+        "clear_passport": bool(raw.get("clear_passport", False)),
     }
 
 
-def save_settings(pack_days, delete_days, purge_cancelled) -> dict:
-    s = validate_settings(pack_days, delete_days, purge_cancelled)
+def save_settings(pack_days, delete_days, purge_cancelled, clear_passport=False) -> dict:
+    s = validate_settings(pack_days, delete_days, purge_cancelled, clear_passport)
     os.makedirs(os.path.dirname(RETENTION_FILE), exist_ok=True)
     with open(RETENTION_FILE, "w", encoding="utf-8") as f:
         json.dump(s, f)
@@ -309,7 +314,7 @@ def _rows():
     conn = get_db()
     try:
         cur = conn.execute(
-            "SELECT id, username, status, check_out, deposit_returned, signed_at FROM bookings "
+            "SELECT id, username, status, check_out, deposit_returned, signed_at, passport FROM bookings "
             "WHERE COALESCE(username,'') <> ''")
         return [dict(r) for r in cur.fetchall()]
     finally:
@@ -343,6 +348,31 @@ def _purge_candidates():
     return out
 
 
+def _passport_candidates(today, include_cancelled: bool):
+    """
+    Брони, у которых в базе ещё лежит номер паспорта и его уже можно стереть:
+    подтверждённая бронь — залог возвращён, выезд состоялся, подписанный договор с номером сохранён (на диске или в архиве);
+    отменённая без подписанного договора — если включена очистка отменённых.
+    """
+    index = _load_index()
+    out = []
+    for r in _rows():
+        number = (r.get("passport") or "").strip()
+        if not number or number == PASSPORT_CLEARED:
+            continue
+        ref = r["username"]
+        if r["status"] in CONFIRMED_STATUSES:
+            co = _d(r["check_out"])
+            if not r["deposit_returned"] or not co or co > today or not _is_signed(ref, r):
+                continue
+            on_disk = any(os.path.isfile(os.path.join(CONTRACTS_DIR, c + "_podpisan.pdf")) for c in _variants(ref))
+            if on_disk or any(c in index for c in _variants(ref)):
+                out.append(r)
+        elif include_cancelled and r["status"] == "cancelled" and not _is_signed(ref, r):
+            out.append(r)
+    return out
+
+
 def _archives_due(delete_days: int, today):
     if delete_days <= 0:
         return []
@@ -364,14 +394,15 @@ def archive_delete_date(entry: dict, delete_days: int):
     return (base + timedelta(days=delete_days)).strftime("%d.%m.%Y")
 
 
-def preview(pack_days, delete_days, purge_cancelled=False) -> dict:
+def preview(pack_days, delete_days, purge_cancelled=False, clear_passport=False) -> dict:
     """Сколько броней попадёт под правила при указанных значениях (без сохранения и без изменений)."""
     today = _today()
-    s = validate_settings(pack_days, delete_days, purge_cancelled)
+    s = validate_settings(pack_days, delete_days, purge_cancelled, clear_passport)
     return {
         "to_pack": len(_pack_candidates(s["pack_days"], today)),
         "archives_to_delete": len(_archives_due(s["delete_days"], today)),
         "cancelled_with_files": len(_purge_candidates()),
+        "passports_to_clear": len(_passport_candidates(today, s["purge_cancelled"])),
     }
 
 
@@ -383,7 +414,7 @@ def run_retention() -> dict:
     global _password_warned
     s = load_settings()
     today = _today()
-    result = {"packed": 0, "archives_deleted": 0, "purged": 0, "errors": 0}
+    result = {"packed": 0, "archives_deleted": 0, "purged": 0, "passports_cleared": 0, "errors": 0}
 
     if s["purge_cancelled"]:
         for r in _purge_candidates():
@@ -394,6 +425,17 @@ def run_retention() -> dict:
             except Exception as e:
                 result["errors"] += 1
                 logger.error("Не удалось очистить файлы отменённой брони %s: %s", r["username"], e, exc_info=True)
+
+    if s["clear_passport"]:
+        from core import bookings_repo
+        for r in _passport_candidates(today, s["purge_cancelled"]):
+            try:
+                if bookings_repo.clear_passport_by_id(r["id"], PASSPORT_CLEARED):
+                    result["passports_cleared"] += 1
+                    logger.info("Бронь %s: номер паспорта в базе стёрт", r["username"])
+            except Exception as e:
+                result["errors"] += 1
+                logger.error("Не удалось стереть номер паспорта брони %s: %s", r["username"], e, exc_info=True)
 
     if s["pack_days"] > 0:
         candidates = _pack_candidates(s["pack_days"], today)

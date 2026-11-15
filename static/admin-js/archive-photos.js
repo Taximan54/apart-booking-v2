@@ -11,6 +11,7 @@ function retentionForm() {
     pack_days: parseInt(document.getElementById('retPackDays').value) || 0,
     delete_days: parseInt(document.getElementById('retDeleteDays').value) || 0,
     purge_cancelled: document.getElementById('retPurgeCancelled').checked,
+    clear_passport: document.getElementById('retClearPassport').checked,
   };
 }
 
@@ -20,7 +21,8 @@ function showRetentionPreview(p) {
   el.innerHTML =
     `При этих значениях: под упаковку попадёт броней — <b>${p.to_pack}</b>; ` +
     `под удаление архивов — <b>${p.archives_to_delete}</b>; ` +
-    `отменённых броней с файлами сейчас — <b>${p.cancelled_with_files}</b>.`;
+    `отменённых броней с файлами сейчас — <b>${p.cancelled_with_files}</b>; ` +
+    `номеров паспорта к стиранию в базе — <b>${p.passports_to_clear || 0}</b>.`;
 }
 
 async function loadRetentionSettings() {
@@ -30,6 +32,7 @@ async function loadRetentionSettings() {
     document.getElementById('retPackDays').value = d.settings.pack_days;
     document.getElementById('retDeleteDays').value = d.settings.delete_days;
     document.getElementById('retPurgeCancelled').checked = !!d.settings.purge_cancelled;
+    document.getElementById('retClearPassport').checked = !!d.settings.clear_passport;
     document.getElementById('retNoPassword').style.display = d.password_set ? 'none' : 'block';
     showRetentionPreview(d.preview);
   } catch(e) {
@@ -61,6 +64,7 @@ async function saveRetentionSettings() {
     if (p.to_pack > 0) parts.push(`упаковка в архив и удаление обычных файлов у ${p.to_pack} броней`);
     if (p.archives_to_delete > 0) parts.push(`окончательное удаление ${p.archives_to_delete} архивов`);
     if (f.purge_cancelled && p.cancelled_with_files > 0) parts.push(`удаление файлов у ${p.cancelled_with_files} отменённых броней`);
+    if (f.clear_passport && p.passports_to_clear > 0) parts.push(`стирание номера паспорта в базе у ${p.passports_to_clear} броней (номер останется только в подписанном договоре)`);
     if (parts.length && !confirm('После сохранения в течение часа будет выполнено:\n— ' + parts.join('\n— ') + '\n\nУдаление необратимо. Продолжить?')) return;
     const d = await apiPost('/api/admin/retention', f);
     _retDirty = false;

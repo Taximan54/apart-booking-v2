@@ -281,6 +281,11 @@ def mark_deposit_returned(ref: str, returned_at: str) -> None:
            (returned_at, ref))
 
 
+def clear_passport_by_id(booking_id, marker: str) -> int:
+    """Заменяет номер паспорта текстом-пометкой (номер остаётся только в подписанном договоре). Возвращает число изменённых строк."""
+    return _write("UPDATE bookings SET passport=? WHERE id=?", (marker, booking_id))
+
+
 def sign_booking(booking_id, signed_at: str, sign_ip: str, guest_fields: Optional[dict] = None) -> None:
     """
     Подписание договора: записывает дату и IP подписи и (если переданы) дозаполненные
