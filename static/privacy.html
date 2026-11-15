@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Политика конфиденциальности — Городская Пауза</title>
+<title>Политика конфиденциальности</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400&family=Montserrat:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
 :root{--gold:#C9A84C;--black:#0A0A0A;--black-card:#141414;--black-border:#1E1E1E;--text-primary:#F0E6C8;--text-secondary:#A89060;--text-muted:#5A4A30;}
@@ -29,22 +29,24 @@ footer{padding:40px 60px;border-top:1px solid var(--black-border);text-align:cen
 <body>
 
 <header>
-  <a href="index.html" class="logo">Городская Пауза</a>
-  <a href="index.html" class="back">← На главную</a>
+  <a href="/" class="logo" data-fill="brand">Моя квартира</a>
+  <a href="/" class="back">← На главную</a>
 </header>
 
 <div class="container">
   <h1>Политика конфиденциальности</h1>
   <div class="date">Редакция от 7 июня 2026 года</div>
 
-  <p>Настоящая Политика конфиденциальности определяет порядок обработки персональных данных пользователей сайта <strong>citypause.ru</strong> (далее — «Сайт»), осуществляемой в соответствии с Федеральным законом № 152-ФЗ «О персональных данных».</p>
+  <p>Настоящая Политика конфиденциальности определяет порядок обработки персональных данных пользователей сайта <strong data-fill="domain">адрес сайта</strong> (далее — «Сайт»), осуществляемой в соответствии с Федеральным законом № 152-ФЗ «О персональных данных».</p>
 
   <div class="divider"></div>
 
   <h2>1. Оператор персональных данных</h2>
-  <p>Оператором персональных данных является физическое лицо, осуществляющее деятельность по сдаче апартаментов «Городская Пауза» в аренду.</p>
-  <p>Контактный email: <a href="mailto:citypause@mail.ru">citypause@mail.ru</a></p>
+  <!-- ЮРИСТУ: кто оператор (физлицо / самозанятый / клиент сервиса) и в каких ролях — решить; текст ниже не менять без заключения юриста -->
+  <p>Оператором персональных данных является физическое лицо, осуществляющее деятельность по сдаче апартаментов «<span data-fill="brand">Моя квартира</span>» в аренду.</p>
+  <p>Контактный email: <a data-fill="email" href="#">указан в разделе «Контакты» на сайте</a></p>
 
+  <!-- ЮРИСТУ: в списке нет номера и фото паспорта, а система их собирает (при подписании договора) — перечень согласовать -->
   <h2>2. Какие данные мы собираем</h2>
   <p>При оформлении бронирования мы собираем следующие персональные данные:</p>
   <ul>
@@ -71,6 +73,7 @@ footer{padding:40px 60px;border-top:1px solid var(--black-border);text-align:cen
     <li>Исполнения договора, стороной которого является субъект персональных данных (ст. 6, ч. 1, п. 5 ФЗ-152)</li>
   </ul>
 
+  <!-- ЮРИСТУ: срок хранения, «серверы на территории РФ» и «передача третьим лицам не осуществляется» (почта, хостинг, шрифты Google) — проверить на соответствие фактам -->
   <h2>5. Хранение и защита данных</h2>
   <p>Персональные данные хранятся на защищённых серверах, расположенных на территории Российской Федерации. Передача данных третьим лицам не осуществляется, за исключением случаев, предусмотренных законодательством РФ.</p>
   <p>Срок хранения персональных данных — не более 3 лет с момента последнего бронирования.</p>
@@ -83,21 +86,41 @@ footer{padding:40px 60px;border-top:1px solid var(--black-border);text-align:cen
     <li>Отозвать согласие на обработку персональных данных</li>
     <li>Обжаловать действия оператора в Роскомнадзоре</li>
   </ul>
-  <p>Для реализации прав направьте запрос на: <a href="mailto:citypause@mail.ru">citypause@mail.ru</a></p>
+  <p>Для реализации прав направьте запрос на: <a data-fill="email" href="#">адрес из раздела «Контакты»</a></p>
 
+  <!-- ЮРИСТУ: сайт хранит в браузере служебные данные (оформление, вход администратора); формулировку про cookies проверить -->
   <h2>7. Cookies</h2>
   <p>Сайт не использует файлы cookies для сбора персональных данных.</p>
 
   <h2>8. Изменения политики</h2>
-  <p>Оператор вправе вносить изменения в настоящую Политику. Актуальная версия всегда доступна на странице <a href="https://citypause.ru/static/privacy.html">citypause.ru/static/privacy.html</a></p>
+  <p>Оператор вправе вносить изменения в настоящую Политику. Актуальная версия всегда доступна на странице <a id="pSelfLink" href="/static/privacy.html">адрес этой страницы</a></p>
 
   <div class="divider"></div>
 
-  <p style="font-size:12px;color:var(--text-muted)">По всем вопросам, связанным с обработкой персональных данных, обращайтесь: <a href="mailto:citypause@mail.ru">citypause@mail.ru</a></p>
+  <p style="font-size:12px;color:var(--text-muted)">По всем вопросам, связанным с обработкой персональных данных, обращайтесь: <a data-fill="email" href="#">адрес из раздела «Контакты»</a></p>
 
 </div>
 
-<footer>© 2026 Городская Пауза · <a href="index.html">На главную</a></footer>
+<footer>© 2026 <span data-fill="brand">Моя квартира</span> · <a href="/">На главную</a></footer>
 
+<script>
+// Название, адрес сайта и почта подставляются из настроек сайта и раздела «Контакты»; текст политики остаётся прежним
+(function() {
+  var host = location.hostname;
+  function fill(sel, text) { document.querySelectorAll(sel).forEach(function(el) { el.textContent = text; }); }
+  fill('[data-fill="domain"]', host);
+  var self = document.getElementById('pSelfLink');
+  if (self) { self.href = location.origin + '/static/privacy.html'; self.textContent = host + '/static/privacy.html'; }
+  fetch('/api/site-settings').then(function(r) { return r.json(); }).then(function(s) {
+    var name = (s.site_name || '').trim();
+    if (name) fill('[data-fill="brand"]', name);
+  }).catch(function() {});
+  fetch('/api/contacts').then(function(r) { return r.json(); }).then(function(c) {
+    var email = (c.email || '').trim();
+    if (!email) return;
+    document.querySelectorAll('a[data-fill="email"]').forEach(function(a) { a.href = 'mailto:' + email; a.textContent = email; });
+  }).catch(function() {});
+})();
+</script>
 </body>
 </html>
