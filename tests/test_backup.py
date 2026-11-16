@@ -116,9 +116,50 @@ def test_backup_includes_other_data_files_and_property_folders(env, monkeypatch)
     with pyzipper.AESZipFile(path) as zf:
         zf.setpassword("Пароль-123".encode("utf-8"))
         names = zf.namelist()
-    assert {"chat_faq.json", "booking_rules.json", "photos/a.jpg",
+    assert {"chat_faq.json", "booking_rules.json",
             "properties/2/contract_settings.json", "properties/2/ical.json"} <= set(names)
+    assert "photos/a.jpg" not in names, "фото лежат в отдельном архиве"
     assert "backup_password.txt" not in names, "пароль копий не кладём в архив"
     assert not any(".backup_" in n for n in names), "старые резервные версии шаблонов не нужны"
     assert not any(n.startswith("backups/") for n in names), "старые копии не кладём в новую"
     assert len(names) == len(set(names)), "дубликатов в архиве быть не должно"
+
+
+def test_photos_go_to_separate_encrypted_archive(env, monkeypatch):
+    bk, data = env
+    (data / "photos").mkdir()
+    (data / "photos" / "a.jpg").write_bytes(b"PHOTO-SECRET")
+    monkeypatch.setattr(bk.config, "BACKUP_PASSWORD", "Пароль-123", raising=False)
+    path = bk.create_backup_zip()
+    assert os.path.basename(path).startswith("backup_") and "photos" not in os.path.basename(path)
+    photos = [f for f in os.listdir(data / "backups") if f.startswith("backup_photos_")]
+    assert len(photos) == 1
+    ppath = str(data / "backups" / photos[0])
+    assert bk.is_backup_encrypted(ppath)
+    with pyzipper.AESZipFile(ppath) as zf:
+        zf.setpassword("Пароль-123".encode("utf-8"))
+        assert zf.read("photos/a.jpg") == b"PHOTO-SECRET"
+    assert b"PHOTO-SECRET" not in open(ppath, "rb").read()
+
+
+def test_no_photos_no_photo_archive(env):
+    bk, data = env
+    bk.create_backup_zip()
+    assert not [f for f in os.listdir(data / "backups") if f.startswith("backup_photos_")]
+
+
+def test_rotation_counts_main_and_photo_archives_separately(env, monkeypatch):
+    bk, data = env
+    (data / "photos").mkdir()
+    (data / "photos" / "a.jpg").write_bytes(b"x")
+    (data / "backups").mkdir()
+    for d in ("2020-01-01", "2020-01-02", "2020-01-03"):
+        (data / "backups" / f"backup_{d}_00-00.zip").write_bytes(b"old")
+        (data / "backups" / f"backup_photos_{d}_00-00.zip").write_bytes(b"old")
+    monkeypatch.setattr(bk, "BACKUP_KEEP_COUNT", 2)
+    bk.create_backup_zip()
+    names = os.listdir(data / "backups")
+    main = [n for n in names if not n.startswith("backup_photos_")]
+    photos = [n for n in names if n.startswith("backup_photos_")]
+    assert len(main) == 2 and len(photos) == 2
+    assert "backup_2020-01-01_00-00.zip" not in main and "backup_photos_2020-01-01_00-00.zip" not in photos

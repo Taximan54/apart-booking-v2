@@ -96,13 +96,35 @@ def _open_backup_archive(zip_path: str, password: str):
 
 # Что НЕ кладём в копию: сам пароль копий (лежать рядом с данными незачем)
 _BACKUP_SKIP_FILES = {"backup_password.txt"}
-# Папки внутри /data, которые кладём целиком (с вложенными): фото квартир и данные объектов № 2, 3…
-_BACKUP_EXTRA_DIRS = ("photos", "properties")
+# Папки внутри /data, которые кладём в основную копию целиком (с вложенными): данные объектов № 2, 3…
+_BACKUP_EXTRA_DIRS = ("properties",)
+# Фото квартир кладём в ОТДЕЛЬНЫЙ архив backup_photos_<дата>.zip: основная копия остаётся небольшой и уходит на почту
+_PHOTO_DIRS = ("photos",)
+_PHOTOS_PREFIX = "backup_photos_"
+
+def _create_photos_zip(timestamp: str):
+    """Отдельный архив с фото квартир (/data/photos). Нет фото — архив не создаётся."""
+    data_dir = os.path.dirname(DB_FILE)
+    files = []
+    for sub in _PHOTO_DIRS:
+        root = os.path.join(data_dir, sub)
+        for cur, _dirs, names in os.walk(root):
+            for fname in sorted(names):
+                fpath = os.path.join(cur, fname)
+                files.append((fpath, os.path.relpath(fpath, data_dir).replace(os.sep, "/")))
+    if not files:
+        return None
+    zip_path = os.path.join(BACKUP_DIR, f"{_PHOTOS_PREFIX}{timestamp}.zip")
+    with _open_backup_archive(zip_path, get_backup_password()) as zf:
+        for fpath, arc in files:
+            zf.write(fpath, arcname=arc)
+    return zip_path
 
 def create_backup_zip():
     """
     Собирает бэкап главной базы (bookings.db), ключевых JSON-настроек,
-    ВСЕХ остальных файлов папки данных (в т.ч. photos/ и properties/),
+    ВСЕХ остальных файлов папки данных (в т.ч. properties/),
+    фото квартир (photos/) — отдельным архивом backup_photos_<дата>.zip,
     ПОДПИСАННЫХ ДОГОВОРОВ (CONTRACTS_DIR) и ФОТО ПАСПОРТОВ (PASSPORT_DIR)
     в один zip-файл, защищённый паролем (если он задан), кладёт в BACKUP_DIR,
     удаляет старые копии сверх BACKUP_KEEP_COUNT. Возвращает путь к файлу.
@@ -154,16 +176,24 @@ def create_backup_zip():
                             zf.write(fpath, arcname=arc)
                             written.add(arc)
 
-    # Ротация: оставляем только последние BACKUP_KEEP_COUNT файлов
-    backups = sorted(
-        [f for f in os.listdir(BACKUP_DIR) if f.startswith("backup_") and f.endswith(".zip")]
-    )
-    while len(backups) > BACKUP_KEEP_COUNT:
-        oldest = backups.pop(0)
-        try:
-            os.remove(os.path.join(BACKUP_DIR, oldest))
-        except Exception as e:
-            logger.warning("Не удалось удалить старую резервную копию %s: %s", oldest, e)
+    # Фото квартир — отдельным архивом (с тем же паролем), чтобы основная копия не раздувалась
+    try:
+        _create_photos_zip(timestamp)
+    except Exception as e:
+        logger.warning("Не удалось создать архив с фото: %s", e)
+
+    # Ротация: оставляем только последние BACKUP_KEEP_COUNT файлов (основные и фото-архивы считаем отдельно)
+    for is_photos in (False, True):
+        backups = sorted(
+            f for f in os.listdir(BACKUP_DIR)
+            if f.startswith("backup_") and f.endswith(".zip") and f.startswith(_PHOTOS_PREFIX) == is_photos
+        )
+        while len(backups) > BACKUP_KEEP_COUNT:
+            oldest = backups.pop(0)
+            try:
+                os.remove(os.path.join(BACKUP_DIR, oldest))
+            except Exception as e:
+                logger.warning("Не удалось удалить старую резервную копию %s: %s", oldest, e)
 
     return zip_path
 
