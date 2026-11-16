@@ -94,9 +94,15 @@ def _open_backup_archive(zip_path: str, password: str):
             logger.error("Пароль к копиям задан, но библиотека pyzipper не установлена — копия будет без шифрования и не будет отправлена наружу")
     return zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED)
 
+# Что НЕ кладём в копию: сам пароль копий (лежать рядом с данными незачем)
+_BACKUP_SKIP_FILES = {"backup_password.txt"}
+# Папки внутри /data, которые кладём целиком (с вложенными): фото квартир и данные объектов № 2, 3…
+_BACKUP_EXTRA_DIRS = ("photos", "properties")
+
 def create_backup_zip():
     """
     Собирает бэкап главной базы (bookings.db), ключевых JSON-настроек,
+    ВСЕХ остальных файлов папки данных (в т.ч. photos/ и properties/),
     ПОДПИСАННЫХ ДОГОВОРОВ (CONTRACTS_DIR) и ФОТО ПАСПОРТОВ (PASSPORT_DIR)
     в один zip-файл, защищённый паролем (если он задан), кладёт в BACKUP_DIR,
     удаляет старые копии сверх BACKUP_KEEP_COUNT. Возвращает путь к файлу.
@@ -110,10 +116,13 @@ def create_backup_zip():
         PROMO_FILE, CONTRACT_FILE, PASSPORT_MAP_FILE,
         SETTINGS_FILE, DISCOUNTS_FILE, PLACES_FILE, LANDLORD_FILE, ICAL_FILE,
     ]
+    written = set()   # имена уже добавленных файлов, чтобы не класть дважды
     with _open_backup_archive(zip_path, get_backup_password()) as zf:
         for path in files_to_backup:
             if path and os.path.exists(path):
-                zf.write(path, arcname=os.path.basename(path))
+                arc = os.path.basename(path)
+                zf.write(path, arcname=arc)
+                written.add(arc)
 
         # Договоры и фото паспортов — критичные документы, не подлежат восстановлению
         # из кода, поэтому кладём целиком, каждую папку в свою поддиректорию в архиве
@@ -123,6 +132,27 @@ def create_backup_zip():
                     fpath = os.path.join(folder, fname)
                     if os.path.isfile(fpath):
                         zf.write(fpath, arcname=f"{arc_prefix}/{fname}")
+                        written.add(f"{arc_prefix}/{fname}")
+
+        # Всё остальное из папки данных: настройки по объектам, каталог, чат-помощник,
+        # правила бронирования, мониторинг, фото квартир и т.д. Новые файлы попадают сами.
+        data_dir = os.path.dirname(DB_FILE)
+        if data_dir and os.path.isdir(data_dir):
+            for fname in sorted(os.listdir(data_dir)):
+                fpath = os.path.join(data_dir, fname)
+                if (os.path.isfile(fpath) and fname not in written
+                        and fname not in _BACKUP_SKIP_FILES and ".backup_" not in fname):
+                    zf.write(fpath, arcname=fname)
+                    written.add(fname)
+            for sub in _BACKUP_EXTRA_DIRS:
+                root = os.path.join(data_dir, sub)
+                for cur, _dirs, files in os.walk(root):
+                    for fname in sorted(files):
+                        fpath = os.path.join(cur, fname)
+                        arc = os.path.relpath(fpath, data_dir).replace(os.sep, "/")
+                        if arc not in written and ".backup_" not in fname:
+                            zf.write(fpath, arcname=arc)
+                            written.add(arc)
 
     # Ротация: оставляем только последние BACKUP_KEEP_COUNT файлов
     backups = sorted(

@@ -97,3 +97,28 @@ def test_is_backup_encrypted_handles_broken_file(tmp_path):
     bad = tmp_path / "bad.zip"
     bad.write_bytes(b"not a zip")
     assert is_backup_encrypted(str(bad)) is False
+
+
+def test_backup_includes_other_data_files_and_property_folders(env, monkeypatch):
+    """Файлы вроде booking_rules.json, chat_faq.json, contract_settings.json, photos/ и properties/<id>/ попадают в копию."""
+    bk, data = env
+    (data / "photos").mkdir()
+    (data / "properties" / "2").mkdir(parents=True)
+    (data / "chat_faq.json").write_text("{}", encoding="utf-8")
+    (data / "booking_rules.json").write_text("{}", encoding="utf-8")
+    (data / "contract_template.txt.backup_before_placeholders").write_text("old", encoding="utf-8")
+    (data / "photos" / "a.jpg").write_bytes(b"PHOTO")
+    (data / "properties" / "2" / "contract_settings.json").write_text("{}", encoding="utf-8")
+    (data / "properties" / "2" / "ical.json").write_text("{}", encoding="utf-8")
+    (data / "backup_password.txt").write_text("secret-pass", encoding="utf-8")
+    monkeypatch.setattr(bk.config, "BACKUP_PASSWORD", "Пароль-123", raising=False)
+    path = bk.create_backup_zip()
+    with pyzipper.AESZipFile(path) as zf:
+        zf.setpassword("Пароль-123".encode("utf-8"))
+        names = zf.namelist()
+    assert {"chat_faq.json", "booking_rules.json", "photos/a.jpg",
+            "properties/2/contract_settings.json", "properties/2/ical.json"} <= set(names)
+    assert "backup_password.txt" not in names, "пароль копий не кладём в архив"
+    assert not any(".backup_" in n for n in names), "старые резервные версии шаблонов не нужны"
+    assert not any(n.startswith("backups/") for n in names), "старые копии не кладём в новую"
+    assert len(names) == len(set(names)), "дубликатов в архиве быть не должно"
