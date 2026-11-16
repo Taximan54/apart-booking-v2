@@ -43,7 +43,7 @@ async def test_monitoring_mail(_: bool = Depends(require_admin)):
     return await asyncio.to_thread(monitoring.send_test)
 
 
-@router.get("/health/deep")
+@router.api_route("/health/deep", methods=["GET", "HEAD"])   # HEAD нужен внешним проверкам (UptimeRobot)
 async def health_deep():
     """
     Для внешнего сервиса (например, UptimeRobot): 200, если база отвечает и места на диске достаточно,
