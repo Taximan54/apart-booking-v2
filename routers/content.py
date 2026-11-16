@@ -197,11 +197,11 @@ async def backup_now(_: bool = Depends(require_admin)):
     иначе запрос из браузера успевает упасть по таймауту, пока идёт SMTP.
     """
     try:
-        zip_path = create_backup_zip()
+        zip_path = await asyncio.to_thread(create_backup_zip)   # в отдельном потоке: сайт не замирает
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Ошибка создания резервной копии: {e}")
 
-    encrypted = is_backup_encrypted(zip_path)
+    encrypted = await asyncio.to_thread(is_backup_encrypted, zip_path)
     if encrypted:
         asyncio.create_task(send_backup_everywhere(zip_path))
     else:

@@ -195,7 +195,7 @@ async def send_notifications():
             # хранится локально (последние BACKUP_KEEP_COUNT копий)
             if hour == 4 and minute < 30 and get_last_backup_date() != today_str:
                 try:
-                    zip_path = create_backup_zip()
+                    zip_path = await asyncio.to_thread(create_backup_zip)   # в отдельном потоке: сайт не замирает
                     await send_backup_everywhere(zip_path)
                 except Exception as e:
                     logger.error("Backup error: " + str(e), exc_info=True)

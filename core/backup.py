@@ -200,7 +200,7 @@ def create_backup_zip():
 async def send_backup_everywhere(zip_path):
     """Отправляет файл резервной копии в Telegram админам И на почту арендодателя (best-effort, не роняет процесс при ошибке)."""
     from aiogram.types import FSInputFile
-    if not is_backup_encrypted(zip_path):
+    if not await asyncio.to_thread(is_backup_encrypted, zip_path):
         logger.error(
             "Резервная копия %s НЕ отправлена: в ней паспорта и договоры, а пароль не задан "
             "(BACKUP_PASSWORD в config.py или файл backup_password.txt). Копия осталась на сервере.",
@@ -250,7 +250,9 @@ async def send_backup_everywhere(zip_path):
                 f"<p>Резервная копия базы данных, настроек, договоров и фото паспортов — {when_str}.</p>"
                 "<p>Архив защищён паролем. Файл во вложении, хранить в надёжном месте.</p></div>"
             )
-            send_email(
+            # SMTP — синхронный, поэтому в отдельном потоке, чтобы сайт не замирал на время загрузки письма
+            await asyncio.to_thread(
+                send_email,
                 backup_email, f"Резервная копия — {when_str}", html,
                 attachments=[{"filename": os.path.basename(zip_path), "filepath": zip_path}]
             )
