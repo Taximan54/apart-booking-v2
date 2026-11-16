@@ -51,17 +51,27 @@ def test_backup_is_encrypted_with_password(env, monkeypatch):
     with pyzipper.AESZipFile(path) as zf:
         zf.setpassword("Пароль-123".encode("utf-8"))
         names = set(zf.namelist())
-        assert {"bookings.db", "contracts/GP-AAA111_podpisan.pdf", "passports/passport_x.jpg"} <= names
+        assert "bookings.db" in names
+        # договоры и паспорта в основную копию не входят — они в отдельном архиве документов
+        assert not any(n.startswith(("contracts/", "passports/")) for n in names)
+    docs = [f for f in os.listdir(os.path.dirname(path)) if f.startswith("backup_docs_")]
+    assert len(docs) == 1
+    dpath = os.path.join(os.path.dirname(path), docs[0])
+    assert bk.is_backup_encrypted(dpath)
+    with pyzipper.AESZipFile(dpath) as zf:
+        zf.setpassword("Пароль-123".encode("utf-8"))
+        assert {"contracts/GP-AAA111_podpisan.pdf", "passports/passport_x.jpg"} <= set(zf.namelist())
         assert zf.read("passports/passport_x.jpg") == b"JPEGDATA-SECRET"
     # с неверным паролем и без пароля — нет
-    with pyzipper.AESZipFile(path) as zf:
+    with pyzipper.AESZipFile(dpath) as zf:
         zf.setpassword(b"wrong")
         with pytest.raises(RuntimeError):
             zf.read("passports/passport_x.jpg")
         zf.setpassword(None)
         with pytest.raises(RuntimeError):
-            zf.read("bookings.db")
-    # исходные данные паспорта не лежат в архиве открытым текстом
+            zf.read("contracts/GP-AAA111_podpisan.pdf")
+    # данные паспорта не лежат в архивах открытым текстом
+    assert b"JPEGDATA-SECRET" not in open(dpath, "rb").read()
     assert b"JPEGDATA-SECRET" not in open(path, "rb").read()
 
 
@@ -148,18 +158,48 @@ def test_no_photos_no_photo_archive(env):
     assert not [f for f in os.listdir(data / "backups") if f.startswith("backup_photos_")]
 
 
-def test_rotation_counts_main_and_photo_archives_separately(env, monkeypatch):
+def test_rotation_counts_main_docs_and_photo_archives_separately(env, monkeypatch):
+    bk, data = env
+    (data / "backups").mkdir()
+    for d in ("2020-01-01", "2020-01-02", "2020-01-03", "2020-01-04", "2020-01-05"):
+        (data / "backups" / f"backup_{d}_00-00.zip").write_bytes(b"old")
+        (data / "backups" / f"backup_docs_{d}_00-00.zip").write_bytes(b"old")
+        (data / "backups" / f"backup_photos_{d}_00-00.zip").write_bytes(b"old")
+    monkeypatch.setattr(bk, "BACKUP_KEEP_COUNT", 2)
+    bk.create_backup_zip()   # свежих архивов документов и фото нет по mtime? файлы только что созданы -> новые не делаются
+    names = os.listdir(data / "backups")
+    main = [n for n in names if not n.startswith(("backup_docs_", "backup_photos_"))]
+    docs = [n for n in names if n.startswith("backup_docs_")]
+    photos = [n for n in names if n.startswith("backup_photos_")]
+    assert len(main) == 2 and len(docs) == 3 and len(photos) == 2
+    assert "backup_2020-01-01_00-00.zip" not in main
+    assert "backup_docs_2020-01-01_00-00.zip" not in docs and "backup_docs_2020-01-05_00-00.zip" in docs
+    assert "backup_photos_2020-01-04_00-00.zip" in photos
+
+
+def test_docs_and_photos_archives_are_made_rarely(env, monkeypatch):
     bk, data = env
     (data / "photos").mkdir()
     (data / "photos" / "a.jpg").write_bytes(b"x")
-    (data / "backups").mkdir()
-    for d in ("2020-01-01", "2020-01-02", "2020-01-03"):
-        (data / "backups" / f"backup_{d}_00-00.zip").write_bytes(b"old")
-        (data / "backups" / f"backup_photos_{d}_00-00.zip").write_bytes(b"old")
-    monkeypatch.setattr(bk, "BACKUP_KEEP_COUNT", 2)
     bk.create_backup_zip()
-    names = os.listdir(data / "backups")
-    main = [n for n in names if not n.startswith("backup_photos_")]
-    photos = [n for n in names if n.startswith("backup_photos_")]
-    assert len(main) == 2 and len(photos) == 2
-    assert "backup_2020-01-01_00-00.zip" not in main and "backup_photos_2020-01-01_00-00.zip" not in photos
+    bdir = data / "backups"
+    docs = [f for f in os.listdir(bdir) if f.startswith("backup_docs_")]
+    photos = [f for f in os.listdir(bdir) if f.startswith("backup_photos_")]
+    assert len(docs) == 1 and len(photos) == 1
+    # свежие архивы — повторно не делаются (подменяем время, чтобы имя было другим)
+    monkeypatch.setattr(bk, "now_nsk", lambda: __import__("datetime").datetime(2099, 1, 1, 4, 0))
+    bk.create_backup_zip()
+    assert [f for f in os.listdir(bdir) if f.startswith("backup_docs_")] == docs
+    assert [f for f in os.listdir(bdir) if f.startswith("backup_photos_")] == photos
+    # документы старше 14 дней — делаются заново, фото (моложе 30 дней) — нет
+    old = __import__("time").time() - 15 * 86400
+    os.utime(bdir / docs[0], (old, old)); os.utime(bdir / photos[0], (old, old))
+    monkeypatch.setattr(bk, "now_nsk", lambda: __import__("datetime").datetime(2099, 1, 2, 4, 0))
+    bk.create_backup_zip()
+    assert len([f for f in os.listdir(bdir) if f.startswith("backup_docs_")]) == 2
+    assert len([f for f in os.listdir(bdir) if f.startswith("backup_photos_")]) == 1
+    # «Копия сейчас» (force_all) делает всё сразу
+    monkeypatch.setattr(bk, "now_nsk", lambda: __import__("datetime").datetime(2099, 1, 3, 4, 0))
+    bk.create_backup_zip(True)
+    assert len([f for f in os.listdir(bdir) if f.startswith("backup_docs_")]) == 3
+    assert len([f for f in os.listdir(bdir) if f.startswith("backup_photos_")]) == 2

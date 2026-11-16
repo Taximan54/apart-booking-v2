@@ -197,7 +197,7 @@ async def backup_now(_: bool = Depends(require_admin)):
     иначе запрос из браузера успевает упасть по таймауту, пока идёт SMTP.
     """
     try:
-        zip_path = await asyncio.to_thread(create_backup_zip)   # в отдельном потоке: сайт не замирает
+        zip_path = await asyncio.to_thread(create_backup_zip, True)   # True = и документы, и фото; в отдельном потоке
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Ошибка создания резервной копии: {e}")
 

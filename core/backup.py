@@ -2,6 +2,7 @@
 import asyncio
 import json
 import os
+import time
 import zipfile
 
 import config
@@ -98,36 +99,66 @@ def _open_backup_archive(zip_path: str, password: str):
 _BACKUP_SKIP_FILES = {"backup_password.txt"}
 # Папки внутри /data, которые кладём в основную копию целиком (с вложенными): данные объектов № 2, 3…
 _BACKUP_EXTRA_DIRS = ("properties",)
-# Фото квартир кладём в ОТДЕЛЬНЫЙ архив backup_photos_<дата>.zip: основная копия остаётся небольшой и уходит на почту
-_PHOTO_DIRS = ("photos",)
+# Тяжёлое и редко нужное — отдельными архивами и реже, чем основная копия (интервалы потом уйдут в настройки админки):
+#   документы (договоры, паспорта, архив договоров): раз в 14 дней, хранить 3
+#   фото квартир: раз в 30 дней, хранить 2
+# Основная ежедневная копия (база, настройки, шаблоны) остаётся небольшой и уходит на почту.
+_DOCS_PREFIX = "backup_docs_"
 _PHOTOS_PREFIX = "backup_photos_"
+_DOCS_EVERY_DAYS, _DOCS_KEEP = 14, 3
+_PHOTOS_EVERY_DAYS, _PHOTOS_KEEP = 30, 2
 
-def _create_photos_zip(timestamp: str):
-    """Отдельный архив с фото квартир (/data/photos). Нет фото — архив не создаётся."""
-    data_dir = os.path.dirname(DB_FILE)
+def _extra_archive_age_days(prefix: str):
+    """Сколько дней назад создан самый свежий архив с этим префиксом, или None, если архивов нет."""
+    try:
+        times = [os.path.getmtime(os.path.join(BACKUP_DIR, n)) for n in os.listdir(BACKUP_DIR)
+                 if n.startswith(prefix) and n.endswith(".zip")]
+    except Exception:
+        return None
+    return max(0.0, (time.time() - max(times)) / 86400) if times else None
+
+def _create_extra_zip(prefix: str, timestamp: str, folders, every_days: int, force: bool):
+    """
+    Отдельный зашифрованный архив с папками folders [(путь, имя_в_архиве)].
+    Создаётся, если последний такой архив старше every_days дней (или его нет), либо при force.
+    Нет файлов — архив не создаётся.
+    """
+    if not force:
+        age = _extra_archive_age_days(prefix)
+        if age is not None and age < every_days:
+            return None
     files = []
-    for sub in _PHOTO_DIRS:
-        root = os.path.join(data_dir, sub)
-        for cur, _dirs, names in os.walk(root):
+    for folder, arc_prefix in folders:
+        for cur, _dirs, names in os.walk(folder):
             for fname in sorted(names):
                 fpath = os.path.join(cur, fname)
-                files.append((fpath, os.path.relpath(fpath, data_dir).replace(os.sep, "/")))
+                rel = os.path.relpath(fpath, folder).replace(os.sep, "/")
+                files.append((fpath, f"{arc_prefix}/{rel}"))
     if not files:
         return None
-    zip_path = os.path.join(BACKUP_DIR, f"{_PHOTOS_PREFIX}{timestamp}.zip")
+    zip_path = os.path.join(BACKUP_DIR, f"{prefix}{timestamp}.zip")
     with _open_backup_archive(zip_path, get_backup_password()) as zf:
         for fpath, arc in files:
             zf.write(fpath, arcname=arc)
     return zip_path
 
-def create_backup_zip():
+def _rotate(is_mine, keep: int):
+    """Оставляет только последние keep архивов, для которых is_mine(имя) истинно."""
+    names = sorted(n for n in os.listdir(BACKUP_DIR) if n.startswith("backup_") and n.endswith(".zip") and is_mine(n))
+    while len(names) > keep:
+        oldest = names.pop(0)
+        try:
+            os.remove(os.path.join(BACKUP_DIR, oldest))
+        except Exception as e:
+            logger.warning("Не удалось удалить старую резервную копию %s: %s", oldest, e)
+
+def create_backup_zip(force_all: bool = False):
     """
-    Собирает бэкап главной базы (bookings.db), ключевых JSON-настроек,
-    ВСЕХ остальных файлов папки данных (в т.ч. properties/),
-    фото квартир (photos/) — отдельным архивом backup_photos_<дата>.zip,
-    ПОДПИСАННЫХ ДОГОВОРОВ (CONTRACTS_DIR) и ФОТО ПАСПОРТОВ (PASSPORT_DIR)
-    в один zip-файл, защищённый паролем (если он задан), кладёт в BACKUP_DIR,
-    удаляет старые копии сверх BACKUP_KEEP_COUNT. Возвращает путь к файлу.
+    Основная копия: база (bookings.db), настройки, шаблоны и все остальные файлы папки данных
+    (в т.ч. properties/) — в zip, защищённый паролем (если он задан), в BACKUP_DIR; хранится
+    BACKUP_KEEP_COUNT штук. Возвращает путь к ней (только она уходит на почту).
+    Отдельными архивами и реже: документы (договоры, паспорта, архив договоров) — backup_docs_<дата>.zip
+    и фото квартир — backup_photos_<дата>.zip. force_all=True (кнопка «Копия сейчас») делает их сразу.
     """
     os.makedirs(BACKUP_DIR, exist_ok=True)
     timestamp = now_nsk().strftime("%Y-%m-%d_%H-%M")
@@ -146,18 +177,8 @@ def create_backup_zip():
                 zf.write(path, arcname=arc)
                 written.add(arc)
 
-        # Договоры и фото паспортов — критичные документы, не подлежат восстановлению
-        # из кода, поэтому кладём целиком, каждую папку в свою поддиректорию в архиве
-        for folder, arc_prefix in ((CONTRACTS_DIR, "contracts"), (PASSPORT_DIR, "passports"), (ARCHIVE_DIR, "contracts_archive")):
-            if os.path.isdir(folder):
-                for fname in os.listdir(folder):
-                    fpath = os.path.join(folder, fname)
-                    if os.path.isfile(fpath):
-                        zf.write(fpath, arcname=f"{arc_prefix}/{fname}")
-                        written.add(f"{arc_prefix}/{fname}")
-
         # Всё остальное из папки данных: настройки по объектам, каталог, чат-помощник,
-        # правила бронирования, мониторинг, фото квартир и т.д. Новые файлы попадают сами.
+        # правила бронирования, мониторинг и т.д. Новые файлы попадают сами.
         data_dir = os.path.dirname(DB_FILE)
         if data_dir and os.path.isdir(data_dir):
             for fname in sorted(os.listdir(data_dir)):
@@ -176,24 +197,21 @@ def create_backup_zip():
                             zf.write(fpath, arcname=arc)
                             written.add(arc)
 
-    # Фото квартир — отдельным архивом (с тем же паролем), чтобы основная копия не раздувалась
+    # Документы и фото — отдельными архивами и реже (см. константы выше); сбой не должен ронять основную копию
     try:
-        _create_photos_zip(timestamp)
+        _create_extra_zip(_DOCS_PREFIX, timestamp,
+                          [(CONTRACTS_DIR, "contracts"), (PASSPORT_DIR, "passports"), (ARCHIVE_DIR, "contracts_archive")],
+                          _DOCS_EVERY_DAYS, force_all)
+        _create_extra_zip(_PHOTOS_PREFIX, timestamp,
+                          [(os.path.join(os.path.dirname(DB_FILE), "photos"), "photos")],
+                          _PHOTOS_EVERY_DAYS, force_all)
     except Exception as e:
-        logger.warning("Не удалось создать архив с фото: %s", e)
+        logger.warning("Не удалось создать архив с документами или фото: %s", e)
 
-    # Ротация: оставляем только последние BACKUP_KEEP_COUNT файлов (основные и фото-архивы считаем отдельно)
-    for is_photos in (False, True):
-        backups = sorted(
-            f for f in os.listdir(BACKUP_DIR)
-            if f.startswith("backup_") and f.endswith(".zip") and f.startswith(_PHOTOS_PREFIX) == is_photos
-        )
-        while len(backups) > BACKUP_KEEP_COUNT:
-            oldest = backups.pop(0)
-            try:
-                os.remove(os.path.join(BACKUP_DIR, oldest))
-            except Exception as e:
-                logger.warning("Не удалось удалить старую резервную копию %s: %s", oldest, e)
+    # Ротация: основные, документы и фото считаем отдельно
+    _rotate(lambda n: not n.startswith((_DOCS_PREFIX, _PHOTOS_PREFIX)), BACKUP_KEEP_COUNT)
+    _rotate(lambda n: n.startswith(_DOCS_PREFIX), _DOCS_KEEP)
+    _rotate(lambda n: n.startswith(_PHOTOS_PREFIX), _PHOTOS_KEEP)
 
     return zip_path
 
@@ -202,7 +220,7 @@ async def send_backup_everywhere(zip_path):
     from aiogram.types import FSInputFile
     if not await asyncio.to_thread(is_backup_encrypted, zip_path):
         logger.error(
-            "Резервная копия %s НЕ отправлена: в ней паспорта и договоры, а пароль не задан "
+            "Резервная копия %s НЕ отправлена: в ней данные гостей, а пароль не задан "
             "(BACKUP_PASSWORD в config.py или файл backup_password.txt). Копия осталась на сервере.",
             os.path.basename(zip_path),
         )
@@ -247,7 +265,7 @@ async def send_backup_everywhere(zip_path):
         try:
             html = (
                 "<div style='font-family:Arial,sans-serif;padding:20px;color:#333'>"
-                f"<p>Резервная копия базы данных, настроек, договоров и фото паспортов — {when_str}.</p>"
+                f"<p>Резервная копия базы данных и настроек — {when_str}.</p>"
                 "<p>Архив защищён паролем. Файл во вложении, хранить в надёжном месте.</p></div>"
             )
             # SMTP — синхронный, поэтому в отдельном потоке, чтобы сайт не замирал на время загрузки письма

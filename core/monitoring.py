@@ -146,7 +146,8 @@ def _disk_free_percent():
 def _backup_age_hours():
     """Сколько часов назад создана самая свежая копия, или None, если копий нет. Считается по абсолютному времени, часовой пояс сервера не влияет."""
     try:
-        names = [n for n in os.listdir(BACKUP_DIR) if n.startswith("backup_") and n.endswith(".zip")]
+        names = [n for n in os.listdir(BACKUP_DIR) if n.startswith("backup_") and n.endswith(".zip")
+                 and not n.startswith(("backup_docs_", "backup_photos_"))]   # только основные копии
         times = [os.path.getmtime(os.path.join(BACKUP_DIR, n)) for n in names]
         return max(0.0, (time.time() - max(times)) / 3600) if times else None
     except Exception:
