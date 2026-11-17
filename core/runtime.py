@@ -9,7 +9,10 @@ from handlers.admin import router as admin_router
 from handlers.user import router as user_router
 
 
-bot = Bot(token=BOT_TOKEN)
+# Токен необязателен: без него бот не запускается (см. main.py), а объект бота остаётся «пустышкой»,
+# чтобы остальной код (best-effort отправки в Telegram) не ломался при импорте.
+BOT_ENABLED = bool(BOT_TOKEN)
+bot = Bot(token=BOT_TOKEN or "0:no-token")
 dp  = Dispatcher(storage=MemoryStorage())
 dp.include_router(user_router)
 dp.include_router(admin_router)

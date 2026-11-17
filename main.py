@@ -5,7 +5,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from core.runtime import bot, dp
+from core.runtime import bot, dp, BOT_ENABLED
+from core.noindex import setup_noindex
+from config import BASE_URL
 from core.ical_sync import ical_sync_loop
 from core.scheduler import send_notifications
 from core.payment_timeout import expire_unpaid_loop
@@ -30,6 +32,7 @@ init_db()
 app = FastAPI()
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 app.mount("/static", StaticFiles(directory="static"), name="static")
+setup_noindex(app)   # только если в .env задано NOINDEX=1 (тестовые копии)
 
 
 
@@ -65,7 +68,12 @@ async def startup():
             except Exception as e:
                 logger.error("Bot polling error: " + str(e), exc_info=True)
                 await asyncio.sleep(30)
-    asyncio.create_task(safe_polling())
+    if BOT_ENABLED:
+        asyncio.create_task(safe_polling())
+    else:
+        logger.info("BOT_TOKEN не задан — Telegram-бот не запускается (сайт работает как обычно)")
+    if not BASE_URL:
+        logger.warning("BASE_URL не задан в .env — ссылки на подписание договора в письмах будут без адреса сайта!")
     asyncio.create_task(send_notifications())
     asyncio.create_task(ical_sync_loop())
     asyncio.create_task(expire_unpaid_loop())   # автоотмена броней, за которые не подтверждена оплата

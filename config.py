@@ -1,26 +1,40 @@
 import os
+import re
 from dotenv import load_dotenv
 load_dotenv()
 
+# Все настройки установки задаются в файле .env (образец: env.example). Здесь значений конкретного сайта нет.
+
 # =====================================================
-# BOT TOKEN
+# BOT TOKEN (необязателен: без него Telegram-бот просто не запускается, сайт работает)
 # =====================================================
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 
 # =====================================================
-# ADMINS
+# ADMINS (Telegram-ID через запятую; нужны только для бота, можно не задавать)
 # =====================================================
-ADMIN_IDS = [
-    1008661058
-]
+def parse_admin_ids(raw):
+    """Достаёт все целые числа из строки: '1,2', '[1, 2]', ' 1 2 ' -> [1, 2]. Пусто или мусор -> []."""
+    return [int(x) for x in re.findall(r"-?\d+", raw or "")]
+
+ADMIN_IDS = parse_admin_ids(os.getenv("ADMIN_IDS"))
 
 # =====================================================
-# BASE URL (RAILWAY DOMAIN)
+# BASE URL: адрес сайта с https:// и без слэша в конце, например https://example.ru
+# Из него строятся ссылки на подписание договора в письмах гостям, поэтому ЗАДАТЬ ОБЯЗАТЕЛЬНО.
 # =====================================================
-BASE_URL = "https://citypause.ru"
+def clean_base_url(raw):
+    return (raw or "").strip().strip("\"'").strip().rstrip("/")
+
+BASE_URL = clean_base_url(os.getenv("BASE_URL"))
 
 # =====================================================
-# WEBAPP (КАЛЕНДАРЬ)
+# WEBAPP (КАЛЕНДАРЬ для Telegram, бот на паузе)
 # =====================================================
-WEBAPP_URL = f"{BASE_URL}/static/calendar.html"
+WEBAPP_URL = f"{BASE_URL}/static/calendar.html" if BASE_URL else ""
 SBP_PHONE = os.getenv("SBP_PHONE")
+
+# =====================================================
+# ПАРОЛЬ РЕЗЕРВНЫХ КОПИЙ (можно и файлом /data/backup_password.txt; пусто = копии не шифруются и наружу не уходят)
+# =====================================================
+BACKUP_PASSWORD = os.getenv("BACKUP_PASSWORD", "")
