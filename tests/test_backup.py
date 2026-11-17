@@ -203,3 +203,92 @@ def test_docs_and_photos_archives_are_made_rarely(env, monkeypatch):
     bk.create_backup_zip(True)
     assert len([f for f in os.listdir(bdir) if f.startswith("backup_docs_")]) == 3
     assert len([f for f in os.listdir(bdir) if f.startswith("backup_photos_")]) == 2
+
+
+# ---------- настройки копий (backup_settings.json) ----------
+
+def test_backup_settings_defaults_without_file(env):
+    bk, data = env
+    s = bk.get_backup_settings()
+    assert s == {"daily_keep": bk.BACKUP_KEEP_COUNT, "docs_days": 14, "docs_keep": 3,
+                 "photos_days": 30, "photos_keep": 2}
+    assert not (data / "backup_settings.json").exists(), "чтение настроек файл не создаёт"
+
+
+def test_backup_settings_save_and_read_back(env):
+    bk, data = env
+    new = {"daily_keep": 7, "docs_days": 0, "docs_keep": 1, "photos_days": 90, "photos_keep": 5}
+    assert bk.save_backup_settings(new) == new
+    assert (data / "backup_settings.json").exists()
+    assert bk.get_backup_settings() == new
+
+
+@pytest.mark.parametrize("bad", [
+    {"daily_keep": 0},          # хранить ноль ежедневных копий нельзя
+    {"daily_keep": 61},
+    {"docs_days": -1},
+    {"docs_days": 366},
+    {"docs_keep": 0},
+    {"photos_keep": 21},
+    {"photos_days": "abc"},
+    {"photos_days": 1.5},
+    {"docs_days": True},
+    {"docs_days": None},
+])
+def test_backup_settings_rejects_bad_values(env, bad):
+    bk, data = env
+    ok = {"daily_keep": 14, "docs_days": 14, "docs_keep": 3, "photos_days": 30, "photos_keep": 2}
+    with pytest.raises(ValueError):
+        bk.save_backup_settings({**ok, **bad})
+    assert not (data / "backup_settings.json").exists(), "при ошибке ничего не записывается"
+
+
+def test_backup_settings_missing_field_is_rejected(env):
+    bk, _ = env
+    with pytest.raises(ValueError):
+        bk.save_backup_settings({"daily_keep": 14})
+    with pytest.raises(ValueError):
+        bk.save_backup_settings("не словарь")
+
+
+def test_backup_settings_broken_file_falls_back_to_defaults(env):
+    bk, data = env
+    (data / "backup_settings.json").write_text("{не json", encoding="utf-8")
+    assert bk.get_backup_settings()["docs_days"] == 14
+    # частично верный файл: хорошие поля берутся, плохие — по умолчанию
+    (data / "backup_settings.json").write_text('{"docs_days": 5, "photos_days": -3, "daily_keep": "x"}', encoding="utf-8")
+    s = bk.get_backup_settings()
+    assert s["docs_days"] == 5 and s["photos_days"] == 30 and s["daily_keep"] == bk.BACKUP_KEEP_COUNT
+
+
+def test_zero_days_disables_docs_and_photos_even_for_force(env, monkeypatch):
+    bk, data = env
+    (data / "photos").mkdir()
+    (data / "photos" / "a.jpg").write_bytes(b"x")
+    bk.save_backup_settings({"daily_keep": 14, "docs_days": 0, "docs_keep": 3, "photos_days": 0, "photos_keep": 2})
+    path = bk.create_backup_zip(True)
+    names = os.listdir(os.path.dirname(path))
+    assert not [n for n in names if n.startswith(("backup_docs_", "backup_photos_"))]
+    assert os.path.exists(path), "основная копия делается всегда"
+
+
+def test_custom_interval_and_keep_are_used(env, monkeypatch):
+    bk, data = env
+    bk.save_backup_settings({"daily_keep": 1, "docs_days": 3, "docs_keep": 1, "photos_days": 30, "photos_keep": 2})
+    bk.create_backup_zip()
+    bdir = data / "backups"
+    docs = [f for f in os.listdir(bdir) if f.startswith("backup_docs_")]
+    assert len(docs) == 1
+    # архив моложе 3 дней — заново не делается
+    monkeypatch.setattr(bk, "now_nsk", lambda: __import__("datetime").datetime(2099, 1, 1, 4, 0))
+    bk.create_backup_zip()
+    assert [f for f in os.listdir(bdir) if f.startswith("backup_docs_")] == docs
+    # старше 3 дней — делается новый, а старый удаляется (хранить 1); основных копий тоже одна
+    old = __import__("time").time() - 4 * 86400
+    os.utime(bdir / docs[0], (old, old))
+    monkeypatch.setattr(bk, "now_nsk", lambda: __import__("datetime").datetime(2099, 1, 2, 4, 0))
+    bk.create_backup_zip()
+    docs_now = [f for f in os.listdir(bdir) if f.startswith("backup_docs_")]
+    assert len(docs_now) == 1 and docs_now != docs
+    main = [f for f in os.listdir(bdir) if not f.startswith(("backup_docs_", "backup_photos_"))]
+    assert len(main) == 1

@@ -10,7 +10,10 @@ from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
 from fastapi.responses import FileResponse, PlainTextResponse
 
 from core.auth import require_admin
-from core.backup import create_backup_zip, is_backup_encrypted, send_backup_everywhere
+from core.backup import (
+    create_backup_zip, is_backup_encrypted, send_backup_everywhere,
+    get_backup_settings, save_backup_settings,
+)
 from core.constants import (
     REVIEWS_FILE,
     HOUSE_RULES_FILE,
@@ -207,6 +210,19 @@ async def backup_now(_: bool = Depends(require_admin)):
     else:
         logger.error("Ручная копия %s создана без пароля и не отправлена", os.path.basename(zip_path))
     return {"ok": True, "started": encrypted, "encrypted": encrypted, "filename": os.path.basename(zip_path)}
+
+@router.get("/api/admin/backup-settings")
+async def get_backup_settings_api(_: bool = Depends(require_admin)):
+    """Настройки копий: как часто делать архивы документов и фото и сколько хранить (общие для всех объектов)."""
+    return await asyncio.to_thread(get_backup_settings)
+
+@router.post("/api/admin/backup-settings")
+async def save_backup_settings_api(data: dict, _: bool = Depends(require_admin)):
+    try:
+        saved = await asyncio.to_thread(save_backup_settings, data)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return {"ok": True, **saved}
 
 def save_places(places, property_id: int = DEFAULT_PROPERTY_ID):
     with open(property_file(PLACES_FILE, property_id), "w", encoding="utf-8") as f:

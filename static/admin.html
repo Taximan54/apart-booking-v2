@@ -12,16 +12,16 @@ if(localStorage.getItem('adminUiGlobal')==='round')h.classList.add('ui-round');}
 </script>
 <title>Панель управления</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Montserrat:wght@300;400;500;600&family=PT+Serif:wght@400;700&family=IM+Fell+English&family=Yeseva+One&family=Marck+Script&family=Pacifico&family=Poiret+One&family=Great+Vibes&family=Bad+Script&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/static/admin.css?v=20261117a">
+<link rel="stylesheet" href="/static/admin.css?v=20261117b">
 <script>window.CP_THEME_NO_AUTO = true;</script>
 <script src="/static/page-theme.js?v=20261101b"></script>
 <script>
 // Тема выбранного объекта из прошлого захода — применяем сразу, чтобы админка не мигала цветами по умолчанию
 (function(){try{var id=localStorage.getItem('adminPropertyId')||'1';var c=JSON.parse(localStorage.getItem('adminTheme:'+id)||'null');if(c&&window.CityPauseTheme)window.CityPauseTheme.apply(c.bg,c.color);}catch(e){}})();
 </script>
-<link rel="stylesheet" href="/static/buttons.css?v=20261117a">
-<link rel="stylesheet" href="/static/admin-round.css?v=20261117a">
-<script src="/static/buttons.js?v=20261117a" defer></script>
+<link rel="stylesheet" href="/static/buttons.css?v=20261117b">
+<link rel="stylesheet" href="/static/admin-round.css?v=20261117b">
+<script src="/static/buttons.js?v=20261117b" defer></script>
 </head>
 <body>
 
@@ -1537,10 +1537,10 @@ if(localStorage.getItem('adminUiGlobal')==='round')h.classList.add('ui-round');}
           <div class="card-header"><span class="card-title">Резервное копирование</span></div>
           <div class="card-body">
             <div style="font-size:11px;color:var(--text-muted);line-height:1.7;margin-bottom:16px">
-              База данных броней, ключевые настройки, подписанные договоры и фото паспортов
-              автоматически бэкапятся каждую ночь в 04:00 и отправляются файлом в Telegram
-              администраторам и на почту (указанную в Контактах, либо почта по
-              умолчанию). Последние 14 копий также хранятся на самом сервере.<br><br>
+              Каждую ночь в 04:00 делается основная копия: база броней, настройки и шаблоны (небольшой файл).
+              Она отправляется на почту (указанную в Контактах) и в Telegram, если он подключён, и хранится на сервере.
+              Договоры, фото паспортов и фото квартиры сохраняются отдельными архивами реже и остаются только на сервере:
+              как часто и сколько хранить — в карточке «Настройки копий» ниже.<br><br>
               Архив защищён паролем (AES-256): пароль задаётся на сервере в config.py (BACKUP_PASSWORD) и нигде в письмах не показывается. Без пароля копия создаётся только на сервере и наружу не отправляется. Открывать архив можно программой 7-Zip.<br><br>
             Если архив вырастет больше 50 МБ — в Telegram не отправится (лимит бота),
               больше 20 МБ — может не пройти на почту (лимит большинства провайдеров);
@@ -1548,6 +1548,31 @@ if(localStorage.getItem('adminUiGlobal')==='round')h.classList.add('ui-round');}
             </div>
             <button class="btn btn-primary" id="backupNowBtn" onclick="backupNow()">Создать копию сейчас</button>
             <div id="backupStatus" style="font-size:11px;color:var(--text-muted);margin-top:10px"></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">Настройки копий</span></div>
+          <div class="card-body" id="bkSettingsCard">
+            <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px">
+              <div class="info-field" style="flex:1;min-width:200px"><div class="info-label">Ежедневных копий хранить</div>
+                <input type="number" class="info-input" id="bkDailyKeep" min="1" max="60"></div>
+              <div class="info-field" style="flex:1;min-width:200px"><div class="info-label">Архив документов: раз в, дней (0 — не делать)</div>
+                <input type="number" class="info-input" id="bkDocsDays" min="0" max="365"></div>
+              <div class="info-field" style="flex:1;min-width:200px"><div class="info-label">Архивов документов хранить</div>
+                <input type="number" class="info-input" id="bkDocsKeep" min="1" max="20"></div>
+              <div class="info-field" style="flex:1;min-width:200px"><div class="info-label">Архив фото квартир: раз в, дней (0 — не делать)</div>
+                <input type="number" class="info-input" id="bkPhotosDays" min="0" max="365"></div>
+              <div class="info-field" style="flex:1;min-width:200px"><div class="info-label">Архивов фото хранить</div>
+                <input type="number" class="info-input" id="bkPhotosKeep" min="1" max="20"></div>
+            </div>
+            <button class="btn btn-primary" onclick="saveBackupSettings()">Сохранить</button>
+            <div id="bkSettingsStatus" style="font-size:11px;color:var(--text-muted);margin-top:10px"></div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:12px;line-height:1.7">
+              По умолчанию: 14 ежедневных копий, документы раз в 14 дней (хранить 3), фото раз в 30 дней (хранить 2).
+              «0 дней» выключает архив совсем, в том числе для кнопки «Создать копию сейчас».
+              <b>Если уменьшить «сколько хранить», лишние старые архивы удалятся при следующей копии.</b>
+              Ежедневную копию отключить нельзя: на неё смотрит мониторинг.
+            </div>
           </div>
         </div>
       </div>
@@ -1754,20 +1779,21 @@ if(localStorage.getItem('adminUiGlobal')==='round')h.classList.add('ui-round');}
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
-<script src="/static/admin-js/core.js?v=20261117a"></script>
-<script src="/static/admin-js/theme.js?v=20261117a"></script>
-<script src="/static/admin-js/prices-promo.js?v=20261117a"></script>
-<script src="/static/admin-js/bookings-dashboard.js?v=20261117a"></script>
-<script src="/static/admin-js/ui-contract.js?v=20261117a"></script>
-<script src="/static/admin-js/archive-photos.js?v=20261117a"></script>
-<script src="/static/admin-js/content.js?v=20261117a"></script>
-<script src="/static/admin-js/site-settings.js?v=20261117a"></script>
-<script src="/static/admin-js/properties.js?v=20261117a"></script>
-<script src="/static/admin-js/catalog.js?v=20261117a"></script>
-<script src="/static/admin-js/integrations.js?v=20261117a"></script>
-<script src="/static/admin-js/chat-faq.js?v=20261117a"></script>
-<script src="/static/admin-js/booking-rules.js?v=20261117a"></script>
-<script src="/static/admin-js/monitoring.js?v=20261117a"></script>
-<script src="/static/admin-js/init.js?v=20261117a"></script>
+<script src="/static/admin-js/core.js?v=20261117b"></script>
+<script src="/static/admin-js/theme.js?v=20261117b"></script>
+<script src="/static/admin-js/prices-promo.js?v=20261117b"></script>
+<script src="/static/admin-js/bookings-dashboard.js?v=20261117b"></script>
+<script src="/static/admin-js/ui-contract.js?v=20261117b"></script>
+<script src="/static/admin-js/archive-photos.js?v=20261117b"></script>
+<script src="/static/admin-js/content.js?v=20261117b"></script>
+<script src="/static/admin-js/site-settings.js?v=20261117b"></script>
+<script src="/static/admin-js/properties.js?v=20261117b"></script>
+<script src="/static/admin-js/catalog.js?v=20261117b"></script>
+<script src="/static/admin-js/integrations.js?v=20261117b"></script>
+<script src="/static/admin-js/chat-faq.js?v=20261117b"></script>
+<script src="/static/admin-js/booking-rules.js?v=20261117b"></script>
+<script src="/static/admin-js/monitoring.js?v=20261117b"></script>
+<script src="/static/admin-js/backup-settings.js?v=20261117b"></script>
+<script src="/static/admin-js/init.js?v=20261117b"></script>
 </body>
 </html>

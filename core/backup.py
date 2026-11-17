@@ -108,6 +108,86 @@ _PHOTOS_PREFIX = "backup_photos_"
 _DOCS_EVERY_DAYS, _DOCS_KEEP = 14, 3
 _PHOTOS_EVERY_DAYS, _PHOTOS_KEEP = 30, 2
 
+# Настройки копий (задаются в админке) лежат в /data/backup_settings.json; нет файла — значения по умолчанию = прежнее поведение.
+#   daily_keep — сколько основных (ежедневных) копий хранить; docs_days / photos_days — раз в сколько дней делать архив
+#   документов / фото (0 = не делать вовсе, даже по кнопке «Копия сейчас»); docs_keep / photos_keep — сколько таких архивов хранить.
+_SETTINGS_LIMITS = {
+    "daily_keep": (1, 60),
+    "docs_days": (0, 365), "docs_keep": (1, 20),
+    "photos_days": (0, 365), "photos_keep": (1, 20),
+}
+
+def _backup_settings_path() -> str:
+    return os.path.join(os.path.dirname(DB_FILE), "backup_settings.json")
+
+def _backup_settings_defaults() -> dict:
+    return {
+        "daily_keep": BACKUP_KEEP_COUNT,
+        "docs_days": _DOCS_EVERY_DAYS, "docs_keep": _DOCS_KEEP,
+        "photos_days": _PHOTOS_EVERY_DAYS, "photos_keep": _PHOTOS_KEEP,
+    }
+
+def _as_int_in_range(value, low: int, high: int):
+    """Целое число в диапазоне или None (булевы и дробные значения не принимаем)."""
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, float):
+        if not value.is_integer():
+            return None
+        value = int(value)
+    if isinstance(value, str):
+        value = value.strip()
+        if not value.lstrip("-").isdigit():
+            return None
+        value = int(value)
+    if not isinstance(value, int):
+        return None
+    return value if low <= value <= high else None
+
+def get_backup_settings() -> dict:
+    """Текущие настройки копий. Битый файл или недопустимое значение — по умолчанию (копии не должны падать из-за настроек)."""
+    result = _backup_settings_defaults()
+    try:
+        with open(_backup_settings_path(), "r", encoding="utf-8") as f:
+            raw = json.load(f)
+    except FileNotFoundError:
+        return result
+    except Exception as e:
+        logger.warning("Не удалось прочитать настройки копий, используются значения по умолчанию: %s", e)
+        return result
+    if isinstance(raw, dict):
+        for key, (low, high) in _SETTINGS_LIMITS.items():
+            if key in raw:
+                val = _as_int_in_range(raw[key], low, high)
+                if val is not None:
+                    result[key] = val
+    return result
+
+def save_backup_settings(data: dict) -> dict:
+    """Проверяет и сохраняет настройки (все пять полей обязательны). Ошибка в значении — ValueError с понятным текстом."""
+    labels = {
+        "daily_keep": "Сколько ежедневных копий хранить",
+        "docs_days": "Архив документов: раз в, дней",
+        "docs_keep": "Сколько архивов документов хранить",
+        "photos_days": "Архив фото: раз в, дней",
+        "photos_keep": "Сколько архивов фото хранить",
+    }
+    if not isinstance(data, dict):
+        raise ValueError("Неверный формат настроек")
+    clean = {}
+    for key, (low, high) in _SETTINGS_LIMITS.items():
+        val = _as_int_in_range(data.get(key), low, high)
+        if val is None:
+            raise ValueError(f"{labels[key]}: нужно целое число от {low} до {high}")
+        clean[key] = val
+    path = _backup_settings_path()
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(clean, f, ensure_ascii=False, indent=2)
+    os.replace(tmp, path)
+    return clean
+
 def _extra_archive_age_days(prefix: str):
     """Сколько дней назад создан самый свежий архив с этим префиксом, или None, если архивов нет."""
     try:
@@ -123,6 +203,8 @@ def _create_extra_zip(prefix: str, timestamp: str, folders, every_days: int, for
     Создаётся, если последний такой архив старше every_days дней (или его нет), либо при force.
     Нет файлов — архив не создаётся.
     """
+    if every_days <= 0:
+        return None   # в настройках выключено («0 дней») — не делаем, даже по кнопке «Копия сейчас»
     if not force:
         age = _extra_archive_age_days(prefix)
         if age is not None and age < every_days:
@@ -197,21 +279,22 @@ def create_backup_zip(force_all: bool = False):
                             zf.write(fpath, arcname=arc)
                             written.add(arc)
 
+    cfg = get_backup_settings()
     # Документы и фото — отдельными архивами и реже (см. константы выше); сбой не должен ронять основную копию
     try:
         _create_extra_zip(_DOCS_PREFIX, timestamp,
                           [(CONTRACTS_DIR, "contracts"), (PASSPORT_DIR, "passports"), (ARCHIVE_DIR, "contracts_archive")],
-                          _DOCS_EVERY_DAYS, force_all)
+                          cfg["docs_days"], force_all)
         _create_extra_zip(_PHOTOS_PREFIX, timestamp,
                           [(os.path.join(os.path.dirname(DB_FILE), "photos"), "photos")],
-                          _PHOTOS_EVERY_DAYS, force_all)
+                          cfg["photos_days"], force_all)
     except Exception as e:
         logger.warning("Не удалось создать архив с документами или фото: %s", e)
 
     # Ротация: основные, документы и фото считаем отдельно
-    _rotate(lambda n: not n.startswith((_DOCS_PREFIX, _PHOTOS_PREFIX)), BACKUP_KEEP_COUNT)
-    _rotate(lambda n: n.startswith(_DOCS_PREFIX), _DOCS_KEEP)
-    _rotate(lambda n: n.startswith(_PHOTOS_PREFIX), _PHOTOS_KEEP)
+    _rotate(lambda n: not n.startswith((_DOCS_PREFIX, _PHOTOS_PREFIX)), cfg["daily_keep"])
+    _rotate(lambda n: n.startswith(_DOCS_PREFIX), cfg["docs_keep"])
+    _rotate(lambda n: n.startswith(_PHOTOS_PREFIX), cfg["photos_keep"])
 
     return zip_path
 
