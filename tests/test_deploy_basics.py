@@ -92,3 +92,9 @@ def test_env_example_lists_required_keys_without_real_values():
     for key in ("BASE_URL=", "ADMIN_PASSWORD=", "SESSION_SECRET=", "MAIL_FROM=", "MAIL_PASSWORD=", "BACKUP_PASSWORD="):
         assert key in text
     assert "citypause" not in text.lower()
+
+
+def test_polling_does_not_take_over_sigterm():
+    """aiogram по умолчанию перехватывает SIGTERM у uvicorn: сервис не завершался и systemd убивал его через 90 секунд."""
+    text = open(os.path.join(ROOT, "main.py"), encoding="utf-8").read()
+    assert "dp.start_polling(bot, handle_signals=False)" in text

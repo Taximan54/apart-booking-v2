@@ -60,7 +60,9 @@ async def startup():
     async def safe_polling():
         while True:
             try:
-                await dp.start_polling(bot)
+                # handle_signals=False: иначе aiogram перехватывает SIGTERM у uvicorn, и сервис при остановке
+                # не завершается, пока systemd не убьёт его через 90 секунд (так было при каждом перезапуске)
+                await dp.start_polling(bot, handle_signals=False)
             except TelegramNetworkError as e:
                 # Telegram с сервера часто недоступен (сетевые блокировки): это ожидаемо,
                 # поэтому одна короткая строка без длинного трейсбека.
