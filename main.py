@@ -13,7 +13,7 @@ from core.scheduler import send_notifications
 from core.payment_timeout import expire_unpaid_loop
 from core.retention import retention_loop
 from core.monitoring import watchdog_loop
-from routers import pages, admin_auth, pricing, content, photos, contracts, bookings, signing_api, ical, properties, monitoring, chat
+from routers import pages, admin_auth, pricing, content, photos, contracts, bookings, signing_api, ical, properties, monitoring, chat, setup
 from services.booking_service import init_db
 from core.logger import get_logger
 import core.telegram_callbacks  # noqa: F401  (регистрирует обработчики кнопок Telegram на dp)
@@ -48,6 +48,7 @@ app.include_router(ical.router)
 app.include_router(properties.router)
 app.include_router(monitoring.router)
 app.include_router(chat.router)
+app.include_router(setup.router)
 
 # =====================================================
 # STARTUP / SHUTDOWN
