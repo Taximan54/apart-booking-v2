@@ -1,5 +1,7 @@
 """Авторизация администратора (пароль, токены сессии, роли)."""
 import base64
+import copy
+
 import hashlib
 import hmac
 import json
@@ -101,10 +103,10 @@ def check_admin_password(password: str) -> bool:
     return bool(ADMIN_PASSWORD) and hmac.compare_digest(password, ADMIN_PASSWORD)
 
 
-def make_token(login: Optional[str] = None) -> str:
+def make_token(login: Optional[str] = None, fp: str = "") -> str:
     """Токен сессии. Без login — прежний формат (для совместимости со старым входом)."""
     expires = int(time.time()) + SESSION_TTL
-    raw_payload = str(expires) if not login else "%s:%s" % (login, expires)
+    raw_payload = str(expires) if not login else "%s:%s:%s" % (login, fp, expires)
     payload = raw_payload.encode()
     sig = hmac.new(SESSION_SECRET.encode(), payload, hashlib.sha256).hexdigest()
     return base64.urlsafe_b64encode(payload + b"." + sig.encode()).decode()
@@ -128,7 +130,10 @@ def _token_payload(token: str) -> Optional[str]:
 
 
 def verify_token(token: str) -> bool:
-    return _token_payload(token) is not None
+    """True только для токена владельца (старый формат). Токены сотрудников здесь НЕ проходят:
+    так любой старый код, проверяющий токен напрямую, остаётся закрытым для сотрудников."""
+    payload = _token_payload(token)
+    return payload is not None and ":" not in payload
 
 
 def token_login(token: str) -> Optional[str]:
@@ -136,15 +141,22 @@ def token_login(token: str) -> Optional[str]:
     text = _token_payload(token)
     if text is None or ":" not in text:
         return None
-    return text.rsplit(":", 1)[0] or None
+    return text.split(":")[0] or None
+
+
+def token_fp(token: str) -> str:
+    """Отпечаток пароля в токене сотрудника (при смене пароля старые токены перестают работать)."""
+    parts = (_token_payload(token) or "").split(":")
+    return parts[1] if len(parts) == 3 else ""
 
 
 def require_admin(authorization: Optional[str] = Header(None)):
     """Dependency для защиты админских эндпоинтов — добавлять как Depends(require_admin)."""
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Unauthorized")
-    if not verify_token(authorization[len("Bearer "):]):
-        raise HTTPException(status_code=401, detail="Unauthorized")
+    user = current_user(authorization)
+    if user is not None and not is_owner(user):
+        raise HTTPException(status_code=403, detail="Forbidden")   # сотрудникам — только через require_permission
     return True
 
 
@@ -163,6 +175,49 @@ OWNER_ROLE = "owner"
 
 # Каталог прав: по нему админка будет рисовать галочки при создании роли.
 ALL_PERMISSIONS = [
+    "today", "today.guest_name", "bookings.view", "guest.contacts", "bookings.edit",
+    "bookings.cancel", "dates.block", "payments", "door_code.view", "passports.view",
+    "contracts.pdf", "guest.mail", "prices.edit", "site.content", "site.settings",
+    "contract.templates", "payment.settings", "calendars.sync", "brand.edit",
+    "backup.retention", "monitoring.view",
+]
+
+# Только владелец, выдать нельзя никому
+OWNER_ONLY = ["admin.users", "admin.roles", "admin.journal", "admin.delete", "admin.checklist"]
+
+PERMISSION_INFO = {
+    "today": ("Экран «Сегодня»", "заезды и выезды дня: квартира, время"),
+    "today.guest_name": ("Имя гостя в «Сегодня»", "показать имя рядом"),
+    "bookings.view": ("Смотреть брони и календарь", "список, карточки, заезды, выезды"),
+    "guest.contacts": ("Контакты гостя", "имя, телефон, почта"),
+    "bookings.edit": ("Создавать и менять брони", "ручная бронь, правка дат и гостей"),
+    "bookings.cancel": ("Отменять брони", "отмена"),
+    "dates.block": ("Блокировать даты", "закрыть и открыть даты"),
+    "payments": ("Подтверждать оплату, возврат залога", "деньги"),
+    "door_code.view": ("Код двери: смотреть", ""),
+    "passports.view": ("Паспорта: фото и номер", "в брони"),
+    "contracts.pdf": ("Договоры PDF, ссылки подписи", "содержат паспорт"),
+    "guest.mail": ("Письма после выезда, промокоды гостям", ""),
+    "prices.edit": ("Цены, акции, промокоды", ""),
+    "site.content": ("Фото, тексты, отзывы, места, правила, чат", "содержимое сайта"),
+    "site.settings": ("Настройки сайта, оформление, каталог, объекты", ""),
+    "contract.templates": ("Шаблоны договора и данные для договора", ""),
+    "payment.settings": ("Реквизиты оплаты, время автоотмены", ""),
+    "calendars.sync": ("Календари площадок", ""),
+    "brand.edit": ("Арендодатель и контакты (бренд)", ""),
+    "backup.retention": ("Копии, срок хранения данных", ""),
+    "monitoring.view": ("Мониторинг", ""),
+}
+
+# Заготовки ролей: действуют, пока владелец не сохранил роли сам (roles.json при чтении не создаётся)
+DEFAULT_ROLES = {
+    "manager": {"name": "Менеджер", "permissions": [
+        "today", "today.guest_name", "bookings.view", "guest.contacts", "bookings.edit",
+        "dates.block", "payments", "door_code.view"]},
+    "maid": {"name": "Горничная", "permissions": ["today"]},
+}
+
+_OLD_PERMISSIONS_UNUSED = [
     "dashboard.view",
     "bookings.view", "bookings.create", "bookings.edit",
     "calendar.edit", "prices.edit", "promo.edit",
@@ -197,9 +252,9 @@ def load_roles() -> dict:
     try:
         with open(ROLES_FILE, "r", encoding="utf-8") as f:
             data = json.load(f)
-        return data if isinstance(data, dict) else {}
+        return data if isinstance(data, dict) else copy.deepcopy(DEFAULT_ROLES)
     except Exception:
-        return {}
+        return copy.deepcopy(DEFAULT_ROLES)
 
 
 def save_roles(roles: dict) -> None:
@@ -256,7 +311,7 @@ def is_owner(user: Optional[dict]) -> bool:
 
 def get_user_permissions(user: Optional[dict]) -> list:
     if is_owner(user):
-        return list(ALL_PERMISSIONS)
+        return list(ALL_PERMISSIONS) + list(OWNER_ONLY)
     role = load_roles().get((user or {}).get("role", "")) or {}
     perms = role.get("permissions") or []
     return [p for p in perms if p in ALL_PERMISSIONS]
@@ -271,22 +326,54 @@ def current_user(authorization: Optional[str] = None) -> Optional[dict]:
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Unauthorized")
     token = authorization[len("Bearer "):]
-    if not verify_token(token):
+    if _token_payload(token) is None:
         raise HTTPException(status_code=401, detail="Unauthorized")
     login = token_login(token)
     if login is None:
         return None
     user = find_user(login)
-    if user is None:  # пользователя удалили — сессия больше не действует
+    # удалён или отключён — сессия больше не действует
+    if user is None or user.get("active", True) is False:
         raise HTTPException(status_code=401, detail="Unauthorized")
+    # сменился пароль — старые токены этого сотрудника недействительны
+    if not hmac.compare_digest(token_fp(token), password_fp(user)):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    return user
+
+
+def password_fp(user: dict) -> str:
+    """Короткий отпечаток пароля сотрудника (кладётся в токен)."""
+    raw = SESSION_SECRET + "|" + str((user or {}).get("password_hash", ""))
+    return hashlib.sha256(raw.encode()).hexdigest()[:12]
+
+
+def check_staff_login(login: str, password: str) -> Optional[dict]:
+    """Сотрудник по логину и паролю (None — неверно или отключён)."""
+    user = find_user(login)
+    if not user or user.get("active", True) is False:
+        verify_password(password or "", "00:00")   # выравниваем время ответа
+        return None
+    if not verify_password(password or "", user.get("password_hash", "")):
+        return None
     return user
 
 
 def require_permission(permission: str):
     """Использовать как Depends(require_permission("bookings.view"))."""
-    def checker(authorization: Optional[str] = Header(None)):
+    def checker(authorization: Optional[str] = Header(None),
+                x_property_id: Optional[str] = Header(None, alias="X-Property-Id")):
         user = current_user(authorization)
+        if is_owner(user):
+            return user
         if not user_has_permission(user, permission):
             raise HTTPException(status_code=403, detail="Forbidden")
+        allowed = user.get("properties") or None
+        if allowed:
+            try:
+                pid = int(x_property_id) if x_property_id else 1
+            except ValueError:
+                raise HTTPException(status_code=400, detail="Неверный номер объекта")
+            if pid not in allowed:
+                raise HTTPException(status_code=403, detail="Нет доступа к этой квартире")
         return user
     return checker

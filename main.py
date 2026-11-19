@@ -13,7 +13,7 @@ from core.scheduler import send_notifications
 from core.payment_timeout import expire_unpaid_loop
 from core.retention import retention_loop
 from core.monitoring import watchdog_loop
-from routers import pages, admin_auth, pricing, content, photos, contracts, bookings, signing_api, ical, properties, monitoring, chat, setup
+from routers import pages, admin_auth, pricing, content, photos, contracts, bookings, signing_api, ical, properties, monitoring, chat, setup, admin_users
 from services.booking_service import init_db
 from core.logger import get_logger
 import core.telegram_callbacks  # noqa: F401  (регистрирует обработчики кнопок Telegram на dp)
@@ -38,6 +38,7 @@ setup_noindex(app)   # только если в .env задано NOINDEX=1 (т�
 
 app.include_router(pages.router)
 app.include_router(admin_auth.router)
+app.include_router(admin_users.router)   # роли и сотрудники (вход сотрудников, /api/admin/users, /roles, /me)
 app.include_router(pricing.router)
 app.include_router(content.router)
 app.include_router(photos.router)
