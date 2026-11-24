@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import PlainTextResponse, FileResponse
 from pydantic import BaseModel
 
-from core.auth import require_admin
+from core.auth import require_admin, require_permission
 from core.constants import (
     CONTRACT_FILE,
     CONTRACT_STATIC,
@@ -54,7 +54,7 @@ async def get_contract_template():
     return PlainTextResponse("")
 
 @router.post("/api/contract-template")
-async def set_contract_template(c: ContractTemplate, _: bool = Depends(require_admin)):
+async def set_contract_template(c: ContractTemplate, _=Depends(require_permission("contract.templates"))):
     with open(CONTRACT_FILE, "w", encoding="utf-8") as f:
         f.write(c.text)
     return {"ok": True}
@@ -65,12 +65,12 @@ async def get_contract_info(property_id: int = Depends(request_property_id)):
     return contract_public_values(property_id)
 
 @router.get("/api/admin/contract-settings")
-async def get_contract_settings(_: bool = Depends(require_admin), property_id: int = Depends(admin_property_id)):
+async def get_contract_settings(_=Depends(require_permission("contract.templates")), property_id: int = Depends(admin_property_id)):
     """Данные объекта для договора (арендодатель, вид объекта, адрес, перечень имущества)."""
     return load_contract_settings(property_id)
 
 @router.post("/api/admin/contract-settings")
-async def set_contract_settings(s: ContractSettings, _: bool = Depends(require_admin), property_id: int = Depends(admin_property_id)):
+async def set_contract_settings(s: ContractSettings, _=Depends(require_permission("contract.templates")), property_id: int = Depends(admin_property_id)):
     if len(s.landlord_name) > 200 or len(s.object_kind) > 100 or len(s.address) > 300 or len(s.inventory) > 8000 or len(s.basis) > 500:
         raise HTTPException(status_code=400, detail="Слишком длинный текст в одном из полей")
     return save_contract_settings(property_id, s.dict())
@@ -83,7 +83,7 @@ async def get_checkin_memo(property_id: int = Depends(admin_property_id)):
     return PlainTextResponse(DEFAULT_CHECKIN_MEMO)
 
 @router.post("/api/checkin-memo")
-async def set_checkin_memo(c: CheckinMemo, _: bool = Depends(require_admin), property_id: int = Depends(admin_property_id)):
+async def set_checkin_memo(c: CheckinMemo, _=Depends(require_permission("site.content")), property_id: int = Depends(admin_property_id)):
     with open(property_file(CHECKIN_FILE, property_id), "w", encoding="utf-8") as f:
         f.write(c.text)
     return {"ok": True}
@@ -96,7 +96,7 @@ async def get_checkout_checklist(property_id: int = Depends(admin_property_id)):
     return PlainTextResponse(DEFAULT_CHECKOUT_CHECKLIST)
 
 @router.post("/api/checkout-checklist")
-async def set_checkout_checklist(c: CheckinMemo, _: bool = Depends(require_admin), property_id: int = Depends(admin_property_id)):
+async def set_checkout_checklist(c: CheckinMemo, _=Depends(require_permission("site.content")), property_id: int = Depends(admin_property_id)):
     with open(property_file(CHECKOUT_FILE, property_id), "w", encoding="utf-8") as f:
         f.write(c.text)
     return {"ok": True}
@@ -108,6 +108,9 @@ async def get_review_template():
             return PlainTextResponse(f.read())
     return PlainTextResponse(DEFAULT_REVIEW_TEMPLATE)
 
+# ВАЖНО: шаблон письма после выезда остаётся на require_admin — это часть блока
+# «Письма после выезда, промокоды гостям», который в pricing.py целиком на require_admin
+# (требование tests/test_review_promo.py). Чтобы не было рассинхрона — здесь то же.
 @router.post("/api/review-template")
 async def set_review_template(c: CheckinMemo, _: bool = Depends(require_admin)):
     with open(REVIEW_FILE, "w", encoding="utf-8") as f:
@@ -119,7 +122,7 @@ async def set_review_template(c: CheckinMemo, _: bool = Depends(require_admin)):
 # =====================================================
 
 @router.get("/api/contracts")
-async def list_contracts(_: bool = Depends(require_admin)):
+async def list_contracts(_=Depends(require_permission("contracts.pdf"))):
     """
     Список всех броней с сохранёнными документами. Собирается по всем
     типам файлов в CONTRACTS_DIR (черновик .txt, подписанный договор
@@ -231,12 +234,12 @@ def _retention_payload():
     return {"settings": s, "preview": retention.preview(**s), "password_set": retention.password_is_set()}
 
 @router.get("/api/admin/retention")
-async def get_retention(_: bool = Depends(require_admin)):
+async def get_retention(_=Depends(require_permission("backup.retention"))):
     """Сроки хранения (упаковка в архив, удаление архива, очистка отменённых броней) и сколько броней под них попадает."""
     return _retention_payload()
 
 @router.post("/api/admin/retention")
-async def set_retention(body: RetentionSettings, _: bool = Depends(require_admin)):
+async def set_retention(body: RetentionSettings, _=Depends(require_permission("backup.retention"))):
     try:
         retention.save_settings(body.pack_days, body.delete_days, body.purge_cancelled, body.clear_passport)
     except ValueError as e:
@@ -244,7 +247,7 @@ async def set_retention(body: RetentionSettings, _: bool = Depends(require_admin
     return _retention_payload()
 
 @router.get("/api/admin/retention/preview")
-async def preview_retention(pack_days: int = 0, delete_days: int = 0, purge_cancelled: bool = False, _: bool = Depends(require_admin)):
+async def preview_retention(pack_days: int = 0, delete_days: int = 0, purge_cancelled: bool = False, _=Depends(require_permission("backup.retention"))):
     """Сколько броней попадёт под правила при указанных значениях. Ничего не сохраняет и не удаляет."""
     try:
         return retention.preview(pack_days, delete_days, purge_cancelled)
@@ -252,7 +255,7 @@ async def preview_retention(pack_days: int = 0, delete_days: int = 0, purge_canc
         raise HTTPException(status_code=400, detail=str(e))
 
 @router.get("/api/contracts/{booking_ref}")
-async def get_contract(booking_ref: str, _: bool = Depends(require_admin)):
+async def get_contract(booking_ref: str, _=Depends(require_permission("contracts.pdf"))):
     """Получить сохранённый договор."""
     path = os.path.join(CONTRACTS_DIR, booking_ref + ".txt")
     if os.path.exists(path):
@@ -265,7 +268,7 @@ async def get_contract(booking_ref: str, _: bool = Depends(require_admin)):
     return PlainTextResponse(generate_contract(booking))
 
 @router.get("/api/admin/contract-pdf/{booking_ref}/{doc_type}")
-async def get_signed_contract_pdf(booking_ref: str, doc_type: str, _: bool = Depends(require_admin)):
+async def get_signed_contract_pdf(booking_ref: str, doc_type: str, _=Depends(require_permission("contracts.pdf"))):
     """
     Отдаёт подписанный PDF из архива: doc_type = 'contract' (договор +
     приложения + фото паспорта с водяным знаком) или 'consent' (согласие
@@ -286,7 +289,7 @@ class ContractPreviewRequest(BaseModel):
     text: str
 
 @router.post("/api/admin/contract-preview")
-async def contract_preview(body: ContractPreviewRequest, _: bool = Depends(require_admin), property_id: int = Depends(admin_property_id)):
+async def contract_preview(body: ContractPreviewRequest, _=Depends(require_permission("contract.templates")), property_id: int = Depends(admin_property_id)):
     """
     Генерирует PDF-предпросмотр ТЕКУЩЕГО текста в редакторе шаблона (даже
     ещё не сохранённого) с фиктивными тестовыми данными вместо реальной

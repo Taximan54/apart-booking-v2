@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
 from core import chat_faq
-from core.auth import require_admin
+from core.auth import require_admin, require_permission
 from core.properties import admin_property_id, public_property_id
 
 router = APIRouter()
@@ -32,11 +32,11 @@ async def public_chat_faq(property_id: int = Depends(public_property_id)):
 
 
 @router.get("/api/admin/chat-faq")
-async def get_chat_faq(_: bool = Depends(require_admin), property_id: int = Depends(admin_property_id)):
+async def get_chat_faq(_=Depends(require_permission("site.content")), property_id: int = Depends(admin_property_id)):
     return chat_faq.admin_view(property_id)
 
 
 @router.post("/api/admin/chat-faq")
-async def set_chat_faq(data: ChatFaqUpdate, _: bool = Depends(require_admin), property_id: int = Depends(admin_property_id)):
+async def set_chat_faq(data: ChatFaqUpdate, _=Depends(require_permission("site.content")), property_id: int = Depends(admin_property_id)):
     chat_faq.save_settings(property_id, data.dict())
     return chat_faq.admin_view(property_id)
