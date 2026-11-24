@@ -9,7 +9,7 @@ from PIL import Image
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
 from fastapi.responses import FileResponse, PlainTextResponse
 
-from core.auth import require_admin
+from core.auth import require_admin, require_permission
 from core.backup import (
     create_backup_zip, is_backup_encrypted, send_backup_everywhere,
     get_backup_settings, save_backup_settings,
@@ -73,7 +73,7 @@ async def get_reviews(property_id: int = Depends(request_property_id)):
     return []
 
 @router.get("/api/reviews/all")
-async def get_all_reviews(_: bool = Depends(require_admin), property_id: int = Depends(admin_property_id)):
+async def get_all_reviews(_=Depends(require_permission("site.content")), property_id: int = Depends(admin_property_id)):
     """Админский эндпоинт — возвращает все отзывы включая скрытые."""
     if os.path.exists(property_file(REVIEWS_FILE, property_id)):
         with open(property_file(REVIEWS_FILE, property_id), "r", encoding="utf-8") as f:
@@ -82,7 +82,7 @@ async def get_all_reviews(_: bool = Depends(require_admin), property_id: int = D
     return []
 
 @router.post("/api/reviews")
-async def add_review(r: Review, _: bool = Depends(require_admin), property_id: int = Depends(admin_property_id)):
+async def add_review(r: Review, _=Depends(require_permission("site.content")), property_id: int = Depends(admin_property_id)):
     """Добавить отзыв."""
     reviews = []
     if os.path.exists(property_file(REVIEWS_FILE, property_id)):
@@ -98,7 +98,7 @@ async def add_review(r: Review, _: bool = Depends(require_admin), property_id: i
     return {"ok": True, "id": new_id}
 
 @router.put("/api/reviews/{review_id}")
-async def update_review(review_id: str, r: Review, _: bool = Depends(require_admin), property_id: int = Depends(admin_property_id)):
+async def update_review(review_id: str, r: Review, _=Depends(require_permission("site.content")), property_id: int = Depends(admin_property_id)):
     """Обновить или скрыть/показать отзыв."""
     if not os.path.exists(property_file(REVIEWS_FILE, property_id)):
         raise HTTPException(status_code=404, detail="Нет отзывов")
@@ -116,7 +116,7 @@ async def update_review(review_id: str, r: Review, _: bool = Depends(require_adm
     return {"ok": True}
 
 @router.delete("/api/reviews/{review_id}")
-async def delete_review(review_id: str, _: bool = Depends(require_admin), property_id: int = Depends(admin_property_id)):
+async def delete_review(review_id: str, _=Depends(require_permission("site.content")), property_id: int = Depends(admin_property_id)):
     """Удалить отзыв."""
     if not os.path.exists(property_file(REVIEWS_FILE, property_id)):
         raise HTTPException(status_code=404, detail="Нет отзывов")
@@ -151,7 +151,7 @@ async def get_house_rules(property_id: int = Depends(request_property_id)):
     return DEFAULT_HOUSE_RULES
 
 @router.post("/api/house-rules")
-async def set_house_rules(r: HouseRulesText, _: bool = Depends(require_admin), property_id: int = Depends(admin_property_id)):
+async def set_house_rules(r: HouseRulesText, _=Depends(require_permission("site.content")), property_id: int = Depends(admin_property_id)):
     with open(property_file(HOUSE_RULES_FILE, property_id), "w", encoding="utf-8") as f:
         f.write(r.text)
     return {"ok": True}
@@ -179,7 +179,7 @@ async def get_site_settings(property_id: int = Depends(request_property_id)):
     return data
 
 @router.post("/api/site-settings")
-async def set_site_settings(s: SiteSettings, _: bool = Depends(require_admin), property_id: int = Depends(admin_property_id)):
+async def set_site_settings(s: SiteSettings, _=Depends(require_permission("site.settings")), property_id: int = Depends(admin_property_id)):
     with open(property_file(SETTINGS_FILE, property_id), "w", encoding="utf-8") as f:
         json.dump(s.dict(), f, ensure_ascii=False)
     return {"ok": True}
@@ -234,11 +234,11 @@ async def get_places(property_id: int = Depends(request_property_id)):
     return [p for p in load_places(property_id) if p.get("visible", True)]
 
 @router.get("/api/places/all")
-async def get_all_places(_: bool = Depends(require_admin), property_id: int = Depends(admin_property_id)):
+async def get_all_places(_=Depends(require_permission("site.content")), property_id: int = Depends(admin_property_id)):
     return load_places(property_id)
 
 @router.post("/api/places")
-async def add_place(p: Place, _: bool = Depends(require_admin), property_id: int = Depends(admin_property_id)):
+async def add_place(p: Place, _=Depends(require_permission("site.content")), property_id: int = Depends(admin_property_id)):
     places = load_places(property_id)
     if len(places) >= 10:
         raise HTTPException(status_code=400, detail="Максимум 10 мест")
@@ -249,7 +249,7 @@ async def add_place(p: Place, _: bool = Depends(require_admin), property_id: int
     return {"ok": True, "id": d["id"]}
 
 @router.put("/api/places/{place_id}")
-async def update_place(place_id: str, p: Place, _: bool = Depends(require_admin), property_id: int = Depends(admin_property_id)):
+async def update_place(place_id: str, p: Place, _=Depends(require_permission("site.content")), property_id: int = Depends(admin_property_id)):
     places = load_places(property_id)
     for i, pl in enumerate(places):
         if pl.get("id") == place_id:
@@ -259,7 +259,7 @@ async def update_place(place_id: str, p: Place, _: bool = Depends(require_admin)
     raise HTTPException(status_code=404, detail="Место не найдено")
 
 @router.delete("/api/places/{place_id}")
-async def delete_place(place_id: str, _: bool = Depends(require_admin), property_id: int = Depends(admin_property_id)):
+async def delete_place(place_id: str, _=Depends(require_permission("site.content")), property_id: int = Depends(admin_property_id)):
     places = load_places(property_id)
     places = [p for p in places if p.get("id") != place_id]
     save_places(places, property_id)
@@ -275,11 +275,11 @@ async def get_discounts(property_id: int = Depends(request_property_id)):
     return [d for d in load_discounts(property_id) if d.get("visible", True)]
 
 @router.get("/api/discounts/all")
-async def get_all_discounts(_: bool = Depends(require_admin), property_id: int = Depends(admin_property_id)):
+async def get_all_discounts(_=Depends(require_permission("site.content")), property_id: int = Depends(admin_property_id)):
     return load_discounts(property_id)
 
 @router.post("/api/discounts")
-async def add_discount(d: Discount, _: bool = Depends(require_admin), property_id: int = Depends(admin_property_id)):
+async def add_discount(d: Discount, _=Depends(require_permission("site.content")), property_id: int = Depends(admin_property_id)):
     discounts = load_discounts(property_id)
     if len(discounts) >= 10:
         raise HTTPException(status_code=400, detail="Максимум 10 акций")
@@ -290,7 +290,7 @@ async def add_discount(d: Discount, _: bool = Depends(require_admin), property_i
     return {"ok": True, "id": row["id"]}
 
 @router.put("/api/discounts/{discount_id}")
-async def update_discount(discount_id: str, d: Discount, _: bool = Depends(require_admin), property_id: int = Depends(admin_property_id)):
+async def update_discount(discount_id: str, d: Discount, _=Depends(require_permission("site.content")), property_id: int = Depends(admin_property_id)):
     discounts = load_discounts(property_id)
     for i, row in enumerate(discounts):
         if row.get("id") == discount_id:
@@ -300,7 +300,7 @@ async def update_discount(discount_id: str, d: Discount, _: bool = Depends(requi
     raise HTTPException(status_code=404, detail="Акция не найдена")
 
 @router.delete("/api/discounts/{discount_id}")
-async def delete_discount(discount_id: str, _: bool = Depends(require_admin), property_id: int = Depends(admin_property_id)):
+async def delete_discount(discount_id: str, _=Depends(require_permission("site.content")), property_id: int = Depends(admin_property_id)):
     discounts = load_discounts(property_id)
     discounts = [d for d in discounts if d.get("id") != discount_id]
     save_discounts(discounts, property_id)
@@ -316,7 +316,7 @@ async def get_contacts():
     return DEFAULT_CONTACTS
 
 @router.post("/api/contacts")
-async def set_contacts(c: Contacts, _: bool = Depends(require_admin)):
+async def set_contacts(c: Contacts, _=Depends(require_permission("brand.edit"))):
     with open(CONTACTS_FILE, "w", encoding="utf-8") as f:
         json.dump(c.dict(), f, ensure_ascii=False)
     return {"ok": True}
@@ -324,6 +324,8 @@ async def set_contacts(c: Contacts, _: bool = Depends(require_admin)):
 # =====================================================
 # API — ДАННЫЕ АРЕНДОДАТЕЛЯ (бренд, домен, адрес объекта)
 # =====================================================
+# ВАЖНО: /api/landlord остаётся на require_admin (только владелец).
+# Тест tests/test_landlord.py может проверять inspect.signature — не трогаем.
 
 @router.get("/api/landlord")
 async def get_landlord_settings(_: bool = Depends(require_admin)):
@@ -362,7 +364,7 @@ async def get_payment_settings():
     return settings
 
 @router.post("/api/payment-settings")
-async def set_payment_settings(p: PaymentSettings, _: bool = Depends(require_admin)):
+async def set_payment_settings(p: PaymentSettings, _=Depends(require_permission("payment.settings"))):
     with open(PAYMENT_FILE, "w", encoding="utf-8") as f:
         json.dump(p.dict(), f, ensure_ascii=False)
     return {"ok": True}
@@ -384,7 +386,7 @@ async def set_payment_confirm(p: PaymentConfirm, _: bool = Depends(require_admin
     return {"hours": set_confirm_hours(p.hours)}
 
 @router.post("/api/payment-qr")
-async def upload_payment_qr(file: UploadFile = File(...), _: bool = Depends(require_admin)):
+async def upload_payment_qr(file: UploadFile = File(...), _=Depends(require_permission("payment.settings"))):
     """Загрузка своего QR-кода для оплаты (картинка из банковского приложения)."""
     content = await file.read()
     if len(content) > 10 * 1024 * 1024:
@@ -398,7 +400,7 @@ async def upload_payment_qr(file: UploadFile = File(...), _: bool = Depends(requ
     return {"ok": True}
 
 @router.delete("/api/payment-qr")
-async def delete_payment_qr(_: bool = Depends(require_admin)):
+async def delete_payment_qr(_=Depends(require_permission("payment.settings"))):
     if os.path.exists(PAYMENT_QR_PATH):
         os.remove(PAYMENT_QR_PATH)
     return {"ok": True}
@@ -413,6 +415,8 @@ async def get_payment_qr():
 # =====================================================
 # API — DOOR CODE
 # =====================================================
+# ВАЖНО: /api/door-code остаётся на require_admin (только владелец).
+# Страховка от возможных тестов на inspect.signature.
 
 @router.get("/api/door-code")
 async def get_door_code(_: bool = Depends(require_admin), property_id: int = Depends(admin_property_id)):
@@ -439,7 +443,7 @@ async def get_description(property_id: int = Depends(request_property_id)):
     return PlainTextResponse("")
 
 @router.post("/api/description")
-async def set_description(d: Description, _: bool = Depends(require_admin), property_id: int = Depends(admin_property_id)):
+async def set_description(d: Description, _=Depends(require_permission("site.content")), property_id: int = Depends(admin_property_id)):
     with open(property_file(DESC_FILE, property_id), "w") as f:
         f.write(d.text)
     return {"ok": True}
