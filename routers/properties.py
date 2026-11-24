@@ -42,10 +42,11 @@ async def public_properties():
     ]
 
 
-# ВАЖНО: 4 эндпоинта управления объектами остаются на require_admin (только владелец).
-# tests/test_properties.py::test_properties_api_protected_and_working проверяет
-# inspect.signature(func).parameters["_"].default.dependency is require_admin.
-# Право site.settings на них не применяется — оставлено на будущее.
+# ВАЖНО: 4 эндпоинта управления объектами + 2 эндпоинта каталога остаются на require_admin
+# (только владелец). Требования тестов:
+# - tests/test_properties.py::test_properties_api_protected_and_working (get/add/edit/remove)
+# - tests/test_catalog.py::test_catalog_routes_and_page (get_catalog_admin, set_catalog_admin)
+# Право site.settings на них не применяется.
 
 @router.get("/api/admin/properties")
 async def get_properties(_: bool = Depends(require_admin)):
@@ -85,12 +86,12 @@ async def remove_property(property_id: int, _: bool = Depends(require_admin)):
 # =====================================================
 
 @router.get("/api/admin/catalog")
-async def get_catalog_admin(_=Depends(require_permission("site.settings"))):
+async def get_catalog_admin(_: bool = Depends(require_admin)):
     return admin_catalog_state()
 
 
 @router.post("/api/admin/catalog")
-async def set_catalog_admin(data: CatalogSettings, _=Depends(require_permission("site.settings"))):
+async def set_catalog_admin(data: CatalogSettings, _: bool = Depends(require_admin)):
     try:
         save_catalog_settings(data.brand, data.title, data.subtitle, data.background_theme, data.color_theme, data.items,
                               data.button_label, data.columns, data.fonts, data.button_scale, data.date_search)
