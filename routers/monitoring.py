@@ -7,7 +7,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from core import monitoring
-from core.auth import require_admin
+from core.auth import require_admin, require_permission
 
 router = APIRouter()
 
@@ -21,25 +21,25 @@ class MonitoringSettings(BaseModel):
 
 
 @router.get("/api/admin/monitoring")
-async def get_monitoring(_: bool = Depends(require_admin)):
+async def get_monitoring(_=Depends(require_permission("monitoring.view"))):
     return monitoring.public_state()
 
 
 @router.post("/api/admin/monitoring")
-async def set_monitoring(data: MonitoringSettings, _: bool = Depends(require_admin)):
+async def set_monitoring(data: MonitoringSettings, _=Depends(require_permission("monitoring.view"))):
     monitoring.save_settings(data.dict(exclude_none=True))
     return monitoring.public_state()
 
 
 @router.post("/api/admin/monitoring/run")
-async def run_monitoring(_: bool = Depends(require_admin)):
+async def run_monitoring(_=Depends(require_permission("monitoring.view"))):
     """Проверить прямо сейчас (не ждать 5 минут)."""
     names = monitoring.running_task_names()
     return await asyncio.to_thread(monitoring.run_checks, names)
 
 
 @router.post("/api/admin/monitoring/test")
-async def test_monitoring_mail(_: bool = Depends(require_admin)):
+async def test_monitoring_mail(_=Depends(require_permission("monitoring.view"))):
     return await asyncio.to_thread(monitoring.send_test)
 
 
@@ -48,6 +48,7 @@ async def health_deep():
     """
     Для внешнего сервиса (например, UptimeRobot): 200, если база отвечает и места на диске достаточно,
     иначе 503. Подробностей наружу не отдаёт.
+    ВАЖНО: публичный, без require_admin/require_permission — UptimeRobot шлёт запросы без токена.
     """
     problems = monitoring._check_db() + monitoring._check_disk(monitoring.load_settings())
     body = {"status": "problem" if problems else "ok", "incidents": monitoring.open_incident_count()}
