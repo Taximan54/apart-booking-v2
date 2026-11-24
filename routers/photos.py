@@ -7,7 +7,7 @@ from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException
 from fastapi.responses import Response
 from PIL import Image
 
-from core.auth import require_admin
+from core.auth import require_admin, require_permission
 from core.constants import PHOTOS_ORDER_FILE, PHOTOS_DIR, PASSPORT_DIR
 from core.data_store import load_discounts, get_site_settings_dict, load_places
 from core.models import PhotoOrder, PhotoLabel
@@ -92,7 +92,7 @@ async def upload_photo(
     file: UploadFile = File(...),
     label: str = Form(""),
     purpose: str = Form("gallery"),
-    _: bool = Depends(require_admin),
+    _=Depends(require_permission("site.content")),
     property_id: int = Depends(admin_property_id)):
     """Загрузка нового фото. purpose: gallery / site / place / discount."""
     os.makedirs(PHOTOS_DIR, exist_ok=True)
@@ -137,7 +137,7 @@ def find_photo_usages(filename, property_id: int = DEFAULT_PROPERTY_ID):
     return usages
 
 @router.delete("/api/photos/{filename}")
-async def delete_photo(filename: str, force: bool = False, _: bool = Depends(require_admin), property_id: int = Depends(admin_property_id)):
+async def delete_photo(filename: str, force: bool = False, _=Depends(require_permission("site.content")), property_id: int = Depends(admin_property_id)):
     """Удаление фото. Если фото используется как hero/карта/фото места — требует force=true."""
     filepath = os.path.join(PHOTOS_DIR, filename)
     if not os.path.exists(filepath):
@@ -158,7 +158,7 @@ async def delete_photo(filename: str, force: bool = False, _: bool = Depends(req
     return {"ok": True}
 
 @router.post("/api/photos/reorder")
-async def reorder_photos(p: PhotoOrder, _: bool = Depends(require_admin), property_id: int = Depends(admin_property_id)):
+async def reorder_photos(p: PhotoOrder, _=Depends(require_permission("site.content")), property_id: int = Depends(admin_property_id)):
     """Изменение порядка фото галереи."""
     order_data = load_photos_order_data(property_id)
     order_data["order"] = p.order
@@ -167,7 +167,7 @@ async def reorder_photos(p: PhotoOrder, _: bool = Depends(require_admin), proper
     return {"ok": True}
 
 @router.post("/api/photos/{filename}/label")
-async def set_photo_label(filename: str, lb: PhotoLabel, _: bool = Depends(require_admin), property_id: int = Depends(admin_property_id)):
+async def set_photo_label(filename: str, lb: PhotoLabel, _=Depends(require_permission("site.content")), property_id: int = Depends(admin_property_id)):
     """Установить подпись к фото."""
     order_data = load_photos_order_data(property_id)
     order_data["labels"][filename] = lb.label
@@ -186,7 +186,7 @@ async def upload_passport_photo(file: UploadFile = File(...)):
     return {"ok": True, "filename": filename, "size_kb": round(size / 1024, 1)}
 
 @router.get("/api/admin/passport-photo/{booking_ref}/{slot}")
-async def get_passport_photo(booking_ref: str, slot: str, _: bool = Depends(require_admin)):
+async def get_passport_photo(booking_ref: str, slot: str, _=Depends(require_permission("passports.view"))):
     """Просмотр фото паспорта администратором по номеру брони. slot: main / reg1."""
     if slot not in ("main", "reg1"):
         raise HTTPException(status_code=400, detail="Неверный slot")
