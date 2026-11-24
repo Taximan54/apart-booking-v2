@@ -10,7 +10,7 @@ from fastapi import APIRouter, Header, Depends, HTTPException, Query
 from typing import Optional
 
 from config import ADMIN_IDS, BASE_URL
-from core.auth import require_admin, verify_token
+from core.auth import require_admin, require_permission
 from core.booking_rules import get_min_nights, ru_nights
 from core.constants import PROMO_FILE, CODE_FILE, CONTRACTS_DIR, PASSPORT_DIR, MAIL_ADMIN
 from core.contract_docs import save_contract, generate_contract
@@ -78,9 +78,8 @@ async def get_bookings(admin: Optional[str] = None, authorization: Optional[str]
                        property: Optional[str] = Query(None),
                        x_property_id: Optional[str] = Header(None, alias="X-Property-Id")):
     if admin:
-        if not authorization or not authorization.startswith("Bearer ") \
-           or not verify_token(authorization[len("Bearer "):]):
-            raise HTTPException(status_code=401, detail="Unauthorized")
+        # Админский режим: только владелец или сотрудник с правом bookings.view
+        require_permission("bookings.view")(authorization, x_property_id)
     # админка выбирает объект заголовком, сайт — адресом страницы объекта
     property_id = admin_property_id(x_property_id) if admin else public_property_id(property)
     bookings = list_bookings(property_id)
@@ -214,7 +213,7 @@ async def create_booking(b: BookingCreate, property_id: int = Depends(public_pro
     return {"booking_id": booking_ref, "status": "waiting_payment"}
 
 @router.post("/api/admin/manual-booking")
-async def create_manual_booking(b: ManualBookingCreate, _: bool = Depends(require_admin),
+async def create_manual_booking(b: ManualBookingCreate, _=Depends(require_permission("bookings.edit")),
                                 property_id: int = Depends(admin_property_id)):
     """
     Ручное создание брони для внешних площадок (Авито, Яндекс.Путешествия,
@@ -282,7 +281,7 @@ async def create_manual_booking(b: ManualBookingCreate, _: bool = Depends(requir
     return {"ok": True, "booking_ref": booking_ref, "sign_link": sign_link, "email_sent": bool(b.guest_email.strip())}
 
 @router.get("/api/admin/bookings/{ref}/sign-link")
-async def get_sign_link(ref: str, _: bool = Depends(require_admin)):
+async def get_sign_link(ref: str, _=Depends(require_permission("contracts.pdf"))):
     """Возвращает ссылку на страницу заполнения/подписания для брони — чтобы скопировать и отправить гостю вручную (например, в чат Авито)."""
     booking = get_sign_state(ref)
     if not booking:
@@ -298,7 +297,7 @@ async def get_sign_link(ref: str, _: bool = Depends(require_admin)):
     }
 
 @router.post("/api/admin/bookings/{ref}/resend-contract")
-async def resend_contract(ref: str, r: ResendContract, _: bool = Depends(require_admin)):
+async def resend_contract(ref: str, r: ResendContract, _=Depends(require_permission("contracts.pdf"))):
     """
     Повторная отправка на указанный email:
     — если договор уже подписан гостем — уходят готовые подписанные PDF
@@ -335,7 +334,7 @@ async def resend_contract(ref: str, r: ResendContract, _: bool = Depends(require
 # ту же защиту db_lock + is_dates_available, что и обычные брони.
 
 @router.post("/api/blocked-dates")
-async def create_blocked_dates(b: BlockDatesRequest, _: bool = Depends(require_admin),
+async def create_blocked_dates(b: BlockDatesRequest, _=Depends(require_permission("dates.block")),
                                property_id: int = Depends(admin_property_id)):
     if not b.dates:
         raise HTTPException(status_code=400, detail="Не выбраны даты")
@@ -354,7 +353,7 @@ async def create_blocked_dates(b: BlockDatesRequest, _: bool = Depends(require_a
     return {"ok": True, "blocked_days": len(dates_sorted)}
 
 @router.post("/api/unblock-dates")
-async def remove_blocked_dates(u: UnblockDatesRequest, _: bool = Depends(require_admin),
+async def remove_blocked_dates(u: UnblockDatesRequest, _=Depends(require_permission("dates.block")),
                                property_id: int = Depends(admin_property_id)):
     """Отменяет (status='cancelled') записи-блокировки ('blocked'), пересекающиеся с диапазоном."""
     end_exclusive = (datetime.strptime(u.end, "%Y-%m-%d").date() + timedelta(days=1)).strftime("%Y-%m-%d")
@@ -365,7 +364,14 @@ async def remove_blocked_dates(u: UnblockDatesRequest, _: bool = Depends(require
     return {"ok": True, "unblocked": len(ids)}
 
 @router.put("/api/bookings/{booking_id}")
-async def update_booking(booking_id: str, u: BookingUpdate, _: bool = Depends(require_admin)):
+async def update_booking(booking_id: str, u: BookingUpdate,
+                         authorization: Optional[str] = Header(None),
+                         x_property_id: Optional[str] = Header(None, alias="X-Property-Id")):
+    # Смена статуса на "cancelled" требует права bookings.cancel,
+    # любая другая смена — bookings.edit. Иначе сотрудник с bookings.edit
+    # мог бы отменить бронь в обход /cancel.
+    required = "bookings.cancel" if u.status == "cancelled" else "bookings.edit"
+    require_permission(required)(authorization, x_property_id)
     set_status_by_id(booking_id, u.status)
     return {"ok": True}
 
@@ -374,7 +380,7 @@ async def update_booking(booking_id: str, u: BookingUpdate, _: bool = Depends(re
 # =====================================================
 
 @router.post("/api/bookings/{booking_ref}/confirm")
-async def confirm_booking(booking_ref: str, _: bool = Depends(require_admin)):
+async def confirm_booking(booking_ref: str, _=Depends(require_permission("payments"))):
     """Подтверждение оплаты из веб-админки — главный флоу."""
     # Ищем по username (booking_ref) или id
     booking = get_by_ref_or_id(booking_ref)
@@ -422,7 +428,7 @@ async def confirm_booking(booking_ref: str, _: bool = Depends(require_admin)):
     return {"ok": True, "booking_id": booking.get("username"), "door_code": door_code}
 
 @router.post("/api/bookings/{booking_ref}/full-payment")
-async def full_payment(booking_ref: str, _: bool = Depends(require_admin)):
+async def full_payment(booking_ref: str, _=Depends(require_permission("payments"))):
     """Подтверждение полной оплаты — отправляет гостю памятку с кодом замка."""
     booking = get_by_id_or_ref(booking_ref)
     if not booking:
@@ -458,7 +464,7 @@ async def full_payment(booking_ref: str, _: bool = Depends(require_admin)):
     return {"ok": True, "status": "fully_paid"}
 
 @router.post("/api/bookings/{booking_ref}/cancel")
-async def cancel_booking_api(booking_ref: str, _: bool = Depends(require_admin)):
+async def cancel_booking_api(booking_ref: str, _=Depends(require_permission("bookings.cancel"))):
     """Отмена брони из веб-админки."""
     booking = get_by_ref_or_id(booking_ref)
     if not booking:
