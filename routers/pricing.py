@@ -6,7 +6,7 @@ import os
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
-from core.auth import require_admin
+from core.auth import require_admin, require_permission
 from core.constants import (
     DEFAULT_PRICES,
     DEFAULT_REVIEW_SUBJECT,
@@ -53,7 +53,7 @@ async def get_prices(property_id: int = Depends(request_property_id)):
     return DEFAULT_PRICES
 
 @router.post("/api/prices")
-async def set_prices(p: Prices, _: bool = Depends(require_admin), property_id: int = Depends(admin_property_id)):
+async def set_prices(p: Prices, _=Depends(require_permission("prices.edit")), property_id: int = Depends(admin_property_id)):
     with open(property_file(PRICE_FILE, property_id), "w") as f:
         json.dump(p.dict(), f, ensure_ascii=False)
     return {"ok": True}
@@ -63,14 +63,14 @@ async def set_prices(p: Prices, _: bool = Depends(require_admin), property_id: i
 # =====================================================
 
 @router.get("/api/promo-codes")
-async def get_promo_codes(_: bool = Depends(require_admin)):
+async def get_promo_codes(_=Depends(require_permission("prices.edit"))):
     if os.path.exists(PROMO_FILE):
         with open(PROMO_FILE, "r", encoding="utf-8") as f:
             return json.load(f)
     return {}
 
 @router.post("/api/promo-codes")
-async def set_promo_codes(p: PromoCodes, _: bool = Depends(require_admin)):
+async def set_promo_codes(p: PromoCodes, _=Depends(require_permission("prices.edit"))):
     # Нормализуем коды в верхний регистр — чтобы ввод не зависел от регистра
     normalized = {
         code.strip().upper(): percent
@@ -98,14 +98,14 @@ async def validate_promo_code(v: PromoValidate):
 # =====================================================
 
 @router.get("/api/admin/review-promo")
-async def get_review_promo(_: bool = Depends(require_admin)):
+async def get_review_promo(_=Depends(require_permission("guest.mail"))):
     """Размер скидки, тема и текст письма после выезда."""
     return {**get_review_settings(), "text": load_review_template_text(), "default_text": DEFAULT_REVIEW_TEMPLATE,
             "default_subject": DEFAULT_REVIEW_SUBJECT}
 
 
 @router.post("/api/admin/review-promo")
-async def set_review_promo(data: ReviewPromoUpdate, _: bool = Depends(require_admin)):
+async def set_review_promo(data: ReviewPromoUpdate, _=Depends(require_permission("guest.mail"))):
     if not data.text.strip():
         raise HTTPException(status_code=400, detail="Текст письма не может быть пустым")
     try:
@@ -118,7 +118,7 @@ async def set_review_promo(data: ReviewPromoUpdate, _: bool = Depends(require_ad
 
 
 @router.post("/api/admin/review-promo/test")
-async def send_review_promo_test(data: ReviewPromoTest, _: bool = Depends(require_admin)):
+async def send_review_promo_test(data: ReviewPromoTest, _=Depends(require_permission("guest.mail"))):
     """Пробное письмо (с тестовым именем и кодом) на указанную почту или на почту из «Контактов»."""
     to = (data.email or "").strip() or get_landlord_email()
     if "@" not in to or " " in to or len(to) > 200:
@@ -130,7 +130,7 @@ async def send_review_promo_test(data: ReviewPromoTest, _: bool = Depends(requir
 
 
 @router.post("/api/admin/review-promo/send")
-async def send_promo_to_guest(data: ReviewPromoSend, _: bool = Depends(require_admin)):
+async def send_promo_to_guest(data: ReviewPromoSend, _=Depends(require_permission("guest.mail"))):
     """
     Письмо с промокодом любому человеку (например, гостю, который жил до запуска сайта, через другую площадку).
     Промокод — существующий (поле code) или новый личный (скидка percent). Текст и тема — стандартные
@@ -178,13 +178,13 @@ class ReviewDecision(BaseModel):
 
 
 @router.get("/api/admin/review-decisions")
-async def get_review_decisions(_: bool = Depends(require_admin)):
+async def get_review_decisions(_=Depends(require_permission("guest.mail"))):
     """Решения админа по письму после выезда: {номер брони: promo | nopromo | skip}."""
     return load_review_decisions()
 
 
 @router.post("/api/admin/bookings/{ref}/review-decision")
-async def set_booking_review_decision(ref: str, data: ReviewDecision, _: bool = Depends(require_admin)):
+async def set_booking_review_decision(ref: str, data: ReviewDecision, _=Depends(require_permission("guest.mail"))):
     """Админ решает, отправлять ли гостю письмо после выезда (с промокодом / без / не отправлять)."""
     if data.decision not in REVIEW_DECISIONS:
         raise HTTPException(status_code=400, detail="Неверное решение")
