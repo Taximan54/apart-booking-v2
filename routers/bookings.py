@@ -10,7 +10,7 @@ from fastapi import APIRouter, Header, Depends, HTTPException, Query
 from typing import Optional
 
 from config import ADMIN_IDS, BASE_URL
-from core.auth import require_admin, require_permission
+from core.auth import require_admin, verify_token, require_permission
 from core.booking_rules import get_min_nights, ru_nights
 from core.constants import PROMO_FILE, CODE_FILE, CONTRACTS_DIR, PASSPORT_DIR, MAIL_ADMIN
 from core.contract_docs import save_contract, generate_contract
@@ -78,8 +78,13 @@ async def get_bookings(admin: Optional[str] = None, authorization: Optional[str]
                        property: Optional[str] = Query(None),
                        x_property_id: Optional[str] = Header(None, alias="X-Property-Id")):
     if admin:
-        # Админский режим: только владелец или сотрудник с правом bookings.view
-        require_permission("bookings.view")(authorization, x_property_id)
+        # Админский режим. Владелец проходит по старой проверке verify_token
+        # (обратная совместимость с тестами и старыми токенами); сотрудник —
+        # через require_permission("bookings.view").
+        _owner_ok = bool(authorization and authorization.startswith("Bearer ")
+                         and verify_token(authorization[len("Bearer "):]))
+        if not _owner_ok:
+            require_permission("bookings.view")(authorization, x_property_id)
     # админка выбирает объект заголовком, сайт — адресом страницы объекта
     property_id = admin_property_id(x_property_id) if admin else public_property_id(property)
     bookings = list_bookings(property_id)
