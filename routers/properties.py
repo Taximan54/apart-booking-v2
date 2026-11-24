@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from core import bookings_repo as repo
-from core.auth import require_admin
+from core.auth import require_admin, require_permission
 from core.booking_rules import get_min_nights, set_min_nights
 from core.catalog import CatalogError, admin_catalog_state, save_catalog_settings
 from core.models import CatalogSettings, PropertyCreate, PropertyUpdate
@@ -41,6 +41,11 @@ async def public_properties():
         for p in list_properties() if p["active"]
     ]
 
+
+# ВАЖНО: 4 эндпоинта управления объектами остаются на require_admin (только владелец).
+# tests/test_properties.py::test_properties_api_protected_and_working проверяет
+# inspect.signature(func).parameters["_"].default.dependency is require_admin.
+# Право site.settings на них не применяется — оставлено на будущее.
 
 @router.get("/api/admin/properties")
 async def get_properties(_: bool = Depends(require_admin)):
@@ -80,12 +85,12 @@ async def remove_property(property_id: int, _: bool = Depends(require_admin)):
 # =====================================================
 
 @router.get("/api/admin/catalog")
-async def get_catalog_admin(_: bool = Depends(require_admin)):
+async def get_catalog_admin(_=Depends(require_permission("site.settings"))):
     return admin_catalog_state()
 
 
 @router.post("/api/admin/catalog")
-async def set_catalog_admin(data: CatalogSettings, _: bool = Depends(require_admin)):
+async def set_catalog_admin(data: CatalogSettings, _=Depends(require_permission("site.settings"))):
     try:
         save_catalog_settings(data.brand, data.title, data.subtitle, data.background_theme, data.color_theme, data.items,
                               data.button_label, data.columns, data.fonts, data.button_scale, data.date_search)
@@ -103,11 +108,11 @@ class BookingRulesUpdate(BaseModel):
 
 
 @router.get("/api/admin/booking-rules")
-async def get_booking_rules(_: bool = Depends(require_admin), property_id: int = Depends(admin_property_id)):
+async def get_booking_rules(_=Depends(require_permission("site.settings")), property_id: int = Depends(admin_property_id)):
     return {"min_nights": get_min_nights(property_id)}
 
 
 @router.post("/api/admin/booking-rules")
-async def set_booking_rules(data: BookingRulesUpdate, _: bool = Depends(require_admin),
+async def set_booking_rules(data: BookingRulesUpdate, _=Depends(require_permission("site.settings")),
                             property_id: int = Depends(admin_property_id)):
     return {"min_nights": set_min_nights(property_id, data.min_nights)}
