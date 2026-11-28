@@ -46,13 +46,21 @@ function togglePasswordVisibility(inputId, btn) {
 }
 
 async function doLogin() {
-  const pwd = document.getElementById('loginPwd').value;
+  const pwdEl = document.getElementById('loginPwd');
+  const userEl = document.getElementById('loginUser');   // поле «Логин» (только для сотрудников)
+  const pwd = pwdEl.value;
+  const login = userEl ? userEl.value.trim() : '';
   const btn = document.querySelector('#loginScreen button');
   if (btn) { btn.disabled = true; btn.textContent = '...'; }
   try {
-    const r = await fetch(`${API_BASE}/api/admin/login`, {
+    // Если логин заполнен — входим как сотрудник. Если пусто — как владелец.
+    // Обратная совместимость: если поля loginUser нет (старая форма) — всегда владелец.
+    const isStaff = !!login;
+    const url = `${API_BASE}${isStaff ? '/api/admin/staff-login' : '/api/admin/login'}`;
+    const body = isStaff ? { login, password: pwd } : { password: pwd };
+    const r = await fetch(url, {
       method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({password: pwd}),
+      body: JSON.stringify(body),
       signal: AbortSignal.timeout(6000)
     });
     if (!r.ok) throw new Error('bad credentials');
@@ -115,11 +123,90 @@ function blockedRealSet() {
 }
 
 // ============================================================
+// ME / PERMISSIONS (роли сотрудников)
+// ============================================================
+// Загружает права текущего пользователя (владелец или сотрудник).
+// Вызывается из initAdmin() до остальных данных.
+async function loadMe() {
+  const r = await fetch(`${API_BASE}/api/admin/me`, {
+    headers: ADMIN_TOKEN ? {'Authorization': 'Bearer ' + ADMIN_TOKEN} : {},
+    signal: AbortSignal.timeout(4000)
+  });
+  if (r.status === 401) { forceRelogin(); throw new Error('401'); }
+  if (!r.ok) throw new Error(r.status);
+  window.CP_ME = await r.json();
+  return window.CP_ME;
+}
+
+function isOwner() {
+  return !!(window.CP_ME && window.CP_ME.owner);
+}
+
+function hasPermission(perm) {
+  if (isOwner()) return true;
+  return !!(window.CP_ME && Array.isArray(window.CP_ME.permissions) && window.CP_ME.permissions.includes(perm));
+}
+
+// Скрывает пункты меню, к которым у сотрудника нет доступа.
+// Для владельца показывает всё (owner === true).
+// ВАЖНО: для горничной (только право today) пунктов меню не останется,
+// кроме «Выйти» — это нормально, экран «Сегодня» будет отдельной страницей.
+function applyPermissions() {
+  if (!window.CP_ME) return;
+  const menuMap = {
+    'dashboard': 'bookings.view',
+    'bookings': 'bookings.view',
+    'manualbooking': 'bookings.edit',
+    'calendar': 'bookings.view',
+    'prices': 'prices.edit',
+    'promo': 'prices.edit',
+    'contract': 'contract.templates',
+    'contracts': 'contracts.pdf',
+    'checkin': 'site.content',
+    'checkout': 'site.content',
+    'houserules': 'site.content',
+    'sitesettings': 'site.settings',
+    'photos': 'site.content',
+    'discounts': 'site.content',
+    'places': 'site.content',
+    'reviews': 'site.content',
+    'contacts': 'brand.edit',
+    'settings': 'OWNER',
+    'properties': 'OWNER',
+    'catalog': 'OWNER',
+    'integrations': 'OWNER',
+    'chatfaq': 'site.content',
+    'monitoring': 'monitoring.view'
+  };
+  document.querySelectorAll('.sb-nav a.sb-item').forEach(item => {
+    const onclick = item.getAttribute('onclick') || '';
+    const m = onclick.match(/showPanel\('([^']+)'/);
+    if (!m) return;
+    const panel = m[1];
+    if (!(panel in menuMap)) return;
+    const need = menuMap[panel];
+    const allowed = (need === 'OWNER') ? isOwner() : hasPermission(need);
+    if (!allowed) item.style.display = 'none';
+  });
+  document.querySelectorAll('.sb-nav .sb-section').forEach(sec => {
+    const anyVisible = Array.from(sec.querySelectorAll('a.sb-item')).some(i => i.style.display !== 'none');
+    if (!anyVisible) sec.style.display = 'none';
+  });
+}
+
+// ============================================================
 // INIT
 // ============================================================
 async function initAdmin() {
   // Update topbar date
   document.getElementById('topbarDate').textContent = new Date().toLocaleDateString('ru-RU', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
+
+  // Загружаем права пользователя ДО всех данных. Если 401 — forceRelogin, выходим.
+  try {
+    await loadMe();
+  } catch(e) {
+    return;
+  }
 
   // Load api base setting
   const saved = localStorage.getItem('gorodskaya-pauza_api_base');
@@ -153,6 +240,9 @@ async function initAdmin() {
   document.getElementById('adminNextM').onclick = () => { adminCalMonth++; if(adminCalMonth>11){adminCalMonth=0;adminCalYear++;} renderAdminCal(); };
 
   startAutoRefresh();
+
+  // Скрываем пункты сайдбара, к которым нет прав (для сотрудника)
+  applyPermissions();
 }
 
 // Автообновление броней/дашборда в фоне — чтобы новые брони с сайта появлялись
@@ -300,4 +390,3 @@ async function apiPut(path, data) {
   if (!r.ok) throw new Error(r.status);
   return r.json();
 }
-
